@@ -245,6 +245,13 @@ app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Enable static file serving for React frontend
+app.UseStaticFiles();
+
+// Map API controllers
 app.MapControllers();
+
+// SPA fallback for React routing - this must be LAST
+app.MapFallbackToFile("index.html");
 
 app.Run();

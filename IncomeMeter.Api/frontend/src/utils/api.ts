@@ -1,7 +1,11 @@
 import axios from 'axios';
 import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7079';
+// For development: point to .NET API server
+// For production: empty string (same domain as frontend)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  import.meta.env.DEV ? 'https://localhost:7079' : ''
+);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,17 +17,33 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
+  console.log('API Request:', config.method?.toUpperCase(), config.url);
+  console.log('Token present:', !!token);
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    console.warn('No access token found in localStorage');
   }
   return config;
 });
 
 // Response interceptor to handle auth errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', response.status, response.config?.url);
+    return response;
+  },
   (error) => {
+    console.error('API Error:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      data: error.response?.data
+    });
+    
     if (error.response?.status === 401) {
+      console.warn('Unauthorized - removing token and redirecting to login');
       localStorage.removeItem('accessToken');
       window.location.href = '/login';
     }
@@ -63,8 +83,12 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 
 export const getTodaysRoutes = async (): Promise<Route[]> => {
   const response = await api.get<Route[]>('/api/dashboard/todays-routes');
+  
+  // Ensure response.data is an array
+  const routes = Array.isArray(response.data) ? response.data : [];
+  
   // Convert date strings to Date objects
-  return response.data.map(route => ({
+  return routes.map(route => ({
     ...route,
     scheduleStart: new Date(route.scheduleStart),
     scheduleEnd: new Date(route.scheduleEnd),

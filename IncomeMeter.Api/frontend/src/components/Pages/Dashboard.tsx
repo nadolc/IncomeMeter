@@ -18,15 +18,30 @@ const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
+      console.log('Loading dashboard data...');
+      
       const [dashboardStats, routes] = await Promise.all([
-        getDashboardStats(),
-        getTodaysRoutes(),
+        getDashboardStats().catch(err => {
+          console.error('Dashboard stats error:', err);
+          throw err;
+        }),
+        getTodaysRoutes().catch(err => {
+          console.error('Today\'s routes error:', err);
+          console.error('Response data:', err.response?.data);
+          throw err;
+        }),
       ]);
+      
+      console.log('Dashboard stats:', dashboardStats);
+      console.log('Today\'s routes:', routes);
       
       setStats(dashboardStats);
       setTodaysRoutes(routes);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Set empty data to prevent further errors
+      setStats(null);
+      setTodaysRoutes([]);
     } finally {
       setLoading(false);
     }
@@ -77,7 +92,7 @@ const Dashboard: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('dashboard.stats.last7Days')}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {formatCurrency(stats.last7DaysIncome)}
+                {formatCurrency(stats?.last7DaysIncome ?? 0)}
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -100,7 +115,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="space-y-2">
-            {Object.entries(stats.incomeBySource)
+            {Object.entries(stats?.incomeBySource || {})
               .sort(([,a], [,b]) => b - a) // Sort by income amount descending
               .map(([workType, amount], index) => {
                 const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500'];
@@ -116,7 +131,7 @@ const Dashboard: React.FC = () => {
                   </div>
                 );
               })}
-            {Object.keys(stats.incomeBySource).length === 0 && (
+            {Object.keys(stats?.incomeBySource || {}).length === 0 && (
               <div className="text-center py-4">
                 <span className="text-gray-500 text-sm">No completed routes this month</span>
               </div>
@@ -130,7 +145,7 @@ const Dashboard: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">{t('dashboard.stats.netIncome')}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {formatCurrency(stats.netIncome)}
+                {formatCurrency(stats?.netIncome ?? 0)}
               </p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
@@ -155,9 +170,9 @@ const Dashboard: React.FC = () => {
           <div className="space-y-3">
             {(() => {
               // Calculate max income for proper bar scaling
-              const maxIncome = Math.max(...stats.dailyIncomeData.map(d => d.income), 1);
+              const maxIncome = Math.max(...(stats?.dailyIncomeData || []).map(d => d.income), 1);
               
-              return stats.dailyIncomeData.map((day, index) => (
+              return (stats?.dailyIncomeData || []).map((day, index) => (
                 <div key={day.date} className="grid grid-cols-12 gap-3 items-center">
                   {/* Date column - fixed width */}
                   <div className="col-span-2">
@@ -193,7 +208,7 @@ const Dashboard: React.FC = () => {
             })()}
             
             {/* Show message if no data */}
-            {stats.dailyIncomeData.length === 0 && (
+            {(stats?.dailyIncomeData || []).length === 0 && (
               <div className="text-center py-8">
                 <span className="text-gray-500 text-sm">No income data for the last 7 days</span>
               </div>
