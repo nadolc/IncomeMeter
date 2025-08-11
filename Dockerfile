@@ -63,17 +63,18 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose port
-EXPOSE 8080
+# Expose port 80 for Azure App Service
+EXPOSE 80
 
-# Health check
+# Health check (updated for port 80)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/api/diagnostics/health || exit 1
+  CMD curl -f http://localhost:80/api/diagnostics/health || exit 1
 
-# Set environment variables
-ENV ASPNETCORE_URLS=http://+:8080
+# Set environment variables for Azure App Service
+ENV ASPNETCORE_URLS=http://+:80
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS=true
+ENV WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
 
 # Start the application
 ENTRYPOINT ["dotnet", "IncomeMeter.Api.dll"]

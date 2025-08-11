@@ -139,8 +139,9 @@ jobs:
       id: deploy
       uses: azure/webapps-deploy@v2
       with:
-        app-name: incomemeter-dev-app
+        app-name: incomemeter-api-app
         images: ${{ needs.build-container.outputs.image-tag }}
+        startup-command: 'dotnet IncomeMeter.Api.dll'
 
   # Deploy to Staging  
   deploy-staging:

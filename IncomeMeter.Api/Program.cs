@@ -21,6 +21,12 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add startup logging
+Console.WriteLine("=== IncomeMeter API Starting ===");
+Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+Console.WriteLine($"Content Root: {builder.Environment.ContentRootPath}");
+Console.WriteLine($"Web Root: {builder.Environment.WebRootPath}");
+
 // Configure Serilog early in the pipeline
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -253,5 +259,8 @@ app.MapControllers();
 
 // SPA fallback for React routing - this must be LAST
 app.MapFallbackToFile("index.html");
+
+Console.WriteLine("=== IncomeMeter API Started Successfully ===");
+Console.WriteLine($"Listening on: {string.Join(", ", builder.Configuration.GetValue<string>("ASPNETCORE_URLS")?.Split(';') ?? new[] { "http://localhost:5000" })}");
 
 app.Run();

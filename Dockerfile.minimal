@@ -1,0 +1,32 @@
+# Minimal Dockerfile for debugging Azure App Service issues
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy and restore
+COPY IncomeMeter.sln ./
+COPY IncomeMeter.Api/IncomeMeter.Api.csproj ./IncomeMeter.Api/
+RUN dotnet restore IncomeMeter.Api/IncomeMeter.Api.csproj
+
+# Copy source and build
+COPY IncomeMeter.Api/ ./IncomeMeter.Api/
+RUN dotnet publish IncomeMeter.Api/IncomeMeter.Api.csproj -c Release -o /app/publish --no-restore
+
+# Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+
+# Create wwwroot with basic files
+RUN mkdir -p wwwroot
+ECHO '<!DOCTYPE html><html><head><title>IncomeMeter</title></head><body><h1>IncomeMeter API</h1><p>React app will be served here</p></body></html>' > wwwroot/index.html
+
+# Copy app
+COPY --from=build /app/publish ./
+
+# Azure App Service configuration
+ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
+
+EXPOSE 80
+
+ENTRYPOINT ["dotnet", "IncomeMeter.Api.dll"]
