@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace IncomeMeter.Api.Controllers
+namespace IncomeMeter.Web.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]

@@ -361,3 +361,33 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# IncomeMeter specific - Sensitive configuration files
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Local.json
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+
+# Logs
+logs/
+*.log
+
+# API Keys and secrets (backup protection)
+**/secrets.json
+**/user-secrets.json
+**/*secret*
+**/*key*
+**/*password*
+
+# Database connection strings
+**/connectionstrings.json
+
+# Certificate files
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/*.crt

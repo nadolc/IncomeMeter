@@ -1,0 +1,55 @@
+# Docker Compose Override for Development
+# This file provides development-specific overrides
+version: '3.8'
+
+services:
+  # Development MongoDB with exposed ports for debugging
+  mongodb:
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: devpassword123
+      MONGO_INITDB_DATABASE: incomemeter_dev
+    volumes:
+      - mongodb_dev_data:/data/db
+
+  # Development API with hot reload and debugging
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      # Development database
+      MongoConnectionString: mongodb://admin:devpassword123@mongodb:27017/incomemeter_dev?authSource=admin
+      MongoDatabaseName: incomemeter_dev
+      
+      # Development settings
+      ASPNETCORE_ENVIRONMENT: Development
+      FrontendBaseUrl: http://localhost:3000
+      ApiBaseUrl: http://localhost:8080/api
+      
+      # Development CORS - more permissive
+      AllowedCorsOrigins: '["http://localhost:3000","http://localhost:5173","http://localhost:8080"]'
+      
+      # Development secrets (override with .env file)
+      GoogleClientId: your-dev-google-client-id
+      GoogleClientSecret: your-dev-google-client-secret
+      JwtSecret: your-dev-jwt-secret-at-least-32-characters
+      
+    ports:
+      - "8080:8080"
+      - "8443:8443"  # HTTPS for development
+    volumes:
+      # Mount logs for easy access during development
+      - ./logs:/app/logs
+      # Mount appsettings for easy configuration changes
+      - ./IncomeMeter.Api/appsettings.Development.json:/app/appsettings.Development.json:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  mongodb_dev_data:
+    driver: local

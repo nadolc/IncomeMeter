@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route List</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title" data-i18n="routeList_title">Routes</h1>
+            <button class="add-button" onclick="addRoute()">
+                <i class="fas fa-plus"></i>
+            </button>
+        </header>
+
+        <div class="loading-container" id="loadingContainer">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" data-i18n="routeList_loading">Loading routes...</p>
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <i class="fas fa-map fa-3x"></i>
+            <h2 data-i18n="routeList_empty_title">No Routes Found</h2>
+            <p data-i18n="routeList_empty_message">Create your first route to get started</p>
+        </div>
+
+        <div class="list-container" id="routeList">
+            </div>
+    </div>
+
+    <script src="routeList.js"></script>
+</body>
+</html>

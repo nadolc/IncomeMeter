@@ -406,7 +406,24 @@ public class DiagnosticsController : ControllerBase
     {
         try
         {
-            // Try to get the first user (if any exist)
+            // Check if we're using InMemoryUserService (development mode)
+            if (_userService is InMemoryUserService)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Using in-memory user service (development mode)",
+                    timestamp = DateTime.UtcNow,
+                    userService = new
+                    {
+                        type = "InMemoryUserService",
+                        isConfigured = _userService != null,
+                        note = "Authentication uses in-memory storage, MongoDB available for diagnostics"
+                    }
+                });
+            }
+
+            // Try to get the first user (if any exist) - for production mode
             var sampleUser = await _mongoContext.Users.Find(_ => true).FirstOrDefaultAsync();
 
             var result = new

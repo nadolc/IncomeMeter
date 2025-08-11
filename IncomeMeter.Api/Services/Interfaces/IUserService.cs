@@ -6,5 +6,9 @@ namespace IncomeMeter.Api.Services;
 public interface IUserService
 {
     Task<User?> GetUserByApiKeyHashAsync(string keyHash);
+    Task<User?> GetUserByGoogleIdAsync(string googleId);
+    Task<User?> GetUserByEmailAsync(string email);
+    Task<User?> GetUserByIdAsync(string id);
+    Task<User> CreateUserAsync(string googleId, string email, string displayName);
     Task<CreateApiKeyResponseDto> GenerateAndAddApiKeyAsync(string userId, string description);
 }

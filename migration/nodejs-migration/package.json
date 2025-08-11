@@ -1,0 +1,22 @@
+{
+  "name": "mongo-to-cosmos-migration",
+  "version": "1.0.0",
+  "description": "MongoDB to Azure Cosmos DB migration tool",
+  "main": "migrate.js",
+  "scripts": {
+    "start": "node migrate.js",
+    "test": "node test-migration.js"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.0.0",
+    "mongodb": "^6.3.0",
+    "dotenv": "^16.3.1",
+    "progress": "^2.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  },
+  "keywords": ["mongodb", "cosmos-db", "azure", "migration"],
+  "author": "Your Name",
+  "license": "MIT"
+}

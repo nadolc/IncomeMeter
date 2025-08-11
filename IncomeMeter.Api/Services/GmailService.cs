@@ -22,7 +22,7 @@ namespace IncomeMeter.Api.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        private async Task<GmailService> GetGmailServiceAsync(ClaimsPrincipal user)
+        private async Task<Google.Apis.Gmail.v1.GmailService> GetGmailServiceAsync(ClaimsPrincipal user)
         {
             var accessToken = await _httpContextAccessor.HttpContext!
                 .GetTokenAsync("access_token");
@@ -34,7 +34,7 @@ namespace IncomeMeter.Api.Services
 
             var credential = GoogleCredential.FromAccessToken(accessToken);
 
-            return new GmailService(new BaseClientService.Initializer()
+            return new Google.Apis.Gmail.v1.GmailService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = credential,
                 ApplicationName = "Gmail OAuth App",

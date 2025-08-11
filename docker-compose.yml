@@ -1,0 +1,103 @@
+# Docker Compose for IncomeMeter Development
+version: '3.8'
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:7.0
+    container_name: incomemeter-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE_NAME:-incomemeter}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - incomemeter-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # IncomeMeter API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: incomemeter-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Database configuration
+      MongoConnectionString: mongodb://admin:password123@mongodb:27017/incomemeter?authSource=admin
+      MongoDatabaseName: incomemeter
+      
+      # Application settings
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      FrontendBaseUrl: http://localhost:8080
+      ApiBaseUrl: http://localhost:8080/api
+      AllowedCorsOrigins: '["http://localhost:8080","http://localhost:3000","http://localhost:5173"]'
+      
+      # Authentication (use environment file for real values)
+      GoogleClientId: ${GOOGLE_CLIENT_ID}
+      GoogleClientSecret: ${GOOGLE_CLIENT_SECRET}
+      JwtSecret: ${JWT_SECRET}
+      
+      # Geocoding APIs (optional)
+      OpenCageApiKey: ${OPENCAGE_API_KEY:-}
+      OpenRouteServiceApiKey: ${OPENROUTESERVICE_API_KEY:-}
+      
+      # Logging
+      ApplicationInsightsConnectionString: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      - incomemeter-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/diagnostics/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Nginx reverse proxy (optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: incomemeter-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - incomemeter-network
+    depends_on:
+      - api
+    profiles:
+      - production
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  incomemeter-network:
+    driver: bridge

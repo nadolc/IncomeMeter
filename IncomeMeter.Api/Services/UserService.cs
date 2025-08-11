@@ -19,6 +19,34 @@ public class UserService : IUserService
     public async Task<User?> GetUserByApiKeyHashAsync(string keyHash) =>
         await _users.Find(u => u.ApiKeys.Any(k => k.KeyHash == keyHash)).FirstOrDefaultAsync();
 
+    public async Task<User?> GetUserByGoogleIdAsync(string googleId) =>
+        await _users.Find(u => u.GoogleId == googleId).FirstOrDefaultAsync();
+
+    public async Task<User?> GetUserByEmailAsync(string email) =>
+        await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+
+    public async Task<User?> GetUserByIdAsync(string id) =>
+        await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
+
+    public async Task<User> CreateUserAsync(string googleId, string email, string displayName)
+    {
+        var user = new User
+        {
+            GoogleId = googleId,
+            Email = email,
+            DisplayName = displayName,
+            CreatedAt = DateTime.UtcNow,
+            Settings = new UserSettings
+            {
+                Language = "en-GB",
+                CurrencyCode = "GBP"
+            }
+        };
+
+        await _users.InsertOneAsync(user);
+        return user;
+    }
+
     public async Task<CreateApiKeyResponseDto> GenerateAndAddApiKeyAsync(string userId, string description)
     {
         var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();

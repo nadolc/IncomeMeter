@@ -1,0 +1,123 @@
+# .dockerignore
+# Exclude files and directories that shouldn't be included in the Docker build context
+
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+CONFIGURATION.md
+*.md
+
+# IDE and editor files
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# Logs
+**/logs/
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# Node.js dependencies
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files - CRITICAL: Never include these in Docker images
+**/.env*
+**/appsettings.Development.json
+**/appsettings.Local.json
+
+# Test results
+TestResults/
+test-results/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+# MSBuild Binary and Log files
+*.binlog
+
+# Azure Functions artifacts
+bin/
+obj/
+
+# Local development certificates
+*.pfx
+*.p12
+*.key
+*.crt
+*.pem
+
+# Temporary files
+**/tmp/
+**/temp/
+*.tmp
+
+# Migration scripts (optional - exclude if they contain sensitive data)
+migration/
+
+# Sample data (optional)
+sample/
+
+# Scripts that might contain secrets
+scripts/
+
+# Frontend build artifacts (we'll build inside Docker)
+**/dist/
+**/build/
+
+# Package manager files that might not be needed
+package-lock.json
+yarn.lock
