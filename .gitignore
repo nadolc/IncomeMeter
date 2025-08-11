@@ -375,6 +375,9 @@ FodyWeavers.xsd
 logs/
 *.log
 
+#Azure Param
+.Azure/
+
 # API Keys and secrets (backup protection)
 **/secrets.json
 **/user-secrets.json
@@ -391,3 +394,4 @@ logs/
 **/*.pem
 **/*.key
 **/*.crt
+/IncomeMeter.Api/appsettings.json
