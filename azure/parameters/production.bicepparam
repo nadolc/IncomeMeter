@@ -3,16 +3,16 @@ using '../bicep/main.bicep'
 
 // Environment configuration
 param environmentName = 'prod'
-param location = 'East US'
+param location = 'UK South '
 param namePrefix = 'incomemeter'
 
 // Container configuration
-param containerImage = 'ghcr.io/your-username/incomemeter/incomemeter-api:latest'
+param containerImage = 'ghcr.io/nadolc/incomemeter/incomemeter-api:latest'
 
 // URLs configuration
-param frontendBaseUrl = 'https://incomemeter.com'
-param apiBaseUrl = 'https://api.incomemeter.com'
-param allowedCorsOrigins = '["https://incomemeter.com","https://www.incomemeter.com"]'
+param frontendBaseUrl = 'https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net'
+param apiBaseUrl = 'https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net'
+param allowedCorsOrigins = '["https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net"]'
 
 // Secrets (will be provided via Azure CLI or GitHub Actions)
 param mongoConnectionString = '' // Will be overridden
