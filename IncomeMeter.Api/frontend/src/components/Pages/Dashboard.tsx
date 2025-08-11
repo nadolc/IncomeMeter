@@ -234,9 +234,9 @@ const Dashboard: React.FC = () => {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{route.name}</p>
+                      <p className="font-medium text-gray-900">Route {route.id.slice(0, 8)}</p>
                       <p className="text-sm text-gray-600">
-                        {route.startTime?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {route.endTime?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        {route.scheduleStart?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {route.scheduleEnd?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>

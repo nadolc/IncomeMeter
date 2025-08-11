@@ -37,7 +37,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       if (!settings?.language) {
         const storedLanguage = localStorage.getItem('language');
         if (storedLanguage && ['en-GB', 'zh-HK'].includes(storedLanguage)) {
-          languageToUse = storedLanguage;
+          languageToUse = storedLanguage as 'en-GB' | 'zh-HK';
         }
       }
 

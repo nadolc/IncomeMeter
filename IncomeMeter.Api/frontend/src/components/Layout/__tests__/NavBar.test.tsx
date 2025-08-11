@@ -3,27 +3,63 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import NavBar from '../NavBar';
 
-// Mock the auth context with test data
+// Mock contexts
 const mockUser = {
   id: '1',
   name: 'John Doe',
   email: 'john@example.com',
+  phone: '',
+  address: '',
   createdAt: '2024-01-01',
   updatedAt: '2024-01-01'
 };
 
 const mockAuthContext = {
   user: mockUser,
-  loading: false,
+  isLoading: false,
   login: jest.fn(),
   logout: jest.fn(),
+  register: jest.fn(),
   isAuthenticated: true,
 };
 
-// Mock AuthContext
+const mockSettingsContext = {
+  settings: {
+    currency: 'GBP' as const,
+    language: 'en-GB' as const,
+    timeZone: 'Europe/London',
+    dateFormat: 'DD/MM/YYYY',
+    emailNotifications: true,
+    pushNotifications: true,
+    defaultChartPeriod: '7d',
+    showWeekends: true,
+    mileageUnit: 'km' as const,
+  },
+  formatCurrency: (amount: number) => `£${amount.toFixed(2)}`,
+  updateSettings: jest.fn(),
+  loading: false,
+};
+
+const mockLanguageContext = {
+  language: 'en-GB' as const,
+  t: (key: string) => key,
+  changeLanguage: jest.fn(),
+};
+
+// Mock all context hooks
 jest.mock('../../../contexts/AuthContext', () => ({
   useAuth: () => mockAuthContext,
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+jest.mock('../../../contexts/SettingsContext', () => ({
+  useSettings: () => mockSettingsContext,
+  SettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+jest.mock('../../../contexts/LanguageContext', () => ({
+  useLanguage: () => mockLanguageContext,
+  LanguageProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 const renderNavBar = () => {
@@ -141,8 +177,10 @@ describe('NavBar Component', () => {
   describe('Navigation Functionality', () => {
     it('should highlight active page', () => {
       // Mock current location
-      delete (window as unknown as { location: unknown }).location;
-      window.location = { ...window.location, pathname: '/dashboard' };
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { pathname: '/dashboard' }
+      });
       
       renderNavBar();
       

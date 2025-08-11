@@ -77,9 +77,7 @@ describe('API Utils', () => {
 
   describe('Dashboard Stats', () => {
     it('should return mock dashboard stats', async () => {
-      const stats = await getDashboardStats();
-      
-      expect(stats).toEqual({
+      const mockStats = {
         last7DaysIncome: 2450.00,
         currentMonthIncome: 4370.00,
         netIncome: 4370.00,
@@ -88,13 +86,17 @@ describe('API Utils', () => {
           freelance: 850.00,
           other: 320.00,
         },
-        dailyIncomeData: expect.arrayContaining([
-          expect.objectContaining({
-            date: expect.any(String),
-            income: expect.any(Number),
-          }),
-        ]),
-      });
+        dailyIncomeData: Array.from({ length: 7 }, (_, index) => ({
+          date: new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          income: Math.floor(Math.random() * 400) + 200,
+        })),
+      };
+      
+      mockAxiosInstance.get.mockResolvedValue({ data: mockStats });
+      
+      const stats = await getDashboardStats();
+      
+      expect(stats).toEqual(mockStats);
       
       expect(stats.dailyIncomeData).toHaveLength(7);
     });
@@ -116,35 +118,133 @@ describe('API Utils', () => {
 
   describe('Today\'s Routes', () => {
     it('should return mock routes for today', async () => {
+      const today = new Date();
+      const mockRoutes = [
+        {
+          id: '1',
+          userId: 'user1',
+          workType: 'City Center Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0).toISOString(),
+          estimatedIncome: 180.00,
+          distance: 25.5,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          userId: 'user1',
+          workType: 'Suburbs Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 0).toISOString(),
+          estimatedIncome: 120.00,
+          distance: 18.2,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          userId: 'user1',
+          workType: 'Evening Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0).toISOString(),
+          estimatedIncome: 240.00,
+          distance: 35.8,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      
+      mockAxiosInstance.get.mockResolvedValue({ data: mockRoutes });
+      
       const routes = await getTodaysRoutes();
       
       expect(routes).toHaveLength(3);
-      expect(routes[0]).toEqual({
+      expect(routes[0]).toMatchObject({
         id: '1',
-        name: 'City Center Route',
-        startTime: expect.any(Date),
-        endTime: expect.any(Date),
+        userId: 'user1',
+        workType: 'City Center Route',
+        status: 'scheduled',
+        scheduleStart: expect.any(Date),
+        scheduleEnd: expect.any(Date),
         estimatedIncome: 180.00,
         distance: 25.5,
-        userId: 'user1',
-        createdAt: expect.any(String),
+        incomes: [],
+        totalIncome: 0,
       });
     });
 
     it('should generate routes with correct time slots', async () => {
+      const today = new Date();
+      const mockRoutes = [
+        {
+          id: '1',
+          userId: 'user1',
+          workType: 'City Center Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0).toISOString(),
+          estimatedIncome: 180.00,
+          distance: 25.5,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          userId: 'user1',
+          workType: 'Suburbs Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 0).toISOString(),
+          estimatedIncome: 120.00,
+          distance: 18.2,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          userId: 'user1',
+          workType: 'Evening Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 22, 0).toISOString(),
+          estimatedIncome: 240.00,
+          distance: 35.8,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      
+      mockAxiosInstance.get.mockResolvedValue({ data: mockRoutes });
+      
       const routes = await getTodaysRoutes();
       
       // Check morning route
-      expect(routes[0].startTime?.getHours()).toBe(9);
-      expect(routes[0].endTime?.getHours()).toBe(12);
+      expect(routes[0].scheduleStart.getHours()).toBe(9);
+      expect(routes[0].scheduleEnd.getHours()).toBe(12);
       
       // Check afternoon route
-      expect(routes[1].startTime?.getHours()).toBe(14);
-      expect(routes[1].endTime?.getHours()).toBe(16);
+      expect(routes[1].scheduleStart.getHours()).toBe(14);
+      expect(routes[1].scheduleEnd.getHours()).toBe(16);
       
       // Check evening route
-      expect(routes[2].startTime?.getHours()).toBe(18);
-      expect(routes[2].endTime?.getHours()).toBe(22);
+      expect(routes[2].scheduleStart.getHours()).toBe(18);
+      expect(routes[2].scheduleEnd.getHours()).toBe(22);
     });
   });
 
@@ -276,6 +376,37 @@ describe('API Utils', () => {
 
   describe('Mock Data Validation', () => {
     it('should return consistent mock data structure', async () => {
+      // Mock dashboard stats
+      const mockStats = {
+        last7DaysIncome: 2450.00,
+        currentMonthIncome: 4370.00,
+        netIncome: 4370.00,
+        incomeBySource: { salary: 3200.00, freelance: 850.00, other: 320.00 },
+        dailyIncomeData: [{ date: '2024-01-01', income: 250 }],
+      };
+      
+      // Mock routes
+      const today = new Date();
+      const mockRoutes = [
+        {
+          id: '1',
+          userId: 'user1',
+          workType: 'City Center Route',
+          status: 'scheduled' as const,
+          scheduleStart: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0).toISOString(),
+          scheduleEnd: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0).toISOString(),
+          estimatedIncome: 180.00,
+          distance: 25.5,
+          incomes: [],
+          totalIncome: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: mockStats });
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: mockRoutes });
+      
       const stats = await getDashboardStats();
       const routes = await getTodaysRoutes();
       
@@ -290,7 +421,7 @@ describe('API Utils', () => {
       expect(Array.isArray(routes)).toBe(true);
       routes.forEach(route => {
         expect(typeof route.id).toBe('string');
-        expect(typeof route.name).toBe('string');
+        expect(typeof route.workType).toBe('string');
         expect(typeof route.estimatedIncome).toBe('number');
         expect(typeof route.distance).toBe('number');
         expect(typeof route.userId).toBe('string');

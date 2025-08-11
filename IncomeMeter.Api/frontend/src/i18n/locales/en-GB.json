@@ -1,45 +1,7 @@
 {
   "app": {
     "title": "Income Meter",
-    "subtitle": "Track Your Income Like Never Before"
-  },
-  "auth": {
-    "login": {
-      "title": "Welcome Back",
-      "subtitle": "Sign in to your account to track your income",
-      "googleButton": "Continue with Google",
-      "newAccount": "New to Income Meter?",
-      "createAccount": "Create your account",
-      "terms": "By signing in, you agree to our Terms of Service and Privacy Policy",
-      "secureAuth": "Secure authentication powered by Google OAuth 2.0"
-    },
-    "register": {
-      "title": "Create Account",
-      "subtitle": "Join Income Meter to start tracking your income",
-      "form": {
-        "name": "Full Name",
-        "email": "Email Address",
-        "phone": "Phone Number",
-        "address": "Address",
-        "currency": "Preferred Currency",
-        "language": "Language",
-        "timeZone": "Time Zone",
-        "dateFormat": "Date Format"
-      },
-      "validation": {
-        "nameRequired": "Name is required",
-        "emailRequired": "Email is required",
-        "emailInvalid": "Please enter a valid email address",
-        "phoneRequired": "Phone number is required"
-      },
-      "buttons": {
-        "register": "Create Account",
-        "cancel": "Cancel"
-      },
-      "existingAccount": "Already have an account?",
-      "signIn": "Sign in here"
-    },
-    "logout": "Sign Out"
+    "subtitle": "Track your income with precision"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -47,203 +9,147 @@
     "settings": "Settings",
     "menu": "Menu"
   },
-  "dashboard": {
-    "title": "Dashboard",
-    "welcome": "Welcome back! Here's your income overview.",
-    "stats": {
-      "last7Days": "Last 7 Days Income",
-      "currentMonth": "Current Month Total",
-      "netIncome": "Net Income This Month",
-      "incomeBySource": "Income by Source"
-    },
-    "charts": {
-      "dailyIncome": "Daily Income Trend",
-      "incomeBreakdown": "Income Breakdown"
-    },
-    "todayRoutes": {
-      "title": "Today's Routes",
-      "time": "Time",
-      "route": "Route",
-      "income": "Est. Income",
-      "distance": "Distance",
-      "noRoutes": "No routes scheduled for today"
-    },
-    "sources": {
-      "salary": "Salary",
-      "freelance": "Freelance",
-      "other": "Other"
-    },
-    "trends": {
-      "fromLastWeek": "from last week"
-    }
-  },
-  "profile": {
-    "title": "Profile",
-    "personalInfo": "Personal Information",
-    "accountDetails": "Account Details",
-    "form": {
-      "name": "Full Name",
-      "email": "Email Address",
-      "phone": "Phone Number",
-      "address": "Address",
-      "memberSince": "Member Since"
-    },
-    "buttons": {
-      "save": "Save Changes",
-      "cancel": "Cancel"
-    },
-    "messages": {
-      "updateSuccess": "Profile updated successfully",
-      "updateError": "Failed to update profile"
-    }
-  },
-  "settings": {
-    "title": "Settings",
-    "sections": {
-      "localization": "Localisation",
-      "notifications": "Notifications",
-      "display": "Display Preferences"
-    },
-    "form": {
-      "currency": "Currency",
-      "language": "Language",
-      "timeZone": "Time Zone",
-      "dateFormat": "Date Format",
-      "emailNotifications": "Email Notifications",
-      "pushNotifications": "Push Notifications",
-      "showWeekends": "Show Weekends in Charts",
-      "defaultChartPeriod": "Default Chart Period",
-      "mileageUnit": "Distance Unit"
-    },
-    "currencies": {
-      "GBP": "British Pound (£)",
-      "HKD": "Hong Kong Dollar (HK$)"
-    },
-    "languages": {
-      "en-GB": "English (UK)",
-      "zh-HK": "繁體中文 (香港)"
-    },
-    "mileageUnits": {
-      "km": "Kilometres (km)",
-      "mi": "Miles (mi)"
-    },
-    "buttons": {
-      "save": "Save Settings",
-      "cancel": "Cancel",
-      "reset": "Reset to Defaults"
-    },
-    "messages": {
-      "saveSuccess": "Settings saved successfully",
-      "saveError": "Failed to save settings",
-      "resetSuccess": "Settings reset to defaults"
-    }
-  },
   "routes": {
     "title": "Routes",
-    "list": {
-      "title": "Route List",
-      "loading": "Loading routes...",
-      "empty": {
-        "title": "No Routes Found",
-        "message": "Create your first route to get started"
-      },
-      "error": {
-        "title": "Error Loading Routes",
-        "message": "Unable to load routes. Please try again."
-      },
-      "add": "Add Route",
-      "totalIncome": "Total Income",
-      "income": "Income from {{source}}",
-      "viewDetails": "View Details"
-    },
-    "details": {
-      "title": "Route Details",
-      "loading": "Loading route details...",
-      "notFound": {
-        "title": "Route Not Found",
-        "message": "The route you're looking for doesn't exist"
-      },
-      "error": {
-        "title": "Error Loading Route",
-        "message": "Unable to load route details. Please try again."
-      },
-      "date": "Date",
-      "scheduleTime": "Scheduled Time",
-      "actualTime": "Actual Time",
-      "description": "Description",
-      "totalIncome": "Total Income",
-      "income": "Income from {{source}}",
-      "routeInfo": "Route Information",
-      "routeId": "Route ID",
-      "userId": "User ID",
-      "created": "Created",
-      "updated": "Updated",
-      "locations": {
-        "title": "Locations",
-        "count": "{{count}} locations",
-        "empty": "No locations recorded",
-        "startMile": "Start Odometer",
-        "endMile": "End Odometer"
-      }
-    },
     "status": {
       "completed": "Completed",
       "inProgress": "In Progress",
       "scheduled": "Scheduled",
       "cancelled": "Cancelled"
+    },
+    "details": {
+      "title": "Route Details",
+      "loading": "Loading route details...",
+      "date": "Date",
+      "scheduleTime": "Scheduled Time",
+      "actualTime": "Actual Time",
+      "workType": "Work Type",
+      "distance": "Distance",
+      "income": "Income",
+      "status": "Status",
+      "error": {
+        "title": "Error Loading Route",
+        "message": "Failed to load route details"
+      },
+      "notFound": {
+        "title": "Route Not Found",
+        "message": "The requested route could not be found"
+      }
+    },
+    "list": {
+      "title": "My Routes",
+      "loading": "Loading routes...",
+      "add": "Add New Route",
+      "totalIncome": "Total Income",
+      "error": {
+        "title": "Error Loading Routes",
+        "message": "Failed to load routes"
+      },
+      "empty": {
+        "title": "No Routes Found",
+        "message": "You haven't created any routes yet. Add your first route to get started."
+      }
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Track your driving income with precision",
+      "googleButton": "Continue with Google",
+      "newAccount": "or create new account",
+      "createAccount": "Create Account",
+      "terms": "By signing in, you agree to our Terms of Service and Privacy Policy",
+      "secureAuth": "Secure authentication powered by Google"
+    },
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to your income tracking dashboard",
+    "stats": {
+      "last7Days": "Last 7 Days",
+      "currentMonth": "Current Month",
+      "netIncome": "Net Income",
+      "incomeBySource": "Income by Source"
+    },
+    "trends": {
+      "fromLastWeek": "from last week"
+    },
+    "todayRoutes": {
+      "title": "Today's Routes",
+      "noRoutes": "No routes scheduled for today"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": {
+      "title": "Profile Information",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "currency": "Currency",
+      "language": "Language",
+      "timeZone": "Time Zone",
+      "dateFormat": "Date Format",
+      "mileageUnit": "Mileage Unit"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "email": "Email Notifications",
+      "push": "Push Notifications"
+    },
+    "languages": {
+      "en-GB": "English (UK)",
+      "zh-HK": "繁體中文 (香港)"
+    },
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "saved": "Settings saved successfully!"
+  },
+  "profile": {
+    "title": "Profile",
+    "loading": "Loading profile...",
+    "personalInfo": "Personal Information",
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "memberSince": "Member since"
+    },
+    "error": {
+      "title": "Error Loading Profile",
+      "message": "Failed to load profile information"
+    }
+  },
+  "features": {
+    "realTimeAnalytics": "Real-time analytics and insights",
+    "multiCurrency": "Multi-currency support",
+    "securePrivate": "Secure and private data"
   },
   "common": {
     "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "cancel": "Cancel",
-    "save": "Save",
-    "edit": "Edit",
-    "delete": "Delete",
-    "confirm": "Confirm",
-    "close": "Close",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "search": "Search",
-    "filter": "Filter",
-    "sort": "Sort",
-    "export": "Export",
-    "import": "Import",
-    "refresh": "Refresh",
     "retry": "Retry",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
     "yes": "Yes",
     "no": "No",
-    "ok": "OK",
     "unknown": "Unknown",
     "noDate": "No date",
-    "invalidDate": "Invalid date",
-    "noTime": "No time",
-    "invalidTime": "Invalid time"
-  },
-  "features": {
-    "realTimeAnalytics": "Real-time Analytics",
-    "multiCurrency": "Multi-Currency",
-    "securePrivate": "Secure & Private"
+    "noTime": "No time"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection.",
-    "authentication": "Authentication failed. Please sign in again.",
-    "authorization": "You don't have permission to access this resource.",
+    "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",
     "validation": "Please check your input and try again."
-  },
-  "currency": {
-    "symbol": "£",
-    "format": "£{amount}"
-  },
-  "date": {
-    "formats": {
-      "short": "dd/MM/yyyy",
-      "long": "dd MMMM yyyy",
-      "dateTime": "dd/MM/yyyy HH:mm"
-    }
   }
 }
