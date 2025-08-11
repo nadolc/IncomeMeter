@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 import { getDashboardStats, getTodaysRoutes, getProfile, logout, register } from '../api';
 import type { RegisterFormData } from '../../types';

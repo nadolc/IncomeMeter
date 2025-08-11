@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -32,13 +32,7 @@ const RouteDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      loadRouteDetails(id);
-    }
-  }, [id]);
-
-  const loadRouteDetails = async (routeId: string) => {
+  const loadRouteDetails = useCallback(async (routeId: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -66,7 +60,13 @@ const RouteDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (id) {
+      loadRouteDetails(id);
+    }
+  }, [id, loadRouteDetails]);
 
   const getStatusColor = (status: string = 'unknown') => {
     switch (status.toLowerCase()) {

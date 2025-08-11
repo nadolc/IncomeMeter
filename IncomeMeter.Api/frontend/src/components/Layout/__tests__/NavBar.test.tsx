@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../../contexts/AuthContext';
 import NavBar from '../NavBar';
 
 // Mock the auth context with test data
@@ -142,7 +141,7 @@ describe('NavBar Component', () => {
   describe('Navigation Functionality', () => {
     it('should highlight active page', () => {
       // Mock current location
-      delete (window as any).location;
+      delete (window as unknown as { location: unknown }).location;
       window.location = { ...window.location, pathname: '/dashboard' };
       
       renderNavBar();

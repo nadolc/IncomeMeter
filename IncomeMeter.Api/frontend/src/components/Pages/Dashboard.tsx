@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
               // Calculate max income for proper bar scaling
               const maxIncome = Math.max(...(stats?.dailyIncomeData || []).map(d => d.income), 1);
               
-              return (stats?.dailyIncomeData || []).map((day, index) => (
+              return (stats?.dailyIncomeData || []).map((day) => (
                 <div key={day.date} className="grid grid-cols-12 gap-3 items-center">
                   {/* Date column - fixed width */}
                   <div className="col-span-2">

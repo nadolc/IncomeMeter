@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from './SettingsContext';

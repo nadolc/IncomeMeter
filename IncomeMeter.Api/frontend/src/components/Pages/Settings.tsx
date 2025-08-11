@@ -44,7 +44,7 @@ const Settings: React.FC = () => {
     try {
       updateSettings(formData);
       setMessage({ type: 'success', text: t('settings.messages.saveSuccess') });
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: t('settings.messages.saveError') });
     } finally {
       setLoading(false);
