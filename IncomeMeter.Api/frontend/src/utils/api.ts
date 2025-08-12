@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from "../types";
 
 // Get API URL from backend config endpoint
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getApiUrl = async (): Promise<string> => {
   try {
     const response = await fetch('/api/config');
