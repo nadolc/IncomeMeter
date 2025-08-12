@@ -371,16 +371,37 @@ Located in `migration/` directory:
 - **Git**: Conventional commits, feature branches, PR reviews required
 
 ### Environment Variables
+
+#### Backend (.NET API)
 ```bash
 # Development
 ASPNETCORE_ENVIRONMENT=Development
-FRONTEND_BASE_URL=http://localhost:5173
-API_BASE_URL=http://localhost:7079
 
 # Production
 ASPNETCORE_ENVIRONMENT=Production
-FRONTEND_BASE_URL=https://incomemeter.com
-API_BASE_URL=https://api.incomemeter.com
+```
+
+#### Frontend (React/Vite)
+```bash
+# Development (automatic)
+# Uses localhost:7079 for API calls
+
+# Production (Azure App Service)
+VITE_API_BASE_URL=https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net
+```
+
+#### Google OAuth Configuration
+**Authorized Redirect URIs:**
+```
+https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net/signin-google (production)
+https://localhost:7079/signin-google (development)
+```
+
+**Authorized JavaScript Origins:**
+```
+https://incomemeter-api-app-cbf9hubqdhcjh7e5.uksouth-01.azurewebsites.net (production)
+https://localhost:7079 (development)
+http://localhost:5173 (development)
 ```
 
 ---

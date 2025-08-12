@@ -33,7 +33,7 @@ const AuthCallback: React.FC = () => {
         
         // Fetch user profile and update auth context
         try {
-          const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
+          const apiUrl = API_BASE_URL;
           const response = await fetch(`${apiUrl}/api/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`

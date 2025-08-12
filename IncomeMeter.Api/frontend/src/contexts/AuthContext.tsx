@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       params.append('returnUrl', redirectUrl);
     }
     
-    const loginUrl = `${import.meta.env.VITE_API_URL || API_BASE_URL}/api/auth/login?${params}`;
+    const loginUrl = `${API_BASE_URL}/api/auth/login?${params}`;
     window.location.href = loginUrl;
   };
 

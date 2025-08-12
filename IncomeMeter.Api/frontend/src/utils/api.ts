@@ -12,11 +12,28 @@ import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from
   }
 };*/
 
+// Build-time URL validation
+const validateApiUrl = (url: string): void => {
+  if (!import.meta.env.DEV) {
+    if (url.includes('localhost')) {
+      console.error('❌ PRODUCTION BUILD ERROR: API URL contains localhost!');
+      console.error('Set VITE_API_BASE_URL environment variable for production');
+      console.error('Current URL:', url);
+    }
+    if (!url.startsWith('https://')) {
+      console.warn('⚠️  WARNING: Production API URL should use HTTPS');
+    }
+  }
+};
+
 // For development: point to .NET API server
-// For production: same domain as frontend
+// For production: use VITE_API_BASE_URL or fallback to current domain
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
   import.meta.env.DEV ? 'https://localhost:7079' : window.location.origin
 );
+
+// Validate the URL at module load time
+validateApiUrl(API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
