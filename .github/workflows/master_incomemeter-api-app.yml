@@ -23,6 +23,27 @@ jobs:
         with:
           dotnet-version: '9.x'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'IncomeMeter.Api/frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: ./IncomeMeter.Api/frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./IncomeMeter.Api/frontend
+
+      - name: Copy frontend to wwwroot
+        run: |
+          if (Test-Path "IncomeMeter.Api/wwwroot") { Remove-Item -Recurse -Force "IncomeMeter.Api/wwwroot" }
+          Copy-Item -Recurse "IncomeMeter.Api/frontend/dist" "IncomeMeter.Api/wwwroot"
+        shell: pwsh
+
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
