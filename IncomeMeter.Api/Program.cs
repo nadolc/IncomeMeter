@@ -228,8 +228,8 @@ builder.Services.AddAuthentication(options =>
     options.SaveTokens = true;
 
     // Add Gmail scopes
-    options.Scope.Add("https://www.googleapis.com/auth/gmail.readonly");
-    options.Scope.Add("https://www.googleapis.com/auth/gmail.modify");
+    //options.Scope.Add("https://www.googleapis.com/auth/gmail.readonly");
+    //options.Scope.Add("https://www.googleapis.com/auth/gmail.modify");
     options.Scope.Add("https://www.googleapis.com/auth/userinfo.email");
     options.Scope.Add("https://www.googleapis.com/auth/userinfo.profile");
 
