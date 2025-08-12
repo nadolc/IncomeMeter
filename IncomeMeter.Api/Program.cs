@@ -48,9 +48,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .WriteTo.ApplicationInsights(services.GetRequiredService<Microsoft.ApplicationInsights.TelemetryClient>(), TelemetryConverter.Traces)
 );
 // 1. Configure Services
-// Bind appsettings.json to C# objects
-builder.Services.Configure<DatabaseSettings>(
-    builder.Configuration.GetSection("DatabaseSettings"));
+// Bind appsettings.json to C# objects (DatabaseSettings configured separately below)
 builder.Services.Configure<GeocodingSettings>(
     builder.Configuration.GetSection("GeocodingSettings"));
 builder.Services.Configure<AppSettings>(
@@ -82,22 +80,31 @@ else
 
 builder.Services.AddHttpClient<IGeoCodingService, GeoCodingService>();
 
-// Configure Key Vault for production
-if (builder.Environment.IsProduction())
+// Configure Key Vault for Azure deployment (both Development and Production)
+// Use Key Vault when deployed to Azure or when explicitly configured to use it
+var useKeyVault = builder.Configuration.GetValue<bool>("Development:UseKeyVault", false) || 
+                  builder.Environment.IsProduction() ||
+                  !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME")); // Azure App Service indicator
+
+if (useKeyVault)
 {
     var keyVaultUri = builder.Configuration["KeyVault:VaultUri"];
     if (!string.IsNullOrEmpty(keyVaultUri))
     {
-        // Replace this block:
-        // builder.Configuration.AddAzureKeyVault(
-        //     new Uri(keyVaultUri),
-        //     new DefaultAzureCredential());
-        // builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
-
-        // With this block:
-        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
-
-        Console.WriteLine(builder.Configuration["GoogleClientId"]);
+        try 
+        {
+            builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+            Console.WriteLine($"Key Vault configured successfully: {keyVaultUri}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to configure Key Vault: {ex.Message}");
+            // Log but don't fail - fallback to local configuration
+        }
+    }
+    else
+    {
+        Console.WriteLine("Key Vault URI not found in configuration");
     }
 }
 
@@ -114,14 +121,45 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
-// Configure MongoDB
+// Configure MongoDB connection string in DatabaseSettings
+builder.Services.Configure<DatabaseSettings>(options =>
+{
+    var databaseSection = builder.Configuration.GetSection("DatabaseSettings");
+    databaseSection.Bind(options);
+    
+    // Set connection string from appropriate source
+    if (string.IsNullOrEmpty(options.ConnectionString))
+    {
+        if (useKeyVault)
+        {
+            // Try Key Vault first
+            options.ConnectionString = builder.Configuration["MongoConnectionString"] ?? 
+                                     builder.Configuration["DatabaseSettings:ConnectionString"];
+        }
+        else
+        {
+            // Use development configuration
+            options.ConnectionString = builder.Configuration["Development:MongoConnectionString"] ?? 
+                                     builder.Configuration["DatabaseSettings:ConnectionString"];
+        }
+    }
+    
+    Console.WriteLine($"MongoDB Connection configured: {!string.IsNullOrEmpty(options.ConnectionString)}");
+    if (string.IsNullOrEmpty(options.ConnectionString))
+    {
+        Console.WriteLine("WARNING: MongoDB connection string is null or empty!");
+    }
+});
+
+// Configure MongoDB client
 builder.Services.AddSingleton<IMongoClient>(provider =>
 {
-    var connectionString = builder.Environment.IsDevelopment() &&
-                          !builder.Configuration.GetValue<bool>("Development:UseKeyVault")
-        ? builder.Configuration["Development:MongoConnectionString"]
-        : builder.Configuration["MongoConnectionString"];
-    return new MongoClient(connectionString);
+    var dbSettings = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<DatabaseSettings>>().Value;
+    if (string.IsNullOrEmpty(dbSettings.ConnectionString))
+    {
+        throw new InvalidOperationException("MongoDB connection string is not configured. Check Key Vault configuration and secrets.");
+    }
+    return new MongoClient(dbSettings.ConnectionString);
 });
 
 builder.Services.AddScoped<IGmailService, GmailService>();

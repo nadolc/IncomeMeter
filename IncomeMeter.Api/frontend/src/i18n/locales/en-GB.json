@@ -27,6 +27,16 @@
       "distance": "Distance",
       "income": "Income",
       "status": "Status",
+      "totalIncome": "Total Income",
+      "routeInfo": "Route Information",
+      "routeId": "Route ID",
+      "userId": "User ID",
+      "created": "Created",
+      "updated": "Updated",
+      "overview": "Route Overview",
+      "incomeBreakdown": "Income Breakdown",
+      "total": "Total",
+      "workTypeNotSpecified": "Not specified",
       "error": {
         "title": "Error Loading Route",
         "message": "Failed to load route details"
@@ -34,6 +44,13 @@
       "notFound": {
         "title": "Route Not Found",
         "message": "The requested route could not be found"
+      },
+      "locations": {
+        "title": "Locations",
+        "startMile": "Start Mileage",
+        "endMile": "End Mileage",
+        "accuracy": "Accuracy",
+        "speed": "Speed"
       }
     },
     "list": {

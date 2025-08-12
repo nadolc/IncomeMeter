@@ -27,6 +27,16 @@
       "distance": "距離",
       "income": "收入",
       "status": "狀態",
+      "totalIncome": "總收入",
+      "routeInfo": "路線資訊",
+      "routeId": "路線 ID",
+      "userId": "用戶 ID",
+      "created": "創建時間",
+      "updated": "更新時間",
+      "overview": "路線概覽",
+      "incomeBreakdown": "收入明細",
+      "total": "總計",
+      "workTypeNotSpecified": "未指定",
       "error": {
         "title": "載入路線錯誤",
         "message": "無法載入路線詳情"
@@ -34,6 +44,13 @@
       "notFound": {
         "title": "找不到路線",
         "message": "找不到所要求的路線"
+      },
+      "locations": {
+        "title": "位置",
+        "startMile": "開始里程",
+        "endMile": "結束里程",
+        "accuracy": "準確度",
+        "speed": "速度"
       }
     },
     "list": {
