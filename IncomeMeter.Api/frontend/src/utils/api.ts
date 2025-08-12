@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from "../types";
 
 // Get API URL from backend config endpoint
-const _getApiUrl = async (): Promise<string> => {
+/*const _getApiUrl = async (): Promise<string> => {
   try {
     const response = await fetch('/api/config');
     const config = await response.json();
@@ -10,7 +10,7 @@ const _getApiUrl = async (): Promise<string> => {
   } catch {
     return import.meta.env.DEV ? 'https://localhost:7079' : window.location.origin;
   }
-};
+};*/
 
 // For development: point to .NET API server
 // For production: same domain as frontend
