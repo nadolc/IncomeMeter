@@ -121,6 +121,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
+// Add configuration endpoint for frontend
+builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
+
 // Configure MongoDB connection string in DatabaseSettings
 builder.Services.Configure<DatabaseSettings>(options =>
 {
@@ -291,6 +294,13 @@ app.UseAuthorization();
 
 // Enable static file serving for React frontend
 app.UseStaticFiles();
+
+// Expose configuration to frontend
+app.MapGet("/api/config", (IConfiguration config) => new
+{
+    ApiBaseUrl = config["AppSettings:ApiBaseUrl"],
+    FrontendBaseUrl = config["AppSettings:FrontendBaseUrl"]
+});
 
 // Map API controllers
 app.MapControllers();

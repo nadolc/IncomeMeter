@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types';
 import * as authApi from '../utils/api';
+import { API_BASE_URL } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
@@ -56,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       params.append('returnUrl', redirectUrl);
     }
     
-    const loginUrl = `${import.meta.env.VITE_API_URL || 'https://localhost:7079'}/api/auth/login?${params}`;
+    const loginUrl = `${import.meta.env.VITE_API_URL || API_BASE_URL}/api/auth/login?${params}`;
     window.location.href = loginUrl;
   };
 

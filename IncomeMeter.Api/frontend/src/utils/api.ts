@@ -1,10 +1,21 @@
 import axios from 'axios';
 import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from "../types";
 
+// Get API URL from backend config endpoint
+const getApiUrl = async (): Promise<string> => {
+  try {
+    const response = await fetch('/api/config');
+    const config = await response.json();
+    return config.ApiBaseUrl || window.location.origin;
+  } catch {
+    return import.meta.env.DEV ? 'https://localhost:7079' : window.location.origin;
+  }
+};
+
 // For development: point to .NET API server
-// For production: empty string (same domain as frontend)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  import.meta.env.DEV ? 'https://localhost:7079' : ''
+// For production: same domain as frontend
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  import.meta.env.DEV ? 'https://localhost:7079' : window.location.origin
 );
 
 const api = axios.create({

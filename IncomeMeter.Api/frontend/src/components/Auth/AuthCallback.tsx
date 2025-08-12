@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { API_BASE_URL } from '../../utils/api';
 
 const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const AuthCallback: React.FC = () => {
         
         // Fetch user profile and update auth context
         try {
-          const apiUrl = import.meta.env.VITE_API_URL || 'https://localhost:7079';
+          const apiUrl = import.meta.env.VITE_API_URL || API_BASE_URL;
           const response = await fetch(`${apiUrl}/api/auth/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
