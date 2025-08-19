@@ -14,7 +14,7 @@ import EnhancedRouteList from './components/Pages/EnhancedRouteList';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AuthCallback from './components/Auth/AuthCallback';
 import './i18n';
-import TokenDisplay from './components/Debug/TokenDisplay';
+// import TokenDisplay from './components/Debug/TokenDisplay';
 
 function App() {
   return (
@@ -38,7 +38,7 @@ function App() {
                 </Route>
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
-              { <TokenDisplay /> }
+              {/* <TokenDisplay /> */}
             </div>
           </Router>
         </LanguageProvider>
