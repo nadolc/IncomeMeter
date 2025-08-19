@@ -212,7 +212,7 @@ describe('LocationForm Component', () => {
   it('handles geolocation error', async () => {
     const mockError = { message: 'Location access denied' };
 
-    geolocationMock.getCurrentPosition.mockImplementation((success, error) => {
+    geolocationMock.getCurrentPosition.mockImplementation((_, error) => {
       error(mockError);
     });
 

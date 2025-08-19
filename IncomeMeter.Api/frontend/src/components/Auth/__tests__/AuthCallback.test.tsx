@@ -47,7 +47,7 @@ describe('AuthCallback Component', () => {
   it('renders loading state initially', () => {
     render(
       <TestWrapper>
-        <AuthCallbackComponent />
+        <AuthCallback />
       </TestWrapper>
     );
 
@@ -68,7 +68,7 @@ describe('AuthCallback Component', () => {
 
     render(
       <TestWrapper>
-        <AuthCallbackComponent />
+        <AuthCallback />
       </TestWrapper>
     );
 
@@ -130,7 +130,7 @@ describe('AuthCallback Component', () => {
 
     render(
       <TestWrapper>
-        <AuthCallbackComponent />
+        <AuthCallback />
       </TestWrapper>
     );
 

@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../../../i18n';
 import RouteForm from '../RouteForm';
+import type { Route } from '../../../types';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -19,7 +20,7 @@ const mockRoute = {
   id: '1',
   userId: 'user-1',
   workType: 'Taxi',
-  status: 'scheduled',
+  status: 'scheduled' as const,
   scheduleStart: new Date('2024-01-01T09:00:00Z'),
   scheduleEnd: new Date('2024-01-01T17:00:00Z'),
   actualStartTime: undefined,
@@ -40,7 +41,7 @@ const mockRoute = {
 const mockOnSave = jest.fn();
 const mockOnCancel = jest.fn();
 
-const renderRouteForm = (route?: typeof mockRoute) => {
+const renderRouteForm = (route?: Route) => {
   return render(
     <I18nextProvider i18n={i18n}>
       <RouteForm
