@@ -319,7 +319,13 @@ public class RoutesController : ControllerBase
                 .ForContext("WorkType", route.WorkType)
                 .Information("Route created successfully via API key");
 
-            return Ok(route);
+            // Return iOS-friendly response with prominent routeId
+            return Ok(new {
+                success = true,
+                message = "Route started successfully",
+                routeId = route.Id,
+                route = route
+            });
         }
         catch (Exception ex)
         {
@@ -331,6 +337,121 @@ public class RoutesController : ControllerBase
                 .Error(ex, "Failed to start route via API key");
             
             return StatusCode(500, new { message = "Failed to start route", error = ex.Message });
+        }
+    }
+
+    // API Key compatible endpoint for ending routes via iOS shortcuts
+    [HttpPost("end-with-apikey")]
+    public async Task<IActionResult> EndRouteWithApiKey([FromBody] EndRouteIOSDto endRouteDto)
+    {
+        // Get user from API key middleware (stored in HttpContext.Items)
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+        {
+            return Unauthorized("Invalid API key - user not found via middleware");
+        }
+
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+
+        // Validate model state (basic required fields and ranges)
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .ToList();
+                
+            Log.Logger
+                .ForContext("EventType", "RouteEndValidationFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("ValidationErrors", errors)
+                .Warning("iOS route end validation failed: {ValidationErrors}", string.Join(", ", errors));
+                
+            return BadRequest(new { error = "Validation failed", details = errors });
+        }
+
+        // Additional custom validation
+        var validationError = endRouteDto.GetValidationError();
+        if (!string.IsNullOrEmpty(validationError))
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteEndCustomValidationFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("ValidationError", validationError)
+                .Warning("iOS route end custom validation failed: {ValidationError}", validationError);
+                
+            return BadRequest(new { error = validationError });
+        }
+
+        // Validate RouteId format (basic ObjectId format check)
+        if (string.IsNullOrWhiteSpace(endRouteDto.RouteId) || endRouteDto.RouteId.Length != 24)
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteEndRouteIdValidationError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", endRouteDto.RouteId)
+                .Warning("iOS route end RouteId format validation failed");
+                
+            return BadRequest(new { error = "RouteId must be a valid 24-character ObjectId" });
+        }
+        
+        try
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteEndingStarted")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
+                .ForContext("EndMile", endRouteDto.EndMile)
+                .ForContext("SchedulePeriod", endRouteDto.SchedulePeriod)
+                .Information("User ending route via API key - validation passed");
+
+            var route = await _routeService.EndRouteFromIOSAsync(endRouteDto, user.Id!);
+            
+            if (route == null)
+            {
+                Log.Logger
+                    .ForContext("EventType", "RouteEndFailed")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                    .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
+                    .Warning("Route not found when attempting to end route via API key");
+                return NotFound(new { error = "Route not found or you do not have access to this route", routeId = endRouteDto.RouteId });
+            }
+
+            Log.Logger
+                .ForContext("EventType", "RouteCompleted")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", route.Id?[..Math.Min(8, route.Id.Length)] + "***")
+                .ForContext("TotalIncome", route.TotalIncome)
+                .ForContext("Distance", route.Distance)
+                .Information("Route ended successfully via API key with income: {TotalIncome}", route.TotalIncome);
+
+            // Return iOS-friendly response
+            return Ok(new {
+                success = true,
+                message = "Route ended successfully",
+                routeId = route.Id,
+                totalIncome = route.TotalIncome,
+                distance = route.Distance,
+                route = route
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteEndFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
+                .ForContext("Error", ex.Message)
+                .Error(ex, "Failed to end route via API key");
+            
+            return StatusCode(500, new { message = "Failed to end route", error = ex.Message });
         }
     }
 

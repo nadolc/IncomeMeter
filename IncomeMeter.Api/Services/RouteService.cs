@@ -99,6 +99,111 @@ public class RouteService : IRouteService
         return result;
     }
 
+    public async Task<Models.Route?> EndRouteFromIOSAsync(EndRouteIOSDto routeDto, string userId)
+    {
+        // First, get the current route to validate and get actualStartTime
+        var currentRoute = await GetRouteByIdAsync(routeDto.RouteId, userId);
+        if (currentRoute == null)
+        {
+            return null; // Route not found or user doesn't have access
+        }
+
+        // Validate endMile against startMile
+        if (currentRoute.StartMile.HasValue && routeDto.EndMile < currentRoute.StartMile.Value)
+        {
+            throw new InvalidOperationException("End mileage cannot be less than start mileage");
+        }
+
+        // Convert iOS income format to standard format
+        var incomeItems = routeDto.ConvertToIncomeItems();
+        var totalIncome = incomeItems.Sum(i => i.Amount);
+
+        // Parse schedule period and combine with actual start time
+        var actualStartTime = currentRoute.ActualStartTime ?? DateTime.UtcNow;
+        var (scheduleStart, scheduleEnd) = ParseSchedulePeriod(routeDto.SchedulePeriod, actualStartTime);
+
+        // Use provided actualEndTime or current time
+        var actualEndTime = routeDto.ActualEndTime ?? DateTime.UtcNow;
+
+        var filter = Builders<Models.Route>.Filter.And(
+            Builders<Models.Route>.Filter.Eq(r => r.Id, routeDto.RouteId),
+            Builders<Models.Route>.Filter.Eq(r => r.UserId, userId)
+        );
+
+        var update = Builders<Models.Route>.Update
+            .Set(r => r.EndMile, routeDto.EndMile)
+            .Set(r => r.ActualEndTime, actualEndTime)
+            .Set(r => r.Status, "completed")
+            .Set(r => r.ScheduleStart, scheduleStart)
+            .Set(r => r.ScheduleEnd, scheduleEnd)
+            .Set(r => r.Incomes, incomeItems.Select(dto => new IncomeItem 
+            { 
+                Source = dto.Source, 
+                Amount = dto.Amount 
+            }).ToList())
+            .Set(r => r.TotalIncome, totalIncome)
+            .Set(r => r.UpdatedAt, DateTime.UtcNow);
+
+        var result = await _routes.FindOneAndUpdateAsync(filter, update, 
+            new FindOneAndUpdateOptions<Models.Route> { ReturnDocument = ReturnDocument.After });
+
+        // Calculate distance if both start and end miles are available
+        if (result != null && result.StartMile.HasValue && result.EndMile.HasValue)
+        {
+            var distance = Math.Abs(result.EndMile.Value - result.StartMile.Value);
+            var distanceUpdate = Builders<Models.Route>.Update.Set(r => r.Distance, distance);
+            await _routes.UpdateOneAsync(filter, distanceUpdate);
+            result.Distance = distance;
+        }
+
+        return result;
+    }
+
+    private (DateTime scheduleStart, DateTime scheduleEnd) ParseSchedulePeriod(string schedulePeriod, DateTime baseDate)
+    {
+        var parts = schedulePeriod.Split('-');
+        if (parts.Length != 2)
+        {
+            throw new ArgumentException("Schedule period must be in format 'HHMM-HHMM'");
+        }
+
+        var startTimeStr = parts[0].Trim();
+        var endTimeStr = parts[1].Trim();
+
+        if (startTimeStr.Length != 4 || endTimeStr.Length != 4)
+        {
+            throw new ArgumentException("Time parts must be 4 digits (HHMM)");
+        }
+
+        // Parse start time
+        if (!int.TryParse(startTimeStr.Substring(0, 2), out int startHour) ||
+            !int.TryParse(startTimeStr.Substring(2, 2), out int startMinute) ||
+            startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59)
+        {
+            throw new ArgumentException("Invalid start time in schedule period");
+        }
+
+        // Parse end time
+        if (!int.TryParse(endTimeStr.Substring(0, 2), out int endHour) ||
+            !int.TryParse(endTimeStr.Substring(2, 2), out int endMinute) ||
+            endHour < 0 || endHour > 23 || endMinute < 0 || endMinute > 59)
+        {
+            throw new ArgumentException("Invalid end time in schedule period");
+        }
+
+        // Combine date from baseDate with parsed times
+        var scheduleStart = new DateTime(baseDate.Year, baseDate.Month, baseDate.Day, startHour, startMinute, 0, DateTimeKind.Utc);
+        var scheduleEnd = new DateTime(baseDate.Year, baseDate.Month, baseDate.Day, endHour, endMinute, 0, DateTimeKind.Utc);
+
+        // Handle case where end time is next day (e.g., 2300-0100)
+        if (scheduleEnd <= scheduleStart)
+        {
+            scheduleEnd = scheduleEnd.AddDays(1);
+        }
+
+        return (scheduleStart, scheduleEnd);
+    }
+
     public async Task<Models.Route?> UpdateRouteAsync(string id, UpdateRouteDto routeDto, string userId)
     {
         var filter = Builders<Models.Route>.Filter.And(

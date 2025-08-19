@@ -85,3 +85,81 @@ public class IncomeItemDto
     [Range(0, double.MaxValue)]
     public decimal Amount { get; set; }
 }
+
+// DTO for ending a route via iOS shortcuts with flexible income format
+public class EndRouteIOSDto
+{
+    [Required(ErrorMessage = "RouteId is required")]
+    public string RouteId { get; set; } = null!;
+
+    [Required(ErrorMessage = "EndMile is required")]
+    [Range(0, double.MaxValue, ErrorMessage = "EndMile must be a positive number")]
+    public double EndMile { get; set; }
+
+    [Required(ErrorMessage = "SchedulePeriod is required")]
+    public string SchedulePeriod { get; set; } = null!;
+
+    [Required(ErrorMessage = "Incomes are required")]
+    public List<Dictionary<string, object>> Incomes { get; set; } = new();
+
+    public DateTime? ActualEndTime { get; set; }
+
+    // Validation methods
+    public bool IsValidSchedulePeriod()
+    {
+        return !string.IsNullOrWhiteSpace(SchedulePeriod) && SchedulePeriod.Contains('-');
+    }
+
+    public bool IsValidIncomes()
+    {
+        if (Incomes == null || Incomes.Count == 0)
+            return false;
+
+        foreach (var income in Incomes)
+        {
+            if (income == null || income.Count != 1)
+                return false;
+
+            var kvp = income.First();
+            if (string.IsNullOrWhiteSpace(kvp.Key))
+                return false;
+
+            // Try to convert value to decimal
+            if (!decimal.TryParse(kvp.Value?.ToString(), out decimal amount) || amount < 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    public List<IncomeItemDto> ConvertToIncomeItems()
+    {
+        var result = new List<IncomeItemDto>();
+        
+        foreach (var income in Incomes)
+        {
+            var kvp = income.First();
+            if (decimal.TryParse(kvp.Value?.ToString(), out decimal amount))
+            {
+                result.Add(new IncomeItemDto 
+                { 
+                    Source = kvp.Key, 
+                    Amount = amount 
+                });
+            }
+        }
+
+        return result;
+    }
+
+    public string GetValidationError()
+    {
+        if (!IsValidSchedulePeriod())
+            return "SchedulePeriod must be in format 'HHMM-HHMM'";
+        
+        if (!IsValidIncomes())
+            return "Incomes must be an array of objects with source-amount pairs";
+
+        return "";
+    }
+}

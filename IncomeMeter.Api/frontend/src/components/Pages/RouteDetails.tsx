@@ -147,7 +147,7 @@ const RouteDetails: React.FC = () => {
         </p>
         <div className="space-x-4">
           <button
-            onClick={() => navigate('/routes')}
+            onClick={() => navigate('/routes/manage')}
             className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
           >
             {t('common.back')}
@@ -171,7 +171,7 @@ const RouteDetails: React.FC = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-4 mb-4">
           <button
-            onClick={() => navigate('/routes')}
+            onClick={() => navigate('/routes/manage')}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

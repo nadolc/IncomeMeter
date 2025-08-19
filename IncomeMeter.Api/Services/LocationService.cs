@@ -186,6 +186,43 @@ public class LocationService : ILocationService
         }
     }
 
+    public async Task<Location?> AddLocationFromIOSAsync(CreateLocationIOSDto dto, string userId)
+    {
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
+        
+        Log.Logger
+            .ForContext("EventType", "LocationAdditionIOSStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .Information("Starting iOS location addition with automatic timestamp");
+
+        // Convert iOS DTO to full CreateLocationDto with current timestamp
+        var createLocationDto = new CreateLocationDto
+        {
+            RouteId = dto.RouteId,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude,
+            Timestamp = DateTime.UtcNow, // Automatically set to current time
+            Accuracy = null, // iOS will provide basic coordinates only
+            Speed = null     // iOS will provide basic coordinates only
+        };
+
+        Log.Logger
+            .ForContext("EventType", "LocationIOSConversion")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("AutoTimestamp", createLocationDto.Timestamp)
+            .Information("iOS location converted to full DTO with timestamp: {AutoTimestamp}", createLocationDto.Timestamp);
+
+        // Use the existing AddLocationAsync method which handles:
+        // - Route ownership verification
+        // - Address resolution via geocoding
+        // - Distance calculation from last location (DistanceFromLastKm, DistanceFromLastMi)
+        // - GPS coordinate rounding
+        // - Database insertion
+        return await AddLocationAsync(createLocationDto, userId);
+    }
+
     public async Task<Location?> GetLocationByIdAsync(string id, string userId)
     {
         var correlationId = Guid.NewGuid().ToString("N")[..8];

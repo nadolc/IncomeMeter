@@ -10,7 +10,6 @@ namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = "Bearer")]
 public class LocationsController : ControllerBase
 {
     private readonly ILocationService _locationService;
@@ -25,6 +24,7 @@ public class LocationsController : ControllerBase
     private string? GetCurrentUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     [HttpGet]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetLocations([FromQuery] string routeId)
     {
         var userId = GetCurrentUserId();
@@ -56,6 +56,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> AddLocation([FromBody] CreateLocationDto dto)
     {
         var userId = GetCurrentUserId();
@@ -123,6 +124,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetLocationById(string id)
     {
         var userId = GetCurrentUserId();
@@ -164,6 +166,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> UpdateLocation(string id, [FromBody] UpdateLocationDto dto)
     {
         var userId = GetCurrentUserId();
@@ -228,6 +231,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> DeleteLocation(string id)
     {
         var userId = GetCurrentUserId();
@@ -281,6 +285,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpDelete("route/{routeId}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> DeleteLocationsByRouteId(string routeId)
     {
         var userId = GetCurrentUserId();
@@ -331,5 +336,184 @@ public class LocationsController : ControllerBase
                 
             return StatusCode(500, new { error = "An unexpected error occurred while deleting locations." });
         }
+    }
+
+    // API Key compatible endpoint for iOS shortcuts - Add location
+    [HttpPost("add-with-apikey")]
+    public async Task<IActionResult> AddLocationWithApiKey([FromBody] CreateLocationIOSDto dto)
+    {
+        // Get user from API key middleware (stored in HttpContext.Items)
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+        {
+            return Unauthorized("Invalid API key - user not found via middleware");
+        }
+
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+
+        // Validate model state (basic required fields and ranges)
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .ToList();
+                
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionValidationFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("ValidationErrors", errors)
+                .Warning("iOS location validation failed: {ValidationErrors}", string.Join(", ", errors));
+                
+            return BadRequest(new { error = "Validation failed", details = errors });
+        }
+
+        // Validate coordinate precision (6 decimal places)
+        if (!dto.IsValidCoordinatePrecision())
+        {
+            var precisionError = dto.GetCoordinatePrecisionError();
+            
+            Log.Logger
+                .ForContext("EventType", "LocationCoordinatePrecisionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("PrecisionError", precisionError)
+                .Warning("iOS location coordinate precision validation failed: {PrecisionError}", precisionError);
+                
+            return BadRequest(new { error = precisionError });
+        }
+
+        // Validate RouteId format (basic ObjectId format check)
+        if (string.IsNullOrWhiteSpace(dto.RouteId) || dto.RouteId.Length != 24)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationRouteIdValidationError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", dto.RouteId)
+                .Warning("iOS location RouteId format validation failed");
+                
+            return BadRequest(new { error = "RouteId must be a valid 24-character ObjectId" });
+        }
+
+        try
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionRequest")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
+                .ForContext("Latitude", Math.Round(dto.Latitude, 6))
+                .ForContext("Longitude", Math.Round(dto.Longitude, 6))
+                .Information("User adding location via API key - validation passed");
+
+            var location = await _locationService.AddLocationFromIOSAsync(dto, user.Id!);
+            if (location == null)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationAdditionRouteNotFound")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                    .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
+                    .Warning("Route not found or user does not have access to route for location addition via API key");
+                    
+                return NotFound(new { error = "Route not found or you do not have access to this route", routeId = dto.RouteId });
+            }
+
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("LocationId", location.Id?[..Math.Min(8, location.Id.Length)] + "***")
+                .Information("Location added successfully via API key");
+
+            return Ok(location);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionValidationError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("ValidationError", ex.Message)
+                .Warning("Location addition via API key failed validation: {ValidationError}", ex.Message);
+                
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .Error(ex, "Failed to add location via API key");
+                
+            return StatusCode(500, new { message = "Failed to add location", error = ex.Message });
+        }
+    }
+
+    // API Key compatible endpoint for iOS shortcuts - Get locations by route
+    [HttpGet("route/{routeId}/with-apikey")]
+    public async Task<IActionResult> GetLocationsByRouteWithApiKey(string routeId)
+    {
+        // Get user from API key middleware (stored in HttpContext.Items)
+        var user = HttpContext.Items["User"] as User;
+        if (user == null)
+        {
+            return Unauthorized("Invalid API key - user not found via middleware");
+        }
+
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+
+        try
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationsRequest")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", routeId?[..Math.Min(8, routeId?.Length ?? 0)] + "***")
+                .Information("User requesting locations for route via API key");
+
+            var locations = await _locationService.GetLocationsByRouteIdAsync(routeId, user.Id!);
+            
+            Log.Logger
+                .ForContext("EventType", "LocationsRequestSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", routeId?[..Math.Min(8, routeId?.Length ?? 0)] + "***")
+                .ForContext("LocationCount", locations.Count)
+                .Information("Locations returned successfully via API key");
+                
+            return Ok(locations);
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationsRequestError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", routeId?[..Math.Min(8, routeId?.Length ?? 0)] + "***")
+                .Error(ex, "Failed to get locations via API key");
+                
+            return StatusCode(500, new { message = "Failed to get locations", error = ex.Message });
+        }
+    }
+
+    // Debug endpoint to test API key authentication for locations
+    [HttpGet("test-apikey")]
+    public async Task<IActionResult> TestApiKeyForLocations()
+    {
+        var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+        var user = HttpContext.Items["User"] as User;
+        
+        return Ok(new 
+        { 
+            HasAuthHeader = !string.IsNullOrEmpty(authHeader),
+            AuthHeaderPrefix = authHeader?.Substring(0, Math.Min(20, authHeader?.Length ?? 0)),
+            UserFound = user != null,
+            UserEmail = user?.Email,
+            Message = user != null ? "API key authentication working for locations" : "API key authentication failed"
+        });
     }
 }
