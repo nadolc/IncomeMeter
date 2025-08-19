@@ -26,7 +26,7 @@ const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // const [showCreateModal, setShowCreateModal] = useState(false); // TODO: Implement create modal
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -129,7 +129,10 @@ const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">{t('locations.list.title')}</h2>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+            // TODO: Implement create location modal
+            console.log('Create location modal not implemented yet');
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
         >
           {t('locations.list.add')}
