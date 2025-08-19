@@ -142,7 +142,8 @@
   "settings": {
     "title": "Settings",
     "sections": {
-      "localization": "Localization"
+      "localization": "Localization",
+      "apiKeys": "API Keys"
     },
     "profile": {
       "title": "Profile Information",
@@ -190,6 +191,26 @@
     "saving": "Saving...",
     "saved": "Settings saved successfully!"
   },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Generate API keys for programmatic access to your account",
+    "generate": "Generate New API Key",
+    "generating": "Generating...",
+    "form": {
+      "description": "Description",
+      "descriptionPlaceholder": "e.g., Mobile App Integration"
+    },
+    "success": {
+      "title": "API Key Generated",
+      "message": "Your API key has been generated successfully. Copy it now - you won't be able to see it again!",
+      "copyKey": "Copy API Key",
+      "copied": "Copied!"
+    },
+    "errors": {
+      "generateFailed": "Failed to generate API key. Please try again.",
+      "descriptionRequired": "Description is required"
+    }
+  },
   "profile": {
     "title": "Profile",
     "loading": "Loading profile...",
@@ -198,6 +219,8 @@
     "form": {
       "name": "Name",
       "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
       "memberSince": "Member since"
     },
     "error": {

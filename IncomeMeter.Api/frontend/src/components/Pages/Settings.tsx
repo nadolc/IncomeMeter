@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import WorkTypeConfigSection from '../Settings/WorkTypeConfig';
+import ApiKeyGenerator from '../Settings/ApiKeyGenerator';
 import type { UserSettings } from '../../types';
 
 const Settings: React.FC = () => {
@@ -239,6 +240,11 @@ const Settings: React.FC = () => {
                     </label>
                   </div>
                 </div>
+              </div>
+
+              {/* API Keys Section */}
+              <div>
+                <ApiKeyGenerator />
               </div>
 
               {/* Work Types & Income Sources Section */}

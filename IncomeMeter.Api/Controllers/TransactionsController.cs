@@ -3,7 +3,7 @@ using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace WorkTracker.Api.Controllers;
+namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

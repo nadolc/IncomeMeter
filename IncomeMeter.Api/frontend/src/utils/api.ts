@@ -253,3 +253,9 @@ export const updateWorkTypeConfig = async (id: string, data: UpdateWorkTypeConfi
 export const deleteWorkTypeConfig = async (id: string): Promise<void> => {
   await api.delete(`/api/work-type-configs/${id}`);
 };
+
+// API Key endpoints
+export const generateApiKey = async (description: string): Promise<{ apiKey: string; apiKeyDetails: any }> => {
+  const response = await api.post('/api/users/me/apikeys', { description });
+  return response.data;
+};

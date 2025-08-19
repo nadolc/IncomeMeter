@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Serilog;
 
-namespace WorkTracker.Api.Controllers;
+namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

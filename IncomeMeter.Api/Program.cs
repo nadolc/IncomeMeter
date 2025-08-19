@@ -289,14 +289,14 @@ app.UseHttpsRedirection();
 // Add global exception handling middleware (should be early in pipeline)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
+// Add custom API key authentication middleware EARLY - before logging
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
+
 // Add request logging middleware
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 // Add security logging middleware
 app.UseMiddleware<SecurityLoggingMiddleware>();
-
-// Add custom API key authentication middleware BEFORE UseAuthentication
-app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

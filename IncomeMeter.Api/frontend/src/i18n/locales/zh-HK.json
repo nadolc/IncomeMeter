@@ -142,7 +142,8 @@
   "settings": {
     "title": "設定",
     "sections": {
-      "localization": "本地化設定"
+      "localization": "本地化設定",
+      "apiKeys": "API 密鑰"
     },
     "profile": {
       "title": "個人資料",
@@ -190,6 +191,26 @@
     "saving": "儲存中...",
     "saved": "設定已成功儲存！"
   },
+  "apiKeys": {
+    "title": "API 密鑰",
+    "description": "為程式化存取您的帳戶產生 API 密鑰",
+    "generate": "產生新 API 密鑰",
+    "generating": "產生中...",
+    "form": {
+      "description": "描述",
+      "descriptionPlaceholder": "例如：手機應用程式整合"
+    },
+    "success": {
+      "title": "API 密鑰已產生",
+      "message": "您的 API 密鑰已成功產生。請立即複製 - 您將無法再次查看！",
+      "copyKey": "複製 API 密鑰",
+      "copied": "已複製！"
+    },
+    "errors": {
+      "generateFailed": "產生 API 密鑰失敗。請重試。",
+      "descriptionRequired": "需要描述"
+    }
+  },
   "profile": {
     "title": "個人檔案",
     "loading": "載入個人檔案中...",
@@ -198,6 +219,8 @@
     "form": {
       "name": "姓名",
       "email": "電郵",
+      "phone": "電話",
+      "address": "地址",
       "memberSince": "會員自"
     },
     "error": {

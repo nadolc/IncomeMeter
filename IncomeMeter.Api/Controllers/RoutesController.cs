@@ -10,7 +10,6 @@ namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(AuthenticationSchemes = "Bearer")]
 public class RoutesController : ControllerBase
 {
     private readonly IRouteService _routeService;
@@ -26,6 +25,7 @@ public class RoutesController : ControllerBase
     private string? GetCurrentUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     [HttpGet]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetRoutes()
     {
         var userId = GetCurrentUserId();
@@ -39,6 +39,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpPost("start")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> StartRoute([FromBody] StartRouteDto startRouteDto)
     {
         var userId = GetCurrentUserId();
@@ -71,6 +72,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetRouteById(string id)
     {
         var userId = GetCurrentUserId();
@@ -90,6 +92,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> CreateRoute([FromBody] CreateRouteDto createRouteDto)
     {
         var userId = GetCurrentUserId();
@@ -122,6 +125,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpPost("end")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> EndRoute([FromBody] EndRouteDto endRouteDto)
     {
         var userId = GetCurrentUserId();
@@ -167,6 +171,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> UpdateRoute(string id, [FromBody] UpdateRouteDto updateRouteDto)
     {
         var userId = GetCurrentUserId();
@@ -207,6 +212,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> DeleteRoute(string id)
     {
         var userId = GetCurrentUserId();
@@ -247,6 +253,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpGet("status/{status}")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetRoutesByStatus(string status)
     {
         var userId = GetCurrentUserId();
@@ -260,6 +267,7 @@ public class RoutesController : ControllerBase
     }
 
     [HttpGet("date-range")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> GetRoutesByDateRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
         var userId = GetCurrentUserId();
@@ -270,5 +278,76 @@ public class RoutesController : ControllerBase
 
         var routes = await _routeService.GetRoutesByDateRangeAsync(userId, startDate, endDate);
         return Ok(routes);
+    }
+
+    // API Key compatible endpoint for iOS shortcuts
+    [HttpPost("start-with-apikey")]
+    public async Task<IActionResult> StartRouteWithApiKey([FromBody] StartRouteDto startRouteDto)
+    {
+        // Debug: Check what's in the Authorization header
+        var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+        Log.Logger.Information("API Key endpoint called with Authorization header: {AuthHeader}", 
+            authHeader != null ? authHeader.Substring(0, Math.Min(20, authHeader.Length)) + "..." : "null");
+
+        // Get user from API key middleware (stored in HttpContext.Items)
+        var user = HttpContext.Items["User"] as User;
+        Log.Logger.Information("User found from API key middleware: {UserFound}", user != null);
+        
+        if (user == null)
+        {
+            return Unauthorized("Invalid API key - user not found via middleware");
+        }
+
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
+        try
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteStartRequested")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("WorkType", startRouteDto.WorkType)
+                .Information("User started a new route via API key");
+
+            var route = await _routeService.StartRouteAsync(startRouteDto, user.Id!);
+            
+            Log.Logger
+                .ForContext("EventType", "RouteCreated")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("RouteId", route.Id?[..Math.Min(8, route.Id.Length)] + "***")
+                .ForContext("WorkType", route.WorkType)
+                .Information("Route created successfully via API key");
+
+            return Ok(route);
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteStartFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("Error", ex.Message)
+                .Error(ex, "Failed to start route via API key");
+            
+            return StatusCode(500, new { message = "Failed to start route", error = ex.Message });
+        }
+    }
+
+    // Debug endpoint to test API key authentication
+    [HttpGet("test-apikey")]
+    public async Task<IActionResult> TestApiKey()
+    {
+        var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+        var user = HttpContext.Items["User"] as User;
+        
+        return Ok(new 
+        { 
+            HasAuthHeader = !string.IsNullOrEmpty(authHeader),
+            AuthHeaderPrefix = authHeader?.Substring(0, Math.Min(20, authHeader?.Length ?? 0)),
+            UserFound = user != null,
+            UserEmail = user?.Email,
+            AllHeaders = HttpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
+        });
     }
 }
