@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next'; // Commented out as unused
 import { 
   getWorkTypeConfigs, 
   createWorkTypeConfig, 
@@ -10,7 +10,7 @@ import {
 import type { WorkTypeConfig, CreateWorkTypeConfigRequest, IncomeSourceTemplate } from '../../types';
 
 const WorkTypeConfigSection: React.FC = () => {
-  const { t } = useTranslation();
+  // const { t } = useTranslation(); // Commented out as unused
   const [workTypeConfigs, setWorkTypeConfigs] = useState<WorkTypeConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);

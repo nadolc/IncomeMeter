@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthCallback } from '../AuthCallback';
+import AuthCallback from '../AuthCallback';
 import { AuthProvider } from '../../../contexts/AuthContext';
 import { LanguageProvider } from '../../../contexts/LanguageContext';
 
@@ -47,7 +47,7 @@ describe('AuthCallback Component', () => {
   it('renders loading state initially', () => {
     render(
       <TestWrapper>
-        <AuthCallback />
+        <AuthCallbackComponent />
       </TestWrapper>
     );
 
@@ -68,7 +68,7 @@ describe('AuthCallback Component', () => {
 
     render(
       <TestWrapper>
-        <AuthCallback />
+        <AuthCallbackComponent />
       </TestWrapper>
     );
 
@@ -94,8 +94,6 @@ describe('AuthCallback Component', () => {
       useSearchParams: () => [new URLSearchParams('error=Authentication%20failed')]
     }));
 
-    const { AuthCallback } = await import('../AuthCallback');
-
     render(
       <TestWrapper>
         <AuthCallback />
@@ -115,8 +113,6 @@ describe('AuthCallback Component', () => {
       useSearchParams: () => [new URLSearchParams('')]
     }));
 
-    const { AuthCallback } = await import('../AuthCallback');
-
     render(
       <TestWrapper>
         <AuthCallback />
@@ -134,7 +130,7 @@ describe('AuthCallback Component', () => {
 
     render(
       <TestWrapper>
-        <AuthCallback />
+        <AuthCallbackComponent />
       </TestWrapper>
     );
 
@@ -162,8 +158,6 @@ describe('AuthCallback Component', () => {
       ok: true,
       json: async () => ({ id: 'user-123' })
     });
-
-    const { AuthCallback } = await import('../AuthCallback');
 
     render(
       <TestWrapper>

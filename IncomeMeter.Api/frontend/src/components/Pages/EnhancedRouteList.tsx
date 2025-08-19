@@ -2,31 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import RouteForm from './RouteForm';
-import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute, startRoute } from '../../utils/api';
+import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute } from '../../utils/api';
+import type { Route } from '../../types';
 
-interface IncomeItem {
-  source: string;
-  amount: number;
-}
-
-interface Route {
-  id?: string;
-  userId: string;
-  workType?: string;
-  status: string;
-  scheduleStart: string | Date;
-  scheduleEnd: string | Date;
-  actualStartTime?: string | Date;
-  actualEndTime?: string | Date;
-  incomes: IncomeItem[];
-  totalIncome: number;
-  estimatedIncome: number;
-  distance: number;
-  startMile?: number;
-  endMile?: number;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-}
 
 const EnhancedRouteList: React.FC = () => {
   const { t } = useTranslation();
@@ -128,24 +106,7 @@ const EnhancedRouteList: React.FC = () => {
     }
   };
 
-  const handleStartRoute = async (workType: string, startMile: number) => {
-    try {
-      const newRoute = await startRoute({ workType, startMile });
-      const processedRoute: Route = {
-        ...newRoute,
-        scheduleStart: new Date(newRoute.scheduleStart),
-        scheduleEnd: new Date(newRoute.scheduleEnd),
-        actualStartTime: newRoute.actualStartTime ? new Date(newRoute.actualStartTime) : undefined,
-        actualEndTime: newRoute.actualEndTime ? new Date(newRoute.actualEndTime) : undefined,
-        createdAt: new Date(newRoute.createdAt),
-        updatedAt: new Date(newRoute.updatedAt),
-      };
-      setRoutes(prev => [processedRoute, ...prev]);
-    } catch (err) {
-      console.error('Error starting route:', err);
-      setError(err instanceof Error ? err.message : 'Failed to start route');
-    }
-  };
+  // Removed unused handleStartRoute function
 
   const getStatusColor = (status: string = 'unknown') => {
     switch (status.toLowerCase()) {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../../../i18n';
@@ -306,7 +305,7 @@ describe('RouteForm Component', () => {
   it('provides work type options', () => {
     renderRouteForm();
     
-    const workTypeSelect = screen.getByLabelText('Work Type *');
+    // const workTypeSelect = screen.getByLabelText('Work Type *'); // Commented out as unused
     
     expect(screen.getByText('Select work type')).toBeInTheDocument();
     expect(screen.getByText('Taxi')).toBeInTheDocument();

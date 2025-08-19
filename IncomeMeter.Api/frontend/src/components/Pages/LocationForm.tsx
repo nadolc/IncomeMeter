@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 
 interface LocationFormData {
   routeId: string;
@@ -35,7 +34,6 @@ interface LocationFormProps {
 
 const LocationForm: React.FC<LocationFormProps> = ({ routeId, location, onSave, onCancel }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [formData, setFormData] = useState<LocationFormData>({
     routeId: routeId,
     latitude: 0,

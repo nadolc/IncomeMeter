@@ -1,7 +1,6 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter, useSearchParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter, useSearchParams } from 'react-router-dom';
 import Register from '../Register';
 import { AuthProvider } from '../../../contexts/AuthContext';
 import { LanguageProvider } from '../../../contexts/LanguageContext';
@@ -348,7 +347,7 @@ describe('Register Page', () => {
     const nameInput = screen.getByLabelText(/name/i);
     const emailInput = screen.getByLabelText(/email/i);
     const phoneInput = screen.getByLabelText(/phone/i);
-    const addressInput = screen.getByLabelText(/address/i);
+    // const addressInput = screen.getByLabelText(/address/i); // Commented out as unused
 
     expect(nameInput).toHaveAttribute('required');
     expect(emailInput).toHaveAttribute('required');

@@ -8,7 +8,10 @@
       "Bash(mkdir:*)",
       "Bash(dotnet build)",
       "Bash(ss:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

@@ -1,7 +1,6 @@
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter, useParams } from 'react-router-dom';
 import RouteDetails from '../RouteDetails';
 import { LanguageProvider } from '../../../contexts/LanguageContext';
 import { SettingsProvider } from '../../../contexts/SettingsContext';

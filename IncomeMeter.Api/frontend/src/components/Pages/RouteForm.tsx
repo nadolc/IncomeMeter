@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { getActiveWorkTypeConfigs, createRoute, updateRoute } from '../../utils/api';
 import type { WorkTypeConfig } from '../../types';
 
@@ -31,7 +30,7 @@ interface Route {
   actualEndTime?: Date;
   incomes: IncomeItem[];
   totalIncome: number;
-  estimatedIncome: number;
+  estimatedIncome?: number;
   distance: number;
   startMile?: number;
   endMile?: number;
@@ -47,7 +46,6 @@ interface RouteFormProps {
 
 const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [formData, setFormData] = useState<RouteFormData>({
     workType: '',
     workTypeId: undefined,

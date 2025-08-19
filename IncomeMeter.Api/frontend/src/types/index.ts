@@ -43,8 +43,8 @@ export interface Route {
   distance: number;
   startMile?: number;
   endMile?: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Transaction {

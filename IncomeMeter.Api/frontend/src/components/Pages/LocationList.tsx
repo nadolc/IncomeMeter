@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // Commented out as unused
 
 interface Location {
   id?: string;
@@ -22,11 +22,11 @@ interface LocationListProps {
 
 const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Commented out as unused
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // const [showCreateModal, setShowCreateModal] = useState(false); // Commented out as unused
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 

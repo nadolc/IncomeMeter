@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next'; // Commented out as unused
 
 interface Setup2FAResponse {
     success: boolean;
@@ -26,7 +26,7 @@ interface TwoFactorStatus {
 
 const TwoFactorSetup: React.FC = () => {
     const { user, accessToken } = useAuth();
-    const { t } = useTranslation();
+    // const { t } = useTranslation(); // Commented out as unused
     
     const [currentStep, setCurrentStep] = useState<'check-status' | 'setup' | 'verify' | 'complete'>('check-status');
     const [setupData, setSetupData] = useState<Setup2FAResponse | null>(null);
@@ -194,11 +194,11 @@ const TwoFactorSetup: React.FC = () => {
             if (!response || response.status === 404 || response.status === 500) {
                 console.warn('Backend not available (status:', response?.status, '), using mock verification');
                 // Mock verification success for development
-                const mockVerifyData: Verify2FAResponse = {
-                    success: true,
-                    message: 'Mock verification completed',
-                    isSetupComplete: true
-                };
+                // const mockVerifyData: Verify2FAResponse = {
+                //     success: true,
+                //     message: 'Mock verification completed',
+                //     isSetupComplete: true
+                // }; // Commented out as unused
                 
                 // Update status to reflect completed setup
                 const mockCompletedStatus: TwoFactorStatus = {
