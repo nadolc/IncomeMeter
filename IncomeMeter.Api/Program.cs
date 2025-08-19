@@ -68,6 +68,10 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddScoped<IRouteService, RouteService>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<ITransactionService, TransactionService>();
+    builder.Services.AddScoped<IWorkTypeConfigService, WorkTypeConfigService>();
+    // Phase 1: Register DefaultWorkTypeService and MigrationService for development
+    builder.Services.AddScoped<DefaultWorkTypeService>();
+    builder.Services.AddScoped<MigrationService>();
 }
 else
 {
@@ -76,7 +80,12 @@ else
     builder.Services.AddScoped<IRouteService, RouteService>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<ITransactionService, TransactionService>();
+    builder.Services.AddScoped<IWorkTypeConfigService, WorkTypeConfigService>();
 }
+
+// Phase 1: Register DefaultWorkTypeService and MigrationService (needed for both dev and prod)
+builder.Services.AddScoped<DefaultWorkTypeService>();
+builder.Services.AddScoped<MigrationService>();
 
 builder.Services.AddHttpClient<IGeoCodingService, GeoCodingService>();
 
@@ -301,6 +310,29 @@ app.MapGet("/api/config", (IConfiguration config) => new
     ApiBaseUrl = config["AppSettings:ApiBaseUrl"],
     FrontendBaseUrl = config["AppSettings:FrontendBaseUrl"]
 });
+
+// Phase 1: Development endpoints for testing default work types
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/api/dev/test-default-worktypes", async (MigrationService migrationService) =>
+    {
+        var result = await migrationService.TestDefaultWorkTypeAssignmentAsync();
+        return Results.Ok(new { success = result, message = result ? "Default work types test passed" : "Default work types test failed" });
+    });
+
+    app.MapPost("/api/dev/migrate-users-phase1", async (MigrationService migrationService) =>
+    {
+        try
+        {
+            await migrationService.MigrateExistingUsersToPhase1Async();
+            return Results.Ok(new { success = true, message = "Phase 1 migration completed successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { success = false, message = $"Migration failed: {ex.Message}" });
+        }
+    });
+}
 
 // Map API controllers
 app.MapControllers();

@@ -7,7 +7,8 @@
     "dashboard": "儀表板",
     "profile": "個人檔案",
     "settings": "設定",
-    "menu": "選單"
+    "menu": "選單",
+    "routeManagement": "路線管理"
   },
   "routes": {
     "title": "路線",
@@ -66,6 +67,47 @@
         "title": "找不到路線",
         "message": "您尚未建立任何路線。新增您的第一條路線以開始使用。"
       }
+    },
+    "crud": {
+      "create": {
+        "title": "建立新路線",
+        "workType": "工作類型",
+        "scheduleStart": "開始時間",
+        "scheduleEnd": "結束時間",
+        "estimatedIncome": "預計收入",
+        "startMile": "開始里程",
+        "description": "描述",
+        "submit": "建立路線",
+        "cancel": "取消"
+      },
+      "edit": {
+        "title": "編輯路線",
+        "submit": "更新路線",
+        "cancel": "取消"
+      },
+      "delete": {
+        "title": "刪除路線",
+        "message": "您確定要刪除此路線嗎？此操作無法撤銷。",
+        "confirm": "刪除",
+        "cancel": "取消"
+      }
+    },
+    "actions": {
+      "start": "開始路線",
+      "end": "結束路線",
+      "edit": "編輯",
+      "delete": "刪除",
+      "view": "查看詳情"
+    },
+    "filters": {
+      "all": "所有路線",
+      "scheduled": "已安排",
+      "inProgress": "進行中",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "dateRange": "日期範圍",
+      "fromDate": "開始日期",
+      "toDate": "結束日期"
     }
   },
   "auth": {
@@ -99,6 +141,9 @@
   },
   "settings": {
     "title": "設定",
+    "sections": {
+      "localization": "本地化設定"
+    },
     "profile": {
       "title": "個人資料",
       "name": "姓名",
@@ -114,6 +159,20 @@
       "dateFormat": "日期格式",
       "mileageUnit": "里程單位"
     },
+    "form": {
+      "currency": "貨幣",
+      "language": "語言",
+      "timeZone": "時區", 
+      "mileageUnit": "里程單位"
+    },
+    "currencies": {
+      "GBP": "英鎊 (GBP)",
+      "HKD": "港幣 (HKD)"
+    },
+    "mileageUnits": {
+      "km": "公里",
+      "mi": "英里"
+    },
     "notifications": {
       "title": "通知",
       "email": "電郵通知",
@@ -123,6 +182,10 @@
       "en-GB": "English (UK)",
       "zh-HK": "繁體中文 (香港)"
     },
+    "messages": {
+      "saveSuccess": "設定已成功儲存！",
+      "saveError": "無法儲存設定，請重試。"
+    },
     "save": "儲存變更",
     "saving": "儲存中...",
     "saved": "設定已成功儲存！"
@@ -131,6 +194,7 @@
     "title": "個人檔案",
     "loading": "載入個人檔案中...",
     "personalInfo": "個人資料",
+    "accountDetails": "帳戶詳情",
     "form": {
       "name": "姓名",
       "email": "電郵",
@@ -146,6 +210,65 @@
     "multiCurrency": "多貨幣支援",
     "securePrivate": "安全和私人數據"
   },
+  "locations": {
+    "title": "位置",
+    "list": {
+      "title": "路線位置",
+      "loading": "載入位置中...",
+      "add": "新增位置",
+      "error": {
+        "title": "載入位置錯誤",
+        "message": "無法載入位置"
+      },
+      "empty": {
+        "title": "找不到位置",
+        "message": "此路線沒有記錄位置數據。"
+      }
+    },
+    "details": {
+      "coordinates": "座標",
+      "address": "地址",
+      "timestamp": "時間戳",
+      "accuracy": "準確度",
+      "speed": "速度",
+      "distance": "與前一位置的距離",
+      "distanceKm": "距離 (公里)",
+      "distanceMi": "距離 (英里)"
+    },
+    "crud": {
+      "create": {
+        "title": "新增位置",
+        "latitude": "緯度",
+        "longitude": "經度",
+        "timestamp": "時間戳",
+        "accuracy": "準確度 (米)",
+        "speed": "速度 (公里/小時)",
+        "submit": "新增位置",
+        "cancel": "取消"
+      },
+      "edit": {
+        "title": "編輯位置",
+        "submit": "更新位置",
+        "cancel": "取消"
+      },
+      "delete": {
+        "title": "刪除位置",
+        "message": "您確定要刪除此位置嗎？",
+        "confirm": "刪除",
+        "cancel": "取消"
+      }
+    },
+    "actions": {
+      "edit": "編輯",
+      "delete": "刪除",
+      "view": "在地圖上查看"
+    },
+    "map": {
+      "title": "路線地圖",
+      "loading": "載入地圖中...",
+      "error": "無法載入地圖"
+    }
+  },
   "common": {
     "loading": "載入中...",
     "retry": "重試",
@@ -160,7 +283,11 @@
     "no": "否",
     "unknown": "未知",
     "noDate": "無日期",
-    "noTime": "無時間"
+    "noTime": "無時間",
+    "success": "成功",
+    "error": "錯誤",
+    "warning": "警告",
+    "info": "資訊"
   },
   "errors": {
     "generic": "發生了一些問題，請重試。",

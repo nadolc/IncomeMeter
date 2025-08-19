@@ -15,6 +15,10 @@ public class Route
     [BsonElement("workType")]
     public string? WorkType { get; set; }
     
+    [BsonElement("workTypeId")]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? WorkTypeId { get; set; }
+    
     [BsonElement("status")]
     public string Status { get; set; } = "scheduled";
     

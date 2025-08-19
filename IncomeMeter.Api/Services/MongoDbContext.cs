@@ -11,6 +11,7 @@ public class MongoDbContext
     public IMongoCollection<IncomeMeter.Api.Models.Route> Routes { get; }
     public IMongoCollection<Location> Locations { get; }
     public IMongoCollection<Transaction> Transactions { get; }
+    public IMongoCollection<WorkTypeConfig> WorkTypeConfigs { get; }
 
     public MongoDbContext(IOptions<DatabaseSettings> dbSettings)
     {
@@ -23,5 +24,6 @@ public class MongoDbContext
         Routes = database.GetCollection<IncomeMeter.Api.Models.Route>(settings.RoutesCollectionName);
         Locations = database.GetCollection<Location>(settings.LocationsCollectionName);
         Transactions = database.GetCollection<Transaction>(settings.TransactionsCollectionName);
+        WorkTypeConfigs = database.GetCollection<WorkTypeConfig>("workTypeConfigs");
     }
 }

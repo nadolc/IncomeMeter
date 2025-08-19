@@ -79,6 +79,9 @@ const NavBar: React.FC = () => {
             <Link to="/routes" className={getLinkClass('/routes')}>
               {t('routes.title')}
             </Link>
+            <Link to="/routes/manage" className={getLinkClass('/routes/manage')}>
+              {t('navigation.routeManagement')}
+            </Link>
             <Link to="/profile" className={getLinkClass('/profile')}>
               {t('navigation.profile')}
             </Link>
@@ -160,6 +163,19 @@ const NavBar: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                       </svg>
                       <span className="text-sm sm:text-base">{t('routes.title')}</span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/routes/manage"
+                    onClick={closeMobileMenu}
+                    className={getLinkClass('/routes/manage', true)}
+                  >
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                      </svg>
+                      <span className="text-sm sm:text-base">{t('navigation.routeManagement')}</span>
                     </div>
                   </Link>
 

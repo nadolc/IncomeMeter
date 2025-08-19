@@ -167,19 +167,41 @@ public class RoutesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateRoute(string id, [FromBody] IncomeMeter.Api.Models.Route updatedRoute)
+    public async Task<IActionResult> UpdateRoute(string id, [FromBody] UpdateRouteDto updateRouteDto)
     {
         var userId = GetCurrentUserId();
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
         }
 
-        var route = await _routeService.UpdateRouteAsync(id, updatedRoute, userId);
+        Log.Logger
+            .ForContext("EventType", "RouteUpdateStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("RouteId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("User initiated route update");
+
+        var route = await _routeService.UpdateRouteAsync(id, updateRouteDto, userId);
         if (route == null)
         {
+            Log.Logger
+                .ForContext("EventType", "RouteUpdateNotFound")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("RouteId", id[..Math.Min(8, id.Length)] + "***")
+                .Warning("Route not found when attempting to update");
             return NotFound();
         }
+
+        Log.Logger
+            .ForContext("EventType", "RouteUpdateSuccess")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("RouteId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("Route updated successfully");
 
         return Ok(route);
     }
@@ -222,5 +244,31 @@ public class RoutesController : ControllerBase
             .Information("Route deleted successfully");
 
         return NoContent();
+    }
+
+    [HttpGet("status/{status}")]
+    public async Task<IActionResult> GetRoutesByStatus(string status)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var routes = await _routeService.GetRoutesByStatusAsync(userId, status);
+        return Ok(routes);
+    }
+
+    [HttpGet("date-range")]
+    public async Task<IActionResult> GetRoutesByDateRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var routes = await _routeService.GetRoutesByDateRangeAsync(userId, startDate, endDate);
+        return Ok(routes);
     }
 }

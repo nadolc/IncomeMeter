@@ -10,6 +10,7 @@ import Settings from './components/Pages/Settings';
 import Profile from './components/Pages/Profile';
 import RouteList from './components/Pages/RouteList';
 import RouteDetails from './components/Pages/RouteDetails';
+import EnhancedRouteList from './components/Pages/EnhancedRouteList';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AuthCallback from './components/Auth/AuthCallback';
 import './i18n';
@@ -30,6 +31,7 @@ function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="routes" element={<RouteList />} />
+                  <Route path="routes/manage" element={<EnhancedRouteList />} />
                   <Route path="routes/:id" element={<RouteDetails />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />

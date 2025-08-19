@@ -10,10 +10,12 @@ namespace IncomeMeter.Api.Services;
 public class UserService : IUserService
 {
     private readonly IMongoCollection<User> _users;
+    private readonly DefaultWorkTypeService _defaultWorkTypeService;
 
-    public UserService(MongoDbContext context)
+    public UserService(MongoDbContext context, DefaultWorkTypeService defaultWorkTypeService)
     {
         _users = context.Users;
+        _defaultWorkTypeService = defaultWorkTypeService;
     }
 
     public async Task<User?> GetUserByApiKeyHashAsync(string keyHash) =>
@@ -36,6 +38,8 @@ public class UserService : IUserService
             Email = email,
             DisplayName = displayName,
             CreatedAt = DateTime.UtcNow,
+            Role = UserRole.Member, // Phase 1: Set default role
+            AssignedWorkTypeIds = new List<string>(), // Initialize empty list
             Settings = new UserSettings
             {
                 Language = "en-GB",
@@ -43,7 +47,27 @@ public class UserService : IUserService
             }
         };
 
+        // Insert user first to get the ID
         await _users.InsertOneAsync(user);
+
+        // Phase 1: Assign default work types to new user
+        try
+        {
+            var assignedWorkTypeIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(user.Id!);
+            
+            // Update user with assigned work type IDs
+            if (assignedWorkTypeIds.Any())
+            {
+                user.AssignedWorkTypeIds = assignedWorkTypeIds;
+                await UpdateUserWorkTypeIdsAsync(user.Id!, assignedWorkTypeIds);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail user creation
+            Console.WriteLine($"Warning: Failed to assign default work types to user {user.Id}: {ex.Message}");
+        }
+
         return user;
     }
 
@@ -68,5 +92,12 @@ public class UserService : IUserService
         await _users.UpdateOneAsync(u => u.Id == userId, update);
 
         return new CreateApiKeyResponseDto { ApiKey = apiKey, ApiKeyDetails = newApiKey };
+    }
+
+    // Phase 1: Helper method to update user's assigned work type IDs
+    private async Task UpdateUserWorkTypeIdsAsync(string userId, List<string> workTypeIds)
+    {
+        var update = Builders<User>.Update.Set(u => u.AssignedWorkTypeIds, workTypeIds);
+        await _users.UpdateOneAsync(u => u.Id == userId, update);
     }
 }

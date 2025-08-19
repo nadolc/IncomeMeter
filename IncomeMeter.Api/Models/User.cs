@@ -15,6 +15,10 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public List<ApiKey> ApiKeys { get; set; } = new();
     public UserSettings Settings { get; set; } = new();
+    
+    // Phase 1: Default work types support
+    public List<string> AssignedWorkTypeIds { get; set; } = new();
+    public UserRole Role { get; set; } = UserRole.Member;
 }
 
 public class ApiKey
@@ -31,4 +35,11 @@ public class UserSettings
     public string Language { get; set; } = "en-GB";
     public string CurrencyCode { get; set; } = "GBP";
     // ... other settings fields from your User.js model
+}
+
+public enum UserRole
+{
+    Member = 0,      // Regular user
+    Admin = 1,       // Organization admin (future)
+    SuperAdmin = 2   // System admin (future)
 }

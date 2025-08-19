@@ -7,7 +7,8 @@
     "dashboard": "Dashboard",
     "profile": "Profile",
     "settings": "Settings",
-    "menu": "Menu"
+    "menu": "Menu",
+    "routeManagement": "Route Management"
   },
   "routes": {
     "title": "Routes",
@@ -66,6 +67,47 @@
         "title": "No Routes Found",
         "message": "You haven't created any routes yet. Add your first route to get started."
       }
+    },
+    "crud": {
+      "create": {
+        "title": "Create New Route",
+        "workType": "Work Type",
+        "scheduleStart": "Start Time",
+        "scheduleEnd": "End Time",
+        "estimatedIncome": "Estimated Income",
+        "startMile": "Start Mileage",
+        "description": "Description",
+        "submit": "Create Route",
+        "cancel": "Cancel"
+      },
+      "edit": {
+        "title": "Edit Route",
+        "submit": "Update Route",
+        "cancel": "Cancel"
+      },
+      "delete": {
+        "title": "Delete Route",
+        "message": "Are you sure you want to delete this route? This action cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    },
+    "actions": {
+      "start": "Start Route",
+      "end": "End Route",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View Details"
+    },
+    "filters": {
+      "all": "All Routes",
+      "scheduled": "Scheduled",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "dateRange": "Date Range",
+      "fromDate": "From Date",
+      "toDate": "To Date"
     }
   },
   "auth": {
@@ -99,6 +141,9 @@
   },
   "settings": {
     "title": "Settings",
+    "sections": {
+      "localization": "Localization"
+    },
     "profile": {
       "title": "Profile Information",
       "name": "Name",
@@ -114,6 +159,20 @@
       "dateFormat": "Date Format",
       "mileageUnit": "Mileage Unit"
     },
+    "form": {
+      "currency": "Currency",
+      "language": "Language", 
+      "timeZone": "Time Zone",
+      "mileageUnit": "Mileage Unit"
+    },
+    "currencies": {
+      "GBP": "British Pound (GBP)",
+      "HKD": "Hong Kong Dollar (HKD)"
+    },
+    "mileageUnits": {
+      "km": "Kilometres",
+      "mi": "Miles"
+    },
     "notifications": {
       "title": "Notifications",
       "email": "Email Notifications",
@@ -123,6 +182,10 @@
       "en-GB": "English (UK)",
       "zh-HK": "繁體中文 (香港)"
     },
+    "messages": {
+      "saveSuccess": "Settings saved successfully!",
+      "saveError": "Failed to save settings. Please try again."
+    },
     "save": "Save Changes",
     "saving": "Saving...",
     "saved": "Settings saved successfully!"
@@ -131,6 +194,7 @@
     "title": "Profile",
     "loading": "Loading profile...",
     "personalInfo": "Personal Information",
+    "accountDetails": "Account Details",
     "form": {
       "name": "Name",
       "email": "Email",
@@ -146,6 +210,65 @@
     "multiCurrency": "Multi-currency support",
     "securePrivate": "Secure and private data"
   },
+  "locations": {
+    "title": "Locations",
+    "list": {
+      "title": "Route Locations",
+      "loading": "Loading locations...",
+      "add": "Add Location",
+      "error": {
+        "title": "Error Loading Locations",
+        "message": "Failed to load locations"
+      },
+      "empty": {
+        "title": "No Locations Found",
+        "message": "No location data recorded for this route."
+      }
+    },
+    "details": {
+      "coordinates": "Coordinates",
+      "address": "Address",
+      "timestamp": "Timestamp",
+      "accuracy": "Accuracy",
+      "speed": "Speed",
+      "distance": "Distance from Previous",
+      "distanceKm": "Distance (km)",
+      "distanceMi": "Distance (mi)"
+    },
+    "crud": {
+      "create": {
+        "title": "Add Location",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "timestamp": "Timestamp",
+        "accuracy": "Accuracy (meters)",
+        "speed": "Speed (km/h)",
+        "submit": "Add Location",
+        "cancel": "Cancel"
+      },
+      "edit": {
+        "title": "Edit Location",
+        "submit": "Update Location",
+        "cancel": "Cancel"
+      },
+      "delete": {
+        "title": "Delete Location",
+        "message": "Are you sure you want to delete this location?",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View on Map"
+    },
+    "map": {
+      "title": "Route Map",
+      "loading": "Loading map...",
+      "error": "Failed to load map"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "retry": "Retry",
@@ -160,7 +283,11 @@
     "no": "No",
     "unknown": "Unknown",
     "noDate": "No date",
-    "noTime": "No time"
+    "noTime": "No time",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

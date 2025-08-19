@@ -31,6 +31,7 @@ export interface Route {
   id: string;
   userId: string;
   workType?: string;
+  workTypeId?: string;
   status: 'completed' | 'in_progress' | 'scheduled' | 'cancelled';
   scheduleStart: Date;
   scheduleEnd: Date;
@@ -76,5 +77,38 @@ export interface RegisterFormData {
   language: 'en-GB' | 'zh-HK';
   timeZone: string;
   dateFormat: string;
+}
+
+export interface IncomeSourceTemplate {
+  name: string;
+  category?: string;
+  defaultAmount?: number;
+  isRequired: boolean;
+  description?: string;
+  displayOrder: number;
+}
+
+export interface WorkTypeConfig {
+  id: string;
+  name: string;
+  description?: string;
+  incomeSourceTemplates: IncomeSourceTemplate[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkTypeConfigRequest {
+  name: string;
+  description?: string;
+  incomeSourceTemplates: Omit<IncomeSourceTemplate, 'displayOrder'>[];
+  isActive?: boolean;
+}
+
+export interface UpdateWorkTypeConfigRequest {
+  name?: string;
+  description?: string;
+  incomeSourceTemplates?: Omit<IncomeSourceTemplate, 'displayOrder'>[];
+  isActive?: boolean;
 }
 

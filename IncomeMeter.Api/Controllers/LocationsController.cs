@@ -121,4 +121,215 @@ public class LocationsController : ControllerBase
             return StatusCode(500, new { error = "An unexpected error occurred while adding the location." });
         }
     }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetLocationById(string id)
+    {
+        var userId = GetCurrentUserId();
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        Log.Logger
+            .ForContext("EventType", "LocationByIdRequest")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("User requested location by ID");
+
+        var location = await _locationService.GetLocationByIdAsync(id, userId);
+        
+        if (location == null)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationByIdNotFound")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Warning("Location not found or user unauthorized");
+            return NotFound();
+        }
+
+        Log.Logger
+            .ForContext("EventType", "LocationByIdSuccess")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("Location returned successfully by ID");
+            
+        return Ok(location);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateLocation(string id, [FromBody] UpdateLocationDto dto)
+    {
+        var userId = GetCurrentUserId();
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        Log.Logger
+            .ForContext("EventType", "LocationUpdateRequest")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("User requested to update location");
+
+        try
+        {
+            var location = await _locationService.UpdateLocationAsync(id, dto, userId);
+            if (location == null)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationUpdateNotFound")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                    .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                    .Warning("Location not found or user unauthorized for update");
+                return NotFound();
+            }
+
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Information("Location updated successfully via API");
+                
+            return Ok(location);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateValidationError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("ValidationError", ex.Message)
+                .Warning("Location update failed validation: {ValidationError}", ex.Message);
+                
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Error(ex, "Unexpected error during location update");
+                
+            return StatusCode(500, new { error = "An unexpected error occurred while updating the location." });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteLocation(string id)
+    {
+        var userId = GetCurrentUserId();
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        Log.Logger
+            .ForContext("EventType", "LocationDeletionRequest")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .Information("User requested to delete location");
+
+        try
+        {
+            var success = await _locationService.DeleteLocationAsync(id, userId);
+            if (!success)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationDeletionNotFound")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                    .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                    .Warning("Location not found or user unauthorized for deletion");
+                return NotFound();
+            }
+
+            Log.Logger
+                .ForContext("EventType", "LocationDeletionSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Information("Location deleted successfully via API");
+                
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationDeletionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Error(ex, "Unexpected error during location deletion");
+                
+            return StatusCode(500, new { error = "An unexpected error occurred while deleting the location." });
+        }
+    }
+
+    [HttpDelete("route/{routeId}")]
+    public async Task<IActionResult> DeleteLocationsByRouteId(string routeId)
+    {
+        var userId = GetCurrentUserId();
+        var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        Log.Logger
+            .ForContext("EventType", "LocationsBulkDeletionRequest")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+            .Information("User requested bulk deletion of locations for route");
+
+        try
+        {
+            var success = await _locationService.DeleteLocationsByRouteIdAsync(routeId, userId);
+            if (!success)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationsBulkDeletionUnauthorized")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                    .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+                    .Warning("Route not found or user unauthorized for bulk location deletion");
+                return NotFound();
+            }
+
+            Log.Logger
+                .ForContext("EventType", "LocationsBulkDeletionSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+                .Information("Bulk deletion of locations completed successfully via API");
+                
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationsBulkDeletionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Error(ex, "Unexpected error during bulk location deletion");
+                
+            return StatusCode(500, new { error = "An unexpected error occurred while deleting locations." });
+        }
+    }
 }

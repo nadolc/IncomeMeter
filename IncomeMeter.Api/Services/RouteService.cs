@@ -27,6 +27,7 @@ public class RouteService : IRouteService
         {
             UserId = userId,
             WorkType = routeDto.WorkType,
+            WorkTypeId = routeDto.WorkTypeId,
             ScheduleStart = routeDto.ScheduleStart,
             ScheduleEnd = routeDto.ScheduleEnd,
             StartMile = routeDto.StartMile,
@@ -37,6 +38,7 @@ public class RouteService : IRouteService
                 Amount = dto.Amount 
             }).ToList(),
             TotalIncome = routeDto.Incomes.Sum(i => i.Amount),
+            EstimatedIncome = routeDto.EstimatedIncome ?? 0,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -50,9 +52,13 @@ public class RouteService : IRouteService
         {
             UserId = userId,
             WorkType = routeDto.WorkType,
+            WorkTypeId = routeDto.WorkTypeId,
             StartMile = routeDto.StartMile,
             Status = "in_progress",
             ActualStartTime = DateTime.UtcNow,
+            ScheduleStart = DateTime.UtcNow,
+            ScheduleEnd = DateTime.UtcNow.AddHours(8), // Default 8-hour duration
+            EstimatedIncome = routeDto.EstimatedIncome ?? 0,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -93,17 +99,78 @@ public class RouteService : IRouteService
         return result;
     }
 
-    public async Task<Models.Route?> UpdateRouteAsync(string id, Models.Route updatedRoute, string userId)
+    public async Task<Models.Route?> UpdateRouteAsync(string id, UpdateRouteDto routeDto, string userId)
     {
         var filter = Builders<Models.Route>.Filter.And(
             Builders<Models.Route>.Filter.Eq(r => r.Id, id),
             Builders<Models.Route>.Filter.Eq(r => r.UserId, userId)
         );
 
-        updatedRoute.UpdatedAt = DateTime.UtcNow;
-        var result = await _routes.ReplaceOneAsync(filter, updatedRoute);
+        // Build update definition
+        var updateBuilder = Builders<Models.Route>.Update;
+        var updates = new List<UpdateDefinition<Models.Route>>();
+
+        if (!string.IsNullOrEmpty(routeDto.WorkType))
+            updates.Add(updateBuilder.Set(r => r.WorkType, routeDto.WorkType));
+
+        if (routeDto.WorkTypeId != null)
+            updates.Add(updateBuilder.Set(r => r.WorkTypeId, routeDto.WorkTypeId));
+
+        if (routeDto.ScheduleStart.HasValue)
+            updates.Add(updateBuilder.Set(r => r.ScheduleStart, routeDto.ScheduleStart.Value));
+
+        if (routeDto.ScheduleEnd.HasValue)
+            updates.Add(updateBuilder.Set(r => r.ScheduleEnd, routeDto.ScheduleEnd.Value));
+
+        if (routeDto.ActualStartTime.HasValue)
+            updates.Add(updateBuilder.Set(r => r.ActualStartTime, routeDto.ActualStartTime.Value));
+
+        if (routeDto.ActualEndTime.HasValue)
+            updates.Add(updateBuilder.Set(r => r.ActualEndTime, routeDto.ActualEndTime.Value));
+
+        if (routeDto.Incomes != null)
+        {
+            var incomes = routeDto.Incomes.Select(dto => new IncomeItem 
+            { 
+                Source = dto.Source, 
+                Amount = dto.Amount 
+            }).ToList();
+            updates.Add(updateBuilder.Set(r => r.Incomes, incomes));
+            updates.Add(updateBuilder.Set(r => r.TotalIncome, routeDto.Incomes.Sum(i => i.Amount)));
+        }
+
+        if (routeDto.EstimatedIncome.HasValue)
+            updates.Add(updateBuilder.Set(r => r.EstimatedIncome, routeDto.EstimatedIncome.Value));
+
+        if (routeDto.StartMile.HasValue)
+            updates.Add(updateBuilder.Set(r => r.StartMile, routeDto.StartMile.Value));
+
+        if (routeDto.EndMile.HasValue)
+            updates.Add(updateBuilder.Set(r => r.EndMile, routeDto.EndMile.Value));
+
+        if (!string.IsNullOrEmpty(routeDto.Status))
+            updates.Add(updateBuilder.Set(r => r.Status, routeDto.Status));
+
+        if (updates.Count == 0)
+        {
+            // No changes to make
+            return await GetRouteByIdAsync(id, userId);
+        }
+
+        // Calculate distance if both start and end miles are provided
+        if (routeDto.StartMile.HasValue && routeDto.EndMile.HasValue)
+        {
+            var distance = Math.Abs(routeDto.EndMile.Value - routeDto.StartMile.Value);
+            updates.Add(updateBuilder.Set(r => r.Distance, distance));
+        }
+
+        updates.Add(updateBuilder.Set(r => r.UpdatedAt, DateTime.UtcNow));
+
+        var combinedUpdate = updateBuilder.Combine(updates);
+        var result = await _routes.FindOneAndUpdateAsync(filter, combinedUpdate,
+            new FindOneAndUpdateOptions<Models.Route> { ReturnDocument = ReturnDocument.After });
         
-        return result.ModifiedCount > 0 ? updatedRoute : null;
+        return result;
     }
 
     public async Task<bool> DeleteRouteAsync(string id, string userId)
@@ -117,5 +184,19 @@ public class RouteService : IRouteService
         return result.DeletedCount > 0;
     }
 
-    // ... Implementations for End, Update, Delete ...
+    public async Task<List<Models.Route>> GetRoutesByStatusAsync(string userId, string status)
+    {
+        return await _routes.Find(r => r.UserId == userId && r.Status == status)
+            .SortByDescending(r => r.ScheduleStart)
+            .ToListAsync();
+    }
+
+    public async Task<List<Models.Route>> GetRoutesByDateRangeAsync(string userId, DateTime startDate, DateTime endDate)
+    {
+        return await _routes.Find(r => r.UserId == userId && 
+                                     r.ScheduleStart >= startDate && 
+                                     r.ScheduleStart <= endDate)
+            .SortByDescending(r => r.ScheduleStart)
+            .ToListAsync();
+    }
 }

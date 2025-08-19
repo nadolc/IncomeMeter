@@ -102,12 +102,14 @@ IncomeMeter/
 ## 🎨 Key Features
 
 ### Core Functionality
-- **Route Management**: Create, track, and analyze driving routes
-- **Income Tracking**: Monitor earnings from multiple sources (salary, freelance, etc.)
+- **Route Management**: Full CRUD operations for driving routes with filtering and date range queries
+- **Location Tracking**: Complete location management with GPS coordinates, geocoding, and distance calculations
+- **Income Tracking**: Monitor earnings from multiple sources with detailed breakdown
 - **Dashboard Analytics**: Real-time charts and statistics
-- **Multi-language Support**: English (UK) and Traditional Chinese (Hong Kong)
+- **Multi-language Support**: English (UK) and Traditional Chinese (Hong Kong) with comprehensive localization
 - **Currency Support**: GBP and HKD with proper formatting
-- **Location Services**: GPS coordinate tracking and geocoding integration
+- **Advanced Filtering**: Filter routes by status, date range, and work type
+- **Geolocation Services**: GPS coordinate tracking, reverse geocoding, and distance validation
 
 ### Authentication & Security
 - Google OAuth 2.0 integration
@@ -175,10 +177,11 @@ frontend/src/
 └── App.test.tsx
 ```
 
-### Backend Testing (Planned)
-- Unit tests for services and controllers
-- Integration tests with in-memory MongoDB
-- API endpoint testing with TestServer
+### Backend Testing (xUnit + Moq + FluentAssertions)
+- **Service Tests**: Complete unit tests for RouteService and LocationService with MongoDB mocking
+- **Controller Tests**: Integration tests for RoutesController and LocationsController with authentication
+- **Test Coverage**: Comprehensive coverage of CRUD operations, error handling, and business logic
+- **Test Configuration**: Uses xUnit, Moq for mocking, and FluentAssertions for readable assertions
 
 ---
 
@@ -193,11 +196,23 @@ frontend/src/
 {
   "app": { "title": "Income Meter", "subtitle": "..." },
   "navigation": { "dashboard": "Dashboard", ... },
-  "routes": { "title": "Routes", "status": {...}, ... },
+  "routes": { 
+    "title": "Routes", 
+    "status": {...}, 
+    "crud": { "create": {...}, "edit": {...}, "delete": {...} },
+    "actions": { "start": "Start Route", "end": "End Route", ... },
+    "filters": { "all": "All Routes", "scheduled": "Scheduled", ... }
+  },
+  "locations": {
+    "title": "Locations",
+    "crud": { "create": {...}, "edit": {...}, "delete": {...} },
+    "details": { "coordinates": "Coordinates", "address": "Address", ... },
+    "map": { "title": "Route Map", ... }
+  },
   "auth": { "login": {...}, "logout": "Logout" },
   "dashboard": { "stats": {...}, "todayRoutes": {...} },
   "settings": { "preferences": {...}, "languages": {...} },
-  "common": { "loading": "Loading...", ... },
+  "common": { "loading": "Loading...", "success": "Success", ... },
   "errors": { "generic": "Something went wrong...", ... }
 }
 ```
@@ -270,26 +285,44 @@ public class User
 }
 ```
 
-**Route**:
+**Route** (Enhanced with full CRUD support):
 ```csharp
 public class Route
 {
     public string Id { get; set; }
     public string UserId { get; set; }
     public string? WorkType { get; set; }
-    public RouteStatus Status { get; set; } // completed, in_progress, scheduled, cancelled
+    public string Status { get; set; } // completed, in_progress, scheduled, cancelled
     public DateTime ScheduleStart { get; set; }
     public DateTime ScheduleEnd { get; set; }
     public DateTime? ActualStartTime { get; set; }
     public DateTime? ActualEndTime { get; set; }
-    public List<IncomeSource> Incomes { get; set; }
+    public List<IncomeItem> Incomes { get; set; }
     public decimal TotalIncome { get; set; }
-    public decimal? EstimatedIncome { get; set; }
+    public decimal EstimatedIncome { get; set; }
     public double Distance { get; set; }
     public double? StartMile { get; set; }
     public double? EndMile { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+```
+
+**Location** (New entity for GPS tracking):
+```csharp
+public class Location
+{
+    public string Id { get; set; }
+    public string RouteId { get; set; }
+    public string UserId { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string? Address { get; set; }
+    public double? Speed { get; set; }
+    public double? Accuracy { get; set; }
+    public double? DistanceFromLastKm { get; set; }
+    public double? DistanceFromLastMi { get; set; }
 }
 ```
 
@@ -307,6 +340,32 @@ interface UserSettings {
   mileageUnit: 'km' | 'mi';
 }
 ```
+
+### API Endpoints
+
+#### Route Management
+- `GET /api/routes` - Get all routes for authenticated user
+- `GET /api/routes/{id}` - Get specific route by ID
+- `GET /api/routes/status/{status}` - Get routes by status (completed, in_progress, scheduled, cancelled)
+- `GET /api/routes/date-range?startDate={start}&endDate={end}` - Get routes within date range
+- `POST /api/routes` - Create new scheduled route
+- `POST /api/routes/start` - Start a new route immediately
+- `POST /api/routes/end` - End an active route
+- `PUT /api/routes/{id}` - Update existing route
+- `DELETE /api/routes/{id}` - Delete route
+
+#### Location Management
+- `GET /api/locations?routeId={routeId}` - Get all locations for a route
+- `GET /api/locations/{id}` - Get specific location by ID
+- `POST /api/locations` - Add new location point
+- `PUT /api/locations/{id}` - Update existing location
+- `DELETE /api/locations/{id}` - Delete specific location
+- `DELETE /api/locations/route/{routeId}` - Delete all locations for a route
+
+#### Data Transfer Objects
+**Route DTOs**: `CreateRouteDto`, `UpdateRouteDto`, `StartRouteDto`, `EndRouteDto`, `RouteResponseDto`
+
+**Location DTOs**: `CreateLocationDto`, `UpdateLocationDto`, `LocationDto`, `LocationResponseDto`
 
 ---
 
@@ -438,6 +497,439 @@ To recreate this project structure:
 - Follow the single service deployment model
 - Maintain the i18n structure for multi-language support
 - Preserve the testing configuration and mock strategies
+- Implement full CRUD operations for both Routes and Locations
+- Use comprehensive error handling and logging throughout
+- Maintain proper authentication and authorization for all endpoints
+- Follow the established patterns for DTOs and service interfaces
+
+---
+
+## 📋 Future Development Phases
+
+### **Phase 2: Organization Foundation (Q2 2025)**
+**Goal**: Multi-tenancy and basic organization structure
+
+#### Enhanced Data Models
+```csharp
+public class Organization
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public OrganizationType Type { get; set; }
+    
+    // Subscription & limits
+    public SubscriptionPlan Plan { get; set; } = SubscriptionPlan.Free;
+    public int MaxUsers { get; set; } = 1;
+    public int MaxWorkTypes { get; set; } = 10;
+    
+    // Settings
+    public OrganizationSettings Settings { get; set; } = new();
+    
+    public string OwnerId { get; set; }
+    public bool IsActive { get; set; } = true;
+    
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public enum OrganizationType
+{
+    Individual = 0,     // Single user (current)
+    Team = 1,          // Small team (2-10 users)
+    Company = 2,       // Medium company (11-100 users)
+    Enterprise = 3     // Large enterprise (100+ users)
+}
+
+public enum SubscriptionPlan
+{
+    Free = 0,          // Individual only
+    Team = 1,          // Up to 10 users
+    Business = 2,      // Up to 100 users
+    Enterprise = 3     // Unlimited users
+}
+
+public class OrganizationSettings
+{
+    public string DefaultCurrency { get; set; } = "GBP";
+    public string DefaultLanguage { get; set; } = "en-GB";
+    public string TimeZone { get; set; } = "Europe/London";
+    public bool RequireApprovalForNewUsers { get; set; } = false;
+    public bool AllowUserCreateWorkTypes { get; set; } = true;
+}
+```
+
+#### Enhanced User Model
+```csharp
+public class User // Phase 2 Enhancement
+{
+    // ... existing properties ...
+    
+    // Organization membership
+    public string? OrganizationId { get; set; }
+    public string? RoleId { get; set; } // Custom role within organization
+    public UserRole SystemRole { get; set; } = UserRole.Member;
+    
+    // Team/department (future)
+    public string? DepartmentId { get; set; }
+    public string? ManagerId { get; set; }
+    
+    // Status
+    public UserStatus Status { get; set; } = UserStatus.Active;
+    public DateTime? LastLoginAt { get; set; }
+    
+    // Invitation flow
+    public string? InviteToken { get; set; }
+    public DateTime? InviteExpiresAt { get; set; }
+    public bool IsInvitePending { get; set; } = false;
+}
+
+public enum UserStatus
+{
+    Active = 0,
+    Inactive = 1,
+    Suspended = 2,
+    PendingInvitation = 3
+}
+```
+
+#### Multi-tenancy Implementation
+```csharp
+// Tenant-aware base repository
+public abstract class TenantAwareRepository<T>
+{
+    protected async Task<List<T>> GetByOrganizationAsync(string? organizationId)
+    {
+        var filter = organizationId == null 
+            ? Builders<T>.Filter.Eq("OrganizationId", BsonNull.Value)
+            : Builders<T>.Filter.Eq("OrganizationId", organizationId);
+            
+        return await _collection.Find(filter).ToListAsync();
+    }
+}
+
+// Middleware for tenant context
+public class TenantContextMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        var user = await GetCurrentUserAsync(context);
+        if (user != null)
+        {
+            context.Items["TenantId"] = user.OrganizationId;
+            context.Items["UserId"] = user.Id;
+        }
+        
+        await next(context);
+    }
+}
+```
+
+### **Phase 3: Enterprise Features (Q3-Q4 2025)**
+**Goal**: Complete organization management and permissions
+
+#### Permission System
+```csharp
+public class Permission
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public PermissionCategory Category { get; set; }
+    public string ResourceType { get; set; } // "Route", "WorkType", "User", etc.
+    public List<string> Actions { get; set; } = new(); // ["Create", "Read", "Update", "Delete"]
+}
+
+public enum PermissionCategory
+{
+    Routes = 0,
+    WorkTypes = 1,
+    Users = 2,
+    Organization = 3,
+    Reports = 4,
+    Settings = 5
+}
+
+public class Role
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string OrganizationId { get; set; }
+    public List<string> PermissionIds { get; set; } = new();
+    public bool IsSystemRole { get; set; } = false;
+    
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+// Built-in system roles
+public static class SystemRoles
+{
+    public static readonly Role Member = new()
+    {
+        Name = "Member",
+        Description = "Standard user - can manage own routes and work types",
+        IsSystemRole = true,
+        PermissionIds = new() { "routes:crud", "worktypes:crud:own" }
+    };
+    
+    public static readonly Role Manager = new()
+    {
+        Name = "Manager", 
+        Description = "Can view team data and manage work types",
+        IsSystemRole = true,
+        PermissionIds = new() { "routes:crud", "routes:read:team", "worktypes:crud" }
+    };
+    
+    public static readonly Role Admin = new()
+    {
+        Name = "Admin",
+        Description = "Full organization access",
+        IsSystemRole = true,
+        PermissionIds = new() { "*" } // All permissions
+    };
+}
+```
+
+#### User Management Features
+```csharp
+public class UserInvitationService
+{
+    public async Task<UserInvitation> InviteUserAsync(string organizationId, string email, string roleId)
+    {
+        var invitation = new UserInvitation
+        {
+            OrganizationId = organizationId,
+            Email = email,
+            RoleId = roleId,
+            Token = GenerateSecureToken(),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            Status = InvitationStatus.Pending
+        };
+        
+        await _invitations.InsertOneAsync(invitation);
+        await SendInvitationEmailAsync(invitation);
+        
+        return invitation;
+    }
+    
+    public async Task<User> AcceptInvitationAsync(string token, CreateUserRequest request)
+    {
+        var invitation = await ValidateInvitationTokenAsync(token);
+        
+        var user = await _userService.CreateUserAsync(
+            request.GoogleId, 
+            request.Email, 
+            request.DisplayName);
+            
+        user.OrganizationId = invitation.OrganizationId;
+        user.RoleId = invitation.RoleId;
+        user.Status = UserStatus.Active;
+        
+        await _userService.UpdateAsync(user);
+        await MarkInvitationAcceptedAsync(invitation.Id);
+        
+        return user;
+    }
+}
+```
+
+#### Department & Team Structure
+```csharp
+public class Department
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string OrganizationId { get; set; }
+    public string? ParentDepartmentId { get; set; } // Hierarchical departments
+    public string? ManagerId { get; set; }
+    
+    // Budget and limits
+    public decimal? MonthlyBudget { get; set; }
+    public int? MaxUsers { get; set; }
+    
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class Team
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string OrganizationId { get; set; }
+    public string? DepartmentId { get; set; }
+    public string LeaderId { get; set; }
+    
+    public List<string> MemberIds { get; set; } = new();
+    public TeamSettings Settings { get; set; } = new();
+    
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+```
+
+### **Migration Strategy**
+
+#### Phase 1 → Phase 2 Migration
+```csharp
+public class Phase2MigrationService
+{
+    public async Task MigrateToMultiTenantAsync()
+    {
+        // 1. Create default organization for existing users
+        var individualUsers = await _users.Find(u => u.OrganizationId == null).ToListAsync();
+        
+        foreach (var user in individualUsers)
+        {
+            // Create personal organization for existing users
+            var personalOrg = new Organization
+            {
+                Name = $"{user.DisplayName}'s Organization",
+                Type = OrganizationType.Individual,
+                Plan = SubscriptionPlan.Free,
+                OwnerId = user.Id,
+                Settings = new OrganizationSettings
+                {
+                    DefaultCurrency = user.Settings.CurrencyCode,
+                    DefaultLanguage = user.Settings.Language
+                }
+            };
+            
+            await _organizations.InsertOneAsync(personalOrg);
+            
+            // Update user to belong to personal organization
+            await _users.UpdateOneAsync(
+                u => u.Id == user.Id,
+                Builders<User>.Update.Set(u => u.OrganizationId, personalOrg.Id));
+            
+            // Migrate user's work types to organization scope
+            await MigrateUserWorkTypesToOrganizationAsync(user.Id, personalOrg.Id);
+        }
+    }
+}
+```
+
+#### Database Schema Evolution
+```javascript
+// MongoDB migration scripts for Phase 2
+db.users.updateMany(
+    { organizationId: { $exists: false } },
+    { 
+        $set: { 
+            organizationId: null,
+            roleId: null,
+            status: 0, // Active
+            lastLoginAt: null
+        }
+    }
+);
+
+db.workTypeConfigs.updateMany(
+    { organizationId: { $exists: false } },
+    {
+        $set: {
+            organizationId: null,
+            scope: 0 // Individual
+        }
+    }
+);
+
+// Add indexes for multi-tenancy
+db.routes.createIndex({ "userId": 1, "organizationId": 1 });
+db.workTypeConfigs.createIndex({ "organizationId": 1, "isActive": 1 });
+db.users.createIndex({ "organizationId": 1, "status": 1 });
+```
+
+### **Frontend Enhancements**
+
+#### Organization Management UI
+```typescript
+// Organization dashboard component
+interface OrganizationDashboard {
+  organization: Organization;
+  users: User[];
+  departments: Department[];
+  teams: Team[];
+  analytics: OrganizationAnalytics;
+}
+
+// User invitation flow
+interface InviteUserForm {
+  email: string;
+  roleId: string;
+  departmentId?: string;
+  teamId?: string;
+  message?: string;
+}
+
+// Permission-aware components
+const ProtectedComponent: React.FC<{ permission: string; children: React.ReactNode }> = 
+  ({ permission, children }) => {
+    const { hasPermission } = usePermissions();
+    return hasPermission(permission) ? <>{children}</> : null;
+  };
+```
+
+#### Multi-tenant Routing
+```typescript
+// Tenant-aware API client
+class ApiClient {
+  constructor(private organizationId?: string) {}
+  
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.getToken()}`,
+    };
+    
+    if (this.organizationId) {
+      headers['X-Organization-Id'] = this.organizationId;
+    }
+    
+    return headers;
+  }
+}
+
+// Organization context provider
+const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
+  
+  return (
+    <OrganizationContext.Provider value={{
+      organization: currentOrganization,
+      permissions: userPermissions,
+      switchOrganization: setCurrentOrganization
+    }}>
+      {children}
+    </OrganizationContext.Provider>
+  );
+};
+```
+
+### **Implementation Timeline**
+
+#### Phase 2 Milestones (6 months)
+- **Month 1-2**: Organization models and multi-tenancy foundation
+- **Month 3-4**: Basic role system and user management
+- **Month 5-6**: Organization dashboard and user invitation flow
+
+#### Phase 3 Milestones (6 months)
+- **Month 1-2**: Advanced permission system and custom roles
+- **Month 3-4**: Department/team structure and hierarchy
+- **Month 5-6**: Enterprise features (analytics, billing, compliance)
+
+### **Benefits of Phased Approach**
+
+1. **Non-Breaking Evolution**: Each phase maintains backward compatibility
+2. **Incremental Value**: Users get benefits at each phase completion
+3. **Risk Mitigation**: Smaller, manageable changes reduce deployment risk
+4. **Market Feedback**: Real user feedback guides feature prioritization
+5. **Resource Planning**: Clear milestones enable better resource allocation
 
 ---
 

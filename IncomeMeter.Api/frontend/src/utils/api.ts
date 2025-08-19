@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -147,8 +147,109 @@ export const getRouteById = async (routeId: string): Promise<Route> => {
   return response.data;
 };
 
+export const getRoutesByStatus = async (status: string): Promise<Route[]> => {
+  const response = await api.get<Route[]>(`/api/routes/status/${status}`);
+  return response.data;
+};
+
+export const getRoutesByDateRange = async (startDate: string, endDate: string): Promise<Route[]> => {
+  const response = await api.get<Route[]>(`/api/routes/date-range?startDate=${startDate}&endDate=${endDate}`);
+  return response.data;
+};
+
+export const createRoute = async (routeData: any): Promise<Route> => {
+  const response = await api.post<Route>('/api/routes', routeData);
+  return response.data;
+};
+
+export const updateRoute = async (routeId: string, routeData: any): Promise<Route> => {
+  const response = await api.put<Route>(`/api/routes/${routeId}`, routeData);
+  return response.data;
+};
+
+export const deleteRoute = async (routeId: string): Promise<void> => {
+  await api.delete(`/api/routes/${routeId}`);
+};
+
+export const startRoute = async (routeData: { workType: string; startMile: number; estimatedIncome?: number }): Promise<Route> => {
+  const response = await api.post<Route>('/api/routes/start', routeData);
+  return response.data;
+};
+
+export const endRoute = async (routeData: { id: string; endMile: number; incomes: any[] }): Promise<Route> => {
+  const response = await api.post<Route>('/api/routes/end', routeData);
+  return response.data;
+};
+
 // Location endpoints
 export const getLocationsByRouteId = async (routeId: string) => {
   const response = await api.get(`/api/locations?routeId=${routeId}`);
   return response.data;
+};
+
+export const getLocationById = async (locationId: string) => {
+  const response = await api.get(`/api/locations/${locationId}`);
+  return response.data;
+};
+
+export const createLocation = async (locationData: {
+  routeId: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  accuracy?: number;
+  speed?: number;
+}) => {
+  const response = await api.post('/api/locations', locationData);
+  return response.data;
+};
+
+export const updateLocation = async (locationId: string, locationData: {
+  latitude?: number;
+  longitude?: number;
+  timestamp?: string;
+  accuracy?: number;
+  speed?: number;
+  address?: string;
+}) => {
+  const response = await api.put(`/api/locations/${locationId}`, locationData);
+  return response.data;
+};
+
+export const deleteLocation = async (locationId: string): Promise<void> => {
+  await api.delete(`/api/locations/${locationId}`);
+};
+
+export const deleteLocationsByRouteId = async (routeId: string): Promise<void> => {
+  await api.delete(`/api/locations/route/${routeId}`);
+};
+
+// Work Type Configuration endpoints
+export const getWorkTypeConfigs = async (): Promise<WorkTypeConfig[]> => {
+  const response = await api.get<WorkTypeConfig[]>('/api/work-type-configs');
+  return response.data;
+};
+
+export const getActiveWorkTypeConfigs = async (): Promise<WorkTypeConfig[]> => {
+  const response = await api.get<WorkTypeConfig[]>('/api/work-type-configs/active');
+  return response.data;
+};
+
+export const getWorkTypeConfigById = async (id: string): Promise<WorkTypeConfig> => {
+  const response = await api.get<WorkTypeConfig>(`/api/work-type-configs/${id}`);
+  return response.data;
+};
+
+export const createWorkTypeConfig = async (data: CreateWorkTypeConfigRequest): Promise<WorkTypeConfig> => {
+  const response = await api.post<WorkTypeConfig>('/api/work-type-configs', data);
+  return response.data;
+};
+
+export const updateWorkTypeConfig = async (id: string, data: UpdateWorkTypeConfigRequest): Promise<WorkTypeConfig> => {
+  const response = await api.put<WorkTypeConfig>(`/api/work-type-configs/${id}`, data);
+  return response.data;
+};
+
+export const deleteWorkTypeConfig = async (id: string): Promise<void> => {
+  await api.delete(`/api/work-type-configs/${id}`);
 };

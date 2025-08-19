@@ -185,4 +185,261 @@ public class LocationService : ILocationService
             throw;
         }
     }
+
+    public async Task<Location?> GetLocationByIdAsync(string id, string userId)
+    {
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
+        
+        Log.Logger
+            .ForContext("EventType", "LocationRetrievalByIdStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .Information("Starting location retrieval by ID");
+
+        var location = await _locations.Find(l => l.Id == id && l.UserId == userId).FirstOrDefaultAsync();
+        
+        if (location == null)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationNotFound")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Warning("Location not found or user unauthorized");
+        }
+        else
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationRetrievalByIdSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Information("Location retrieved successfully by ID");
+        }
+        
+        return location;
+    }
+
+    public async Task<Location?> UpdateLocationAsync(string id, UpdateLocationDto dto, string userId)
+    {
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
+        
+        Log.Logger
+            .ForContext("EventType", "LocationUpdateStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .Information("Starting location update");
+
+        // First, verify the location exists and belongs to the user
+        var existingLocation = await GetLocationByIdAsync(id, userId);
+        if (existingLocation == null)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateUnauthorized")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Warning("Location not found or user unauthorized for update");
+            return null;
+        }
+
+        // Build update definition
+        var updateBuilder = Builders<Location>.Update;
+        var updates = new List<UpdateDefinition<Location>>();
+
+        if (dto.Latitude.HasValue)
+        {
+            var roundedLatitude = Math.Round(dto.Latitude.Value, _settings.CoordinatePrecision);
+            updates.Add(updateBuilder.Set(l => l.Latitude, roundedLatitude));
+        }
+
+        if (dto.Longitude.HasValue)
+        {
+            var roundedLongitude = Math.Round(dto.Longitude.Value, _settings.CoordinatePrecision);
+            updates.Add(updateBuilder.Set(l => l.Longitude, roundedLongitude));
+        }
+
+        if (dto.Timestamp.HasValue)
+            updates.Add(updateBuilder.Set(l => l.Timestamp, dto.Timestamp.Value));
+
+        if (dto.Accuracy.HasValue)
+            updates.Add(updateBuilder.Set(l => l.Accuracy, dto.Accuracy.Value));
+
+        if (dto.Speed.HasValue)
+            updates.Add(updateBuilder.Set(l => l.Speed, dto.Speed.Value));
+
+        if (!string.IsNullOrEmpty(dto.Address))
+            updates.Add(updateBuilder.Set(l => l.Address, dto.Address));
+
+        if (updates.Count == 0)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateNoChanges")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Information("No changes detected for location update");
+            return existingLocation;
+        }
+
+        // If coordinates changed, recalculate address and distances
+        if (dto.Latitude.HasValue || dto.Longitude.HasValue)
+        {
+            var newLat = dto.Latitude ?? existingLocation.Latitude;
+            var newLon = dto.Longitude ?? existingLocation.Longitude;
+            
+            var address = await _geoCodingService.GetAddressFromCoordinatesAsync(newLat, newLon);
+            updates.Add(updateBuilder.Set(l => l.Address, address));
+
+            // Recalculate distance from previous location if coordinates changed
+            var previousLocation = await _locations.Find(l => l.RouteId == existingLocation.RouteId && l.Timestamp < existingLocation.Timestamp)
+                .SortByDescending(l => l.Timestamp)
+                .FirstOrDefaultAsync();
+
+            if (previousLocation != null)
+            {
+                var distanceKm = await _geoCodingService.GetDistanceInKmAsync(
+                    previousLocation.Latitude, previousLocation.Longitude, newLat, newLon);
+
+                updates.Add(updateBuilder.Set(l => l.DistanceFromLastKm, Math.Round(distanceKm, 2)));
+                updates.Add(updateBuilder.Set(l => l.DistanceFromLastMi, Math.Round(distanceKm * 0.621371, 2)));
+            }
+        }
+
+        try
+        {
+            var filter = Builders<Location>.Filter.And(
+                Builders<Location>.Filter.Eq(l => l.Id, id),
+                Builders<Location>.Filter.Eq(l => l.UserId, userId)
+            );
+
+            var combinedUpdate = updateBuilder.Combine(updates);
+            var result = await _locations.FindOneAndUpdateAsync(filter, combinedUpdate,
+                new FindOneAndUpdateOptions<Location> { ReturnDocument = ReturnDocument.After });
+
+            if (result != null)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationUpdateSuccess")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                    .Information("Location updated successfully");
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationUpdateFailed")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Error(ex, "Failed to update location in database");
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteLocationAsync(string id, string userId)
+    {
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
+        
+        Log.Logger
+            .ForContext("EventType", "LocationDeletionStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .Information("Starting location deletion");
+
+        try
+        {
+            var filter = Builders<Location>.Filter.And(
+                Builders<Location>.Filter.Eq(l => l.Id, id),
+                Builders<Location>.Filter.Eq(l => l.UserId, userId)
+            );
+
+            var result = await _locations.DeleteOneAsync(filter);
+            var success = result.DeletedCount > 0;
+
+            if (success)
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationDeletionSuccess")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                    .Information("Location deleted successfully");
+            }
+            else
+            {
+                Log.Logger
+                    .ForContext("EventType", "LocationDeletionFailed")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                    .Warning("Location not found or user unauthorized for deletion");
+            }
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationDeletionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("LocationId", id[..Math.Min(8, id.Length)] + "***")
+                .Error(ex, "Error occurred during location deletion");
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteLocationsByRouteIdAsync(string routeId, string userId)
+    {
+        var correlationId = Guid.NewGuid().ToString("N")[..8];
+        
+        Log.Logger
+            .ForContext("EventType", "LocationsBulkDeletionStarted")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .Information("Starting bulk deletion of locations for route");
+
+        // First verify the route belongs to the user
+        var route = await _routeService.GetRouteByIdAsync(routeId, userId);
+        if (route == null)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationsBulkDeletionUnauthorized")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                .Warning("Route not found or user unauthorized for bulk location deletion");
+            return false;
+        }
+
+        try
+        {
+            var filter = Builders<Location>.Filter.And(
+                Builders<Location>.Filter.Eq(l => l.RouteId, routeId),
+                Builders<Location>.Filter.Eq(l => l.UserId, userId)
+            );
+
+            var result = await _locations.DeleteManyAsync(filter);
+
+            Log.Logger
+                .ForContext("EventType", "LocationsBulkDeletionSuccess")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+                .ForContext("DeletedCount", result.DeletedCount)
+                .Information("Bulk deletion of locations completed successfully");
+
+            return result.DeletedCount > 0;
+        }
+        catch (Exception ex)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationsBulkDeletionError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("RouteId", routeId[..Math.Min(8, routeId.Length)] + "***")
+                .Error(ex, "Error occurred during bulk location deletion");
+            throw;
+        }
+    }
 }

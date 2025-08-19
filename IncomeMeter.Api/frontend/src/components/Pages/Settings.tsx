@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import WorkTypeConfigSection from '../Settings/WorkTypeConfig';
 import type { UserSettings } from '../../types';
 
 const Settings: React.FC = () => {
@@ -238,6 +239,11 @@ const Settings: React.FC = () => {
                     </label>
                   </div>
                 </div>
+              </div>
+
+              {/* Work Types & Income Sources Section */}
+              <div>
+                <WorkTypeConfigSection />
               </div>
             </div>
 
