@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import WorkTypeConfigSection from '../Settings/WorkTypeConfig';
-import ApiKeyGenerator from '../Settings/ApiKeyGenerator';
+// import ApiKeyGenerator from '../Settings/ApiKeyGenerator'; // Temporarily commented out
 import type { UserSettings } from '../../types';
 
 const Settings: React.FC = () => {
@@ -244,7 +244,10 @@ const Settings: React.FC = () => {
 
               {/* API Keys Section */}
               <div>
-                <ApiKeyGenerator />
+                {/* <ApiKeyGenerator /> */}
+                <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
+                  API Key Generator temporarily disabled during build
+                </div>
               </div>
 
               {/* Work Types & Income Sources Section */}

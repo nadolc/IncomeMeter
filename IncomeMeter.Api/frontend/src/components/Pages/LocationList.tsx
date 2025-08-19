@@ -26,7 +26,7 @@ const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // const [showCreateModal, setShowCreateModal] = useState(false); // Commented out as unused
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 

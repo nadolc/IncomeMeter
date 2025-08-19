@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getActiveWorkTypeConfigs, createRoute, updateRoute } from '../../utils/api';
-import type { WorkTypeConfig } from '../../types';
+import type { WorkTypeConfig, Route } from '../../types';
 
 interface IncomeItem {
   source: string;
@@ -19,24 +19,7 @@ interface RouteFormData {
   incomes: IncomeItem[];
 }
 
-interface Route {
-  id?: string;
-  userId: string;
-  workType?: string;
-  status: string;
-  scheduleStart: Date;
-  scheduleEnd: Date;
-  actualStartTime?: Date;
-  actualEndTime?: Date;
-  incomes: IncomeItem[];
-  totalIncome: number;
-  estimatedIncome?: number;
-  distance: number;
-  startMile?: number;
-  endMile?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Using imported Route type from '../../types' instead of local definition
 
 interface RouteFormProps {
   route?: Route;
@@ -147,7 +130,18 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
         result = await createRoute(requestData);
       }
 
-      onSave(result as Route);
+      // Convert dates from strings to Date objects to match Route interface
+      const routeWithDates = {
+        ...result,
+        scheduleStart: new Date(result.scheduleStart),
+        scheduleEnd: new Date(result.scheduleEnd),
+        actualStartTime: result.actualStartTime ? new Date(result.actualStartTime) : undefined,
+        actualEndTime: result.actualEndTime ? new Date(result.actualEndTime) : undefined,
+        createdAt: new Date(result.createdAt),
+        updatedAt: new Date(result.updatedAt)
+      } as Route;
+      
+      onSave(routeWithDates);
     } catch (err) {
       console.error('Error saving route:', err);
       setError(err instanceof Error ? err.message : 'Failed to save route');

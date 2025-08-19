@@ -25,7 +25,9 @@ interface TwoFactorStatus {
 }
 
 const TwoFactorSetup: React.FC = () => {
-    const { user, accessToken } = useAuth();
+    const { user } = useAuth();
+    // Get access token from localStorage instead
+    const accessToken = localStorage.getItem('accessToken');
     // const { t } = useTranslation(); // Commented out as unused
     
     const [currentStep, setCurrentStep] = useState<'check-status' | 'setup' | 'verify' | 'complete'>('check-status');
