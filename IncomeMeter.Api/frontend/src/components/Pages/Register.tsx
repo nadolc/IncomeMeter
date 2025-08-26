@@ -53,8 +53,15 @@ const Register: React.FC = () => {
         }
       } else {
         // Regular email registration (if supported)
-        await register(formData);
-        navigate('/login');
+        const result = await register(formData);
+        if (result.success && result.token) {
+          // Store the token and redirect to dashboard
+          localStorage.setItem('accessToken', result.token);
+          navigate('/dashboard');
+        } else {
+          // If no token returned, user needs to login
+          navigate('/login');
+        }
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

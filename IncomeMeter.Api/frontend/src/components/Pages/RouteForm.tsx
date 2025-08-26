@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../contexts/SettingsContext';
 import { getActiveWorkTypeConfigs, createRoute, updateRoute } from '../../utils/api';
 import type { WorkTypeConfig, Route } from '../../types';
 
@@ -13,8 +14,12 @@ interface RouteFormData {
   workTypeId?: string;
   scheduleStart: string;
   scheduleEnd: string;
+  actualStartTime?: string;
+  actualEndTime?: string;
   estimatedIncome?: number;
   startMile?: number;
+  endMile?: number;
+  status: 'completed' | 'in_progress' | 'scheduled' | 'cancelled';
   description?: string;
   incomes: IncomeItem[];
 }
@@ -29,13 +34,18 @@ interface RouteFormProps {
 
 const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
   const { t } = useTranslation();
+  const { formatCurrency } = useSettings();
   const [formData, setFormData] = useState<RouteFormData>({
     workType: '',
     workTypeId: undefined,
     scheduleStart: new Date().toISOString().slice(0, 16),
     scheduleEnd: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16), // +8 hours
+    actualStartTime: undefined,
+    actualEndTime: undefined,
     estimatedIncome: undefined,
     startMile: undefined,
+    endMile: undefined,
+    status: 'scheduled',
     description: undefined,
     incomes: [],
   });
@@ -57,8 +67,12 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
         workTypeId: (route as any).workTypeId,
         scheduleStart: new Date(route.scheduleStart).toISOString().slice(0, 16),
         scheduleEnd: new Date(route.scheduleEnd).toISOString().slice(0, 16),
+        actualStartTime: route.actualStartTime ? new Date(route.actualStartTime).toISOString().slice(0, 16) : undefined,
+        actualEndTime: route.actualEndTime ? new Date(route.actualEndTime).toISOString().slice(0, 16) : undefined,
         estimatedIncome: route.estimatedIncome,
         startMile: route.startMile,
+        endMile: route.endMile,
+        status: route.status,
         description: undefined, // Not in the route model
         incomes: route.incomes || [],
       });
@@ -110,14 +124,29 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
     setLoading(true);
     setError(null);
 
+    // Check if user has unsaved income source
+    if (newIncomeSource.trim() || newIncomeAmount !== '') {
+      setError(t('routes.crud.validation.unsavedIncomeSource') || 'Please add or clear the income source before saving the route.');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // Calculate total income from incomes array
+      const totalIncome = formData.incomes.reduce((sum, item) => sum + item.amount, 0);
+      
       const requestData = {
         workType: formData.workType,
         workTypeId: formData.workTypeId,
         scheduleStart: new Date(formData.scheduleStart),
         scheduleEnd: new Date(formData.scheduleEnd),
+        actualStartTime: formData.actualStartTime ? new Date(formData.actualStartTime) : undefined,
+        actualEndTime: formData.actualEndTime ? new Date(formData.actualEndTime) : undefined,
         estimatedIncome: formData.estimatedIncome,
+        totalIncome: totalIncome, // Add calculated total income
         startMile: formData.startMile,
+        endMile: formData.endMile,
+        status: formData.status,
         incomes: formData.incomes,
       };
 
@@ -152,12 +181,22 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'estimatedIncome' || name === 'startMile'
-        ? value === '' ? undefined : Number(value)
-        : value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: name === 'estimatedIncome' || name === 'startMile' || name === 'endMile'
+          ? value === '' ? undefined : Number(value)
+          : value
+      };
+      
+      // Auto-calculate distance when mileage changes
+      if ((name === 'startMile' || name === 'endMile') && newData.startMile && newData.endMile) {
+        // This would trigger a distance calculation - implement if needed
+        console.log('Auto-calculate distance:', newData.endMile - newData.startMile);
+      }
+      
+      return newData;
+    });
   };
 
   const addIncomeItem = () => {
@@ -266,7 +305,7 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
                       {workTypeConfigs.find(c => c.id === formData.workTypeId)?.incomeSourceTemplates.map((template, index) => (
                         <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                           {template.name}
-                          {template.defaultAmount && ` (£${template.defaultAmount})`}
+                          {template.defaultAmount && ` (${formatCurrency(template.defaultAmount)})`}
                         </span>
                       ))}
                     </div>
@@ -285,6 +324,22 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
                   step="0.1"
                   min="0"
                   value={formData.startMile || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="endMile" className="block text-sm font-medium text-gray-700">
+                  End Mileage
+                </label>
+                <input
+                  type="number"
+                  id="endMile"
+                  name="endMile"
+                  step="0.1"
+                  min="0"
+                  value={formData.endMile || ''}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -322,6 +377,67 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
                 />
               </div>
             </div>
+
+            {isEdit && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="actualStartTime" className="block text-sm font-medium text-gray-700">
+                    Actual Start Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="actualStartTime"
+                    name="actualStartTime"
+                    value={formData.actualStartTime || ''}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="actualEndTime" className="block text-sm font-medium text-gray-700">
+                    Actual End Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="actualEndTime"
+                    name="actualEndTime"
+                    value={formData.actualEndTime || ''}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {isEdit && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Route Status
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {[
+                    { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-500 hover:bg-blue-600' },
+                    { value: 'in_progress', label: 'On Going', color: 'bg-orange-500 hover:bg-orange-600' },
+                    { value: 'completed', label: 'Completed', color: 'bg-green-500 hover:bg-green-600' },
+                    { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-500 hover:bg-gray-600' },
+                  ].map((status) => (
+                    <button
+                      key={status.value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, status: status.value as any }))}
+                      className={`px-4 py-2 rounded-md text-white text-sm font-medium transition-colors duration-200 ${
+                        formData.status === status.value 
+                          ? status.color.replace('hover:', '') + ' ring-2 ring-offset-2 ring-white' 
+                          : status.color + ' opacity-60'
+                      }`}
+                    >
+                      {status.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="estimatedIncome" className="block text-sm font-medium text-gray-700">
@@ -418,7 +534,7 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
                     </div>
                   ))}
                   <div className="text-right text-sm text-gray-600">
-                    Total from income items: £{totalEstimatedIncome.toFixed(2)}
+                    <span className="font-medium">Total from income items: {formatCurrency(totalEstimatedIncome)}</span>
                   </div>
                 </div>
               )}

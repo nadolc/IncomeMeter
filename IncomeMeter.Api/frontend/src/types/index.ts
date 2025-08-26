@@ -59,6 +59,7 @@ export interface Transaction {
 
 export interface DashboardStats {
   last7DaysIncome: number;
+  previous7DaysIncome: number;
   currentMonthIncome: number;
   netIncome: number;
   incomeBySource: Record<string, number>;

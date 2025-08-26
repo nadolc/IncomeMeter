@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../contexts/SettingsContext';
 import RouteForm from './RouteForm';
 import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute } from '../../utils/api';
+import { getDisplayDistance } from '../../utils/distance';
 import type { Route } from '../../types';
 
 
 const EnhancedRouteList: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { formatCurrency, settings } = useSettings();
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,12 +141,6 @@ const EnhancedRouteList: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-    }).format(amount);
-  };
 
   if (loading && routes.length === 0) {
     return (
@@ -276,8 +273,8 @@ const EnhancedRouteList: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex space-x-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wide">{t('routes.list.totalIncome')}</p>
                     <p className="text-lg font-semibold text-green-600">
@@ -287,35 +284,36 @@ const EnhancedRouteList: React.FC = () => {
                   {route.distance > 0 && (
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Distance</p>
-                      <p className="text-lg font-semibold text-gray-900">{route.distance} mi</p>
+                      <p className="text-lg font-semibold text-gray-900">{getDisplayDistance(route.distance, 'mi', settings.mileageUnit).formatted}</p>
                     </div>
                   )}
                   {(route.startMile !== undefined || route.endMile !== undefined) && (
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Mileage</p>
                       <p className="text-lg font-semibold text-gray-900">
-                        {route.startMile || 0} - {route.endMile || 0} mi
+                        {getDisplayDistance(route.startMile || 0, 'mi', settings.mileageUnit).value.toFixed(1)} - {getDisplayDistance(route.endMile || 0, 'mi', settings.mileageUnit).formatted}
                       </p>
                     </div>
                   )}
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                {/* Mobile-friendly Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                   <button
                     onClick={() => navigate(`/routes/${route.id}`)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
                   >
                     {t('routes.actions.view')}
                   </button>
                   <button
                     onClick={() => setEditingRoute(route)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    className="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
                   >
                     {t('routes.actions.edit')}
                   </button>
                   <button
                     onClick={() => setDeletingRoute(route)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    className="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
                   >
                     {t('routes.actions.delete')}
                   </button>

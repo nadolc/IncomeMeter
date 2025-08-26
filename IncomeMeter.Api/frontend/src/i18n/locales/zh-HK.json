@@ -69,6 +69,9 @@
       }
     },
     "crud": {
+      "validation": {
+        "unsavedIncomeSource": "儲存路線前請先新增或清除收入來源。"
+      },
       "create": {
         "title": "建立新路線",
         "workType": "工作類型",
@@ -132,7 +135,9 @@
       "incomeBySource": "按來源分類的收入"
     },
     "trends": {
-      "fromLastWeek": "較上週"
+      "fromLastWeek": "較上週",
+      "newIncomeThisWeek": "本週新收入",
+      "noIncomeData": "沒有收入資料"
     },
     "todayRoutes": {
       "title": "今日路線",

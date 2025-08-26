@@ -49,14 +49,17 @@ public class DashboardController : ControllerBase
             
             var now = DateTime.UtcNow;
             var startOfWeek = now.AddDays(-7);
+            var startOfPreviousWeek = now.AddDays(-14);
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             
             // Calculate stats from routes
             var last7DaysRoutes = allRoutes.Where(r => r.ScheduleStart >= startOfWeek).ToList();
+            var previous7DaysRoutes = allRoutes.Where(r => r.ScheduleStart >= startOfPreviousWeek && r.ScheduleStart < startOfWeek).ToList();
             var currentMonthRoutes = allRoutes.Where(r => r.ScheduleStart >= startOfMonth).ToList();
             var completedRoutes = allRoutes.Where(r => r.Status == "completed").ToList();
             
             var last7DaysIncome = last7DaysRoutes.Sum(r => r.TotalIncome);
+            var previous7DaysIncome = previous7DaysRoutes.Sum(r => r.TotalIncome);
             var currentMonthIncome = currentMonthRoutes.Sum(r => r.TotalIncome);
             
             // Calculate income by work type from current month's routes
@@ -90,6 +93,7 @@ public class DashboardController : ControllerBase
             var stats = new
             {
                 last7DaysIncome,
+                previous7DaysIncome,
                 currentMonthIncome,
                 netIncome = currentMonthIncome, // For now, same as gross income
                 incomeBySource,

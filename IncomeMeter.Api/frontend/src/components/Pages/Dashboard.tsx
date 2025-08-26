@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type { DashboardStats, Route } from '../../types';
@@ -6,6 +7,7 @@ import { getDashboardStats, getTodaysRoutes } from '../../utils/api';
 import { getDisplayDistance } from '../../utils/distance';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { formatCurrency, settings } = useSettings();
   const { t } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -102,7 +104,30 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-sm text-green-600 font-medium">+12% {t('dashboard.trends.fromLastWeek')}</span>
+            {(() => {
+              const current = stats?.last7DaysIncome ?? 0;
+              const previous = stats?.previous7DaysIncome ?? 0;
+              
+              if (previous === 0) {
+                return current > 0 ? (
+                  <span className="text-sm text-green-600 font-medium">{t('dashboard.trends.newIncomeThisWeek')}</span>
+                ) : (
+                  <span className="text-sm text-gray-500 font-medium">{t('dashboard.trends.noIncomeData')}</span>
+                );
+              }
+              
+              const percentChange = ((current - previous) / previous) * 100;
+              const isPositive = percentChange > 0;
+              const isNeutral = percentChange === 0;
+              
+              return (
+                <span className={`text-sm font-medium ${
+                  isNeutral ? 'text-gray-500' : isPositive ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {isNeutral ? '±0%' : `${isPositive ? '+' : ''}${percentChange.toFixed(1)}%`} {t('dashboard.trends.fromLastWeek')}
+                </span>
+              );
+            })()}
           </div>
         </div>
 
@@ -225,7 +250,11 @@ const Dashboard: React.FC = () => {
           <div className="space-y-4">
             {todaysRoutes.length > 0 ? (
               todaysRoutes.map((route) => (
-                <div key={route.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div 
+                  key={route.id} 
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                  onClick={() => navigate(`/routes/${route.id}`)}
+                >
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-green-100 rounded-full">
                       <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
