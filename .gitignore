@@ -395,3 +395,4 @@ logs/
 **/*.key
 **/*.crt
 /IncomeMeter.Api/appsettings.json
+/IncomeMeter.Api/%HOME%/LogFiles

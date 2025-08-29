@@ -15,6 +15,33 @@ public class CreateApiKeyResponseDto
     public Models.ApiKey ApiKeyDetails { get; set; } = null!;
 }
 
+public class ConfigurationResponseDto
+{
+    public UserInfo User { get; set; } = null!;
+    public List<WorkTypeConfigResponseDto> WorkTypes { get; set; } = new();
+    public ApiEndpoints ApiEndpoints { get; set; } = null!;
+}
+
+public class UserInfo
+{
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public string Email { get; set; } = null!;
+    public string Currency { get; set; } = "GBP";
+    public string Language { get; set; } = "en-GB";
+    public string TimeZone { get; set; } = "Europe/London";
+}
+
+
+public class ApiEndpoints
+{
+    public string StartRoute { get; set; } = null!;
+    public string AddLocation { get; set; } = null!;
+    public string EndRoute { get; set; } = null!;
+    public string GetRoutes { get; set; } = null!;
+    public string GetRoute { get; set; } = null!;
+}
+
 public class RegisterRequest
 {
     [Required]

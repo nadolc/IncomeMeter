@@ -52,6 +52,18 @@
         "endMile": "End Mileage",
         "accuracy": "Accuracy",
         "speed": "Speed"
+      },
+      "map": {
+        "title": "Route Map",
+        "noData": "No location data available",
+        "startPoint": "Start",
+        "endPoint": "End",
+        "point": "Point",
+        "time": "Time",
+        "address": "Address",
+        "coordinates": "Coordinates",
+        "distanceFromPrevious": "Distance from previous",
+        "gpsAccuracy": "GPS Accuracy"
       }
     },
     "list": {

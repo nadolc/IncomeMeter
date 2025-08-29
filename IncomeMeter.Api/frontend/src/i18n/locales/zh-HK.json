@@ -52,6 +52,18 @@
         "endMile": "結束里程",
         "accuracy": "準確度",
         "speed": "速度"
+      },
+      "map": {
+        "title": "路線地圖",
+        "noData": "沒有位置數據",
+        "startPoint": "起點",
+        "endPoint": "終點",
+        "point": "位置點",
+        "time": "時間",
+        "address": "地址",
+        "coordinates": "座標",
+        "distanceFromPrevious": "與上一點的距離",
+        "gpsAccuracy": "GPS 準確度"
       }
     },
     "list": {

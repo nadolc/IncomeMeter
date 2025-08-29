@@ -1,20 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { getDashboardStats, getRoutes } from '../../utils/api';
+import type { DashboardStats, Route } from '../../types';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const { settings, formatCurrency } = useSettings();
   const { t } = useLanguage();
 
-  // Mock quick stats data
-  const quickStats = {
-    totalRoutes: 156,
-    totalIncome: 12450.75,
-    activeDays: 89,
-    avgDailyIncome: 139.89,
-  };
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load dashboard stats and routes data
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [statsData, routesData] = await Promise.all([
+          getDashboardStats(),
+          getRoutes()
+        ]);
+        
+        setDashboardStats(statsData);
+        setRoutes(routesData);
+      } catch (err) {
+        console.error('Error loading profile data:', err);
+        setError('Failed to load profile statistics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileData();
+  }, []);
+
+  // Calculate quick stats from real data
+  const quickStats = React.useMemo(() => {
+    if (!dashboardStats || !routes) {
+      return {
+        totalRoutes: 0,
+        totalIncome: 0,
+        activeDays: 0,
+        avgDailyIncome: 0,
+      };
+    }
+
+    const completedRoutes = routes.filter(route => route.status === 'completed');
+    const totalRoutes = routes.length;
+    const totalIncome = dashboardStats.currentMonthIncome || 0;
+    
+    // Calculate active days (days with completed routes)
+    const uniqueDates = new Set();
+    completedRoutes.forEach(route => {
+      if (route.actualEndTime) {
+        const date = new Date(route.actualEndTime).toDateString();
+        uniqueDates.add(date);
+      }
+    });
+    const activeDays = uniqueDates.size;
+    
+    // Calculate average daily income
+    const avgDailyIncome = activeDays > 0 ? totalIncome / activeDays : 0;
+
+    return {
+      totalRoutes,
+      totalIncome,
+      activeDays,
+      avgDailyIncome,
+    };
+  }, [dashboardStats, routes]);
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -177,35 +237,58 @@ const Profile: React.FC = () => {
           {/* Quick Stats */}
           <div className="mt-8 pt-8 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-6">Quick Stats</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {quickStats.totalRoutes}
-                </div>
-                <div className="text-sm text-gray-600">Total Routes</div>
+            
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="text-center">
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-1">
-                  {formatCurrency(quickStats.totalIncome)}
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-500 mb-2">
+                  <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.502 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
                 </div>
-                <div className="text-sm text-gray-600">Total Income</div>
+                <p className="text-gray-600 text-sm">{error}</p>
               </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600 mb-1">
-                  {quickStats.activeDays}
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600 mb-1">
+                    {quickStats.totalRoutes}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Routes</div>
                 </div>
-                <div className="text-sm text-gray-600">Active Days</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-600 mb-1">
-                  {formatCurrency(quickStats.avgDailyIncome)}
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    {formatCurrency(quickStats.totalIncome)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Income</div>
                 </div>
-                <div className="text-sm text-gray-600">Avg Daily Income</div>
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-600 mb-1">
+                    {quickStats.activeDays}
+                  </div>
+                  <div className="text-sm text-gray-600">Active Days</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-orange-600 mb-1">
+                    {formatCurrency(quickStats.avgDailyIncome)}
+                  </div>
+                  <div className="text-sm text-gray-600">Avg Daily Income</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Recent Activity */}

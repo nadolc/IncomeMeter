@@ -113,3 +113,58 @@ export interface UpdateWorkTypeConfigRequest {
   isActive?: boolean;
 }
 
+export interface Location {
+  id: string;
+  routeId: string;
+  userId: string;
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  accuracy?: number | null;
+  speed?: number | null;
+  distanceFromLastKm?: number | null;
+}
+
+export interface ConfigurationResponse {
+  user: UserInfo;
+  workTypes: WorkTypeConfigResponseDto[];
+  apiEndpoints: ApiEndpoints;
+}
+
+export interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  currency: string;
+  language: string;
+  timeZone: string;
+}
+
+export interface WorkTypeConfigResponseDto {
+  id: string;
+  name: string;
+  description?: string;
+  incomeSourceTemplates: IncomeSourceTemplateDto[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncomeSourceTemplateDto {
+  name: string;
+  category?: string;
+  defaultAmount?: number;
+  isRequired: boolean;
+  description?: string;
+  displayOrder: number;
+}
+
+export interface ApiEndpoints {
+  startRoute: string;
+  addLocation: string;
+  endRoute: string;
+  getRoutes: string;
+  getRoute: string;
+}
+

@@ -2,22 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { Route } from '../../types';
+import type { Route, Location } from '../../types';
 import { getDisplayDistance } from '../../utils/distance';
 import { getRouteById, getLocationsByRouteId } from '../../utils/api';
+import RouteMap from '../Maps/RouteMap';
 
-interface Location {
-  id: string;
-  routeId: string;
-  userId: string;
-  timestamp: string;
-  latitude: number;
-  longitude: number;
-  address?: string;
-  accuracy?: number;
-  speed?: number;
-  distanceFromLastKm?: number;
-}
 
 interface RouteWithLocations extends Route {
   locations?: Location[];
@@ -300,6 +289,18 @@ const RouteDetails: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Route Map */}
+      {route.locations && route.locations.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">{t('routes.details.map.title')}</h2>
+            <span className="text-sm text-gray-600">{route.locations.length} locations</span>
+          </div>
+          
+          <RouteMap locations={route.locations} className="mb-6" />
+        </div>
+      )}
 
       {/* Locations */}
       {route.locations && route.locations.length > 0 && (

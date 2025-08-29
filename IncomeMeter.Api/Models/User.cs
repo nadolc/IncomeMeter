@@ -34,7 +34,13 @@ public class UserSettings
 {
     public string Language { get; set; } = "en-GB";
     public string CurrencyCode { get; set; } = "GBP";
-    // ... other settings fields from your User.js model
+    public string TimeZone { get; set; } = "Europe/London";
+    public string DateFormat { get; set; } = "dd/MM/yyyy";
+    public bool EmailNotifications { get; set; } = true;
+    public bool PushNotifications { get; set; } = true;
+    public string DefaultChartPeriod { get; set; } = "7days";
+    public bool ShowWeekends { get; set; } = true;
+    public string MileageUnit { get; set; } = "km";
 }
 
 public enum UserRole

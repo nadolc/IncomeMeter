@@ -263,14 +263,14 @@ const Dashboard: React.FC = () => {
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Route {route.id.slice(0, 8)}</p>
+                      <p className="font-medium text-gray-900">{route.workType}</p>
                       <p className="text-sm text-gray-600">
                         {route.scheduleStart?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {route.scheduleEnd?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">{formatCurrency(route.estimatedIncome ?? route.totalIncome ?? 0)}</p>
+                    <p className="font-semibold text-gray-900">{formatCurrency(route.totalIncome ?? 0)}</p>
                     <p className="text-sm text-gray-600">{getDisplayDistance(route.distance, 'mi', settings.mileageUnit).formatted}</p>
                   </div>
                 </div>

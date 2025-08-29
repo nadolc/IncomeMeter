@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -257,5 +257,36 @@ export const deleteWorkTypeConfig = async (id: string): Promise<void> => {
 // API Key endpoints
 export const generateApiKey = async (description: string): Promise<{ apiKey: string; apiKeyDetails: any }> => {
   const response = await api.post('/api/users/me/apikeys', { description });
+  return response.data;
+};
+
+// Configuration API (using API key authentication)
+export const getConfigurationWithApiKey = async (apiKey: string): Promise<ConfigurationResponse> => {
+  const response = await axios.get(`${getApiBaseUrl()}/api/configuration`, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.data;
+};
+
+export const getWorkTypesWithApiKey = async (apiKey: string): Promise<{ workTypes: WorkTypeConfigResponseDto[] }> => {
+  const response = await axios.get(`${getApiBaseUrl()}/api/configuration/work-types`, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.data;
+};
+
+export const getApiEndpointsWithApiKey = async (apiKey: string): Promise<ApiEndpoints> => {
+  const response = await axios.get(`${getApiBaseUrl()}/api/configuration/endpoints`, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
   return response.data;
 };
