@@ -64,7 +64,7 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
     if (route) {
       setFormData({
         workType: route.workType || '',
-        workTypeId: (route as any).workTypeId,
+        workTypeId: (route as Route & { workTypeId?: string }).workTypeId,
         scheduleStart: new Date(route.scheduleStart).toISOString().slice(0, 16),
         scheduleEnd: new Date(route.scheduleEnd).toISOString().slice(0, 16),
         actualStartTime: route.actualStartTime ? new Date(route.actualStartTime).toISOString().slice(0, 16) : undefined,
@@ -425,7 +425,7 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
                     <button
                       key={status.value}
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, status: status.value as any }))}
+                      onClick={() => setFormData(prev => ({ ...prev, status: status.value as 'completed' | 'in_progress' | 'scheduled' | 'cancelled' }))}
                       className={`px-4 py-2 rounded-md text-white text-sm font-medium transition-colors duration-200 ${
                         formData.status === status.value 
                           ? status.color.replace('hover:', '') + ' ring-2 ring-offset-2 ring-white' 

@@ -10,19 +10,19 @@ using FluentAssertions;
 using Xunit;
 using System.Security.Claims;
 
-namespace IncomeMeter.Tests.Controllers;
+namespace IncomeMeter.Api.Tests.Controllers;
 
 public class LocationsControllerTests
 {
     private readonly Mock<ILocationService> _mockLocationService;
-    private readonly Mock<ILogger<WorkTracker.Api.Controllers.LocationsController>> _mockLogger;
-    private readonly WorkTracker.Api.Controllers.LocationsController _controller;
+    private readonly Mock<ILogger<IncomeMeter.Api.Controllers.LocationsController>> _mockLogger;
+    private readonly LocationsController _controller;
 
     public LocationsControllerTests()
     {
-        _mockLocationService = new Mock<ILocationService>();
-        _mockLogger = new Mock<ILogger<WorkTracker.Api.Controllers.LocationsController>>();
-        _controller = new WorkTracker.Api.Controllers.LocationsController(_mockLocationService.Object, _mockLogger.Object);
+        _mockLocationService = new Mock<IncomeMeter.Api.Services.ILocationService>();
+        _mockLogger = new Mock<ILogger<IncomeMeter.Api.Controllers.LocationsController>>();
+        _controller = new IncomeMeter.Api.Controllers.LocationsController(_mockLocationService.Object, _mockLogger.Object);
 
         SetupControllerUser();
     }

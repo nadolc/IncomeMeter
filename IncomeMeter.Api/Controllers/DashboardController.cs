@@ -58,17 +58,25 @@ public class DashboardController : ControllerBase
             var currentMonthRoutes = allRoutes.Where(r => r.ScheduleStart >= startOfMonth).ToList();
             var completedRoutes = allRoutes.Where(r => r.Status == "completed").ToList();
             
-            var last7DaysIncome = last7DaysRoutes.Sum(r => r.TotalIncome);
-            var previous7DaysIncome = previous7DaysRoutes.Sum(r => r.TotalIncome);
-            var currentMonthIncome = currentMonthRoutes.Sum(r => r.TotalIncome);
+            var last7DaysIncome = last7DaysRoutes.Where(r => r.Status == "completed").Sum(r => r.TotalIncome);
+            var previous7DaysIncome = previous7DaysRoutes.Where(r => r.Status == "completed").Sum(r => r.TotalIncome);
+            var currentMonthIncome = currentMonthRoutes.Where(r => r.Status == "completed").Sum(r => r.TotalIncome);
             
-            // Calculate income by work type from current month's routes
+            var last7DaysMileage = last7DaysRoutes.Where(r => r.Status == "completed").Sum(r => r.Distance);
+            var currentMonthMileage = currentMonthRoutes.Where(r => r.Status == "completed").Sum(r => r.Distance);
+            
+            // Calculate income, scheduled time, and mileage by work type from current month's routes
             var incomeBySource = currentMonthRoutes
                 .Where(r => r.Status == "completed")
                 .GroupBy(r => r.WorkType ?? "Other")
                 .ToDictionary(
                     g => g.Key, 
-                    g => g.Sum(r => r.TotalIncome)
+                    g => new
+                    {
+                        income = g.Sum(r => r.TotalIncome),
+                        totalScheduledHours = g.Sum(r => (r.ScheduleEnd - r.ScheduleStart).TotalHours),
+                        totalMileage = g.Sum(r => r.Distance)
+                    }
                 );
 
             // Generate daily income data for the last 7 days
@@ -96,6 +104,8 @@ public class DashboardController : ControllerBase
                 previous7DaysIncome,
                 currentMonthIncome,
                 netIncome = currentMonthIncome, // For now, same as gross income
+                last7DaysMileage,
+                currentMonthMileage,
                 incomeBySource,
                 dailyIncomeData
             };

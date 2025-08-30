@@ -12,7 +12,7 @@ using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using IncomeMeter.Api.DTOs;
 
-namespace IncomeMeter.Tests.Controllers;
+namespace IncomeMeter.Api.Tests.Controllers;
 
 public class AuthControllerTests
 {
@@ -219,7 +219,7 @@ public class AuthControllerTests
         // Assert
         Assert.IsType<OkObjectResult>(result);
         var okResult = result as OkObjectResult;
-        var response = okResult.Value as AuthResponse;
+        var response = okResult.Value as DTOs.AuthResponse;
         Assert.True(response.Success);
         Assert.Equal("Registration successful", response.Message);
         Assert.NotNull(response.Token);
@@ -243,7 +243,7 @@ public class AuthControllerTests
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
         var badRequestResult = result as BadRequestObjectResult;
-        var response = badRequestResult.Value as AuthResponse;
+        var response = badRequestResult.Value as DTOs.AuthResponse;
         Assert.False(response.Success);
         Assert.Equal("Missing required fields", response.Message);
     }
@@ -278,7 +278,7 @@ public class AuthControllerTests
         // Assert
         Assert.IsType<BadRequestObjectResult>(result);
         var badRequestResult = result as BadRequestObjectResult;
-        var response = badRequestResult.Value as AuthResponse;
+        var response = badRequestResult.Value as DTOs.AuthResponse;
         Assert.False(response.Success);
         Assert.Equal("User already exists", response.Message);
     }
@@ -378,7 +378,7 @@ public class AuthControllerTests
         // Assert
         Assert.IsType<OkObjectResult>(result);
         var okResult = result as OkObjectResult;
-        var response = okResult.Value as AuthResponse;
+        var response = okResult.Value as DTOs.AuthResponse;
         Assert.True(response.Success);
         Assert.Equal("Logged out successfully", response.Message);
     }

@@ -13,7 +13,8 @@
       "Bash(npm run lint)",
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": []
   }

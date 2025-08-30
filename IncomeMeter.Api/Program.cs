@@ -344,3 +344,6 @@ Console.WriteLine("=== IncomeMeter API Started Successfully ===");
 Console.WriteLine($"Listening on: {string.Join(", ", builder.Configuration.GetValue<string>("ASPNETCORE_URLS")?.Split(';') ?? new[] { "http://localhost:5000" })}");
 
 app.Run();
+
+// Make Program class accessible for integration testing
+public partial class Program { }

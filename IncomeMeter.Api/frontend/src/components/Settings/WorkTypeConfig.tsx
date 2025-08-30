@@ -143,7 +143,7 @@ const WorkTypeConfigSection: React.FC = () => {
     }));
   };
 
-  const updateIncomeSource = (index: number, field: keyof IncomeSourceTemplate, value: any) => {
+  const updateIncomeSource = (index: number, field: keyof IncomeSourceTemplate, value: string | number | boolean | undefined) => {
     setFormData(prev => ({
       ...prev,
       incomeSourceTemplates: prev.incomeSourceTemplates.map((template, i) =>

@@ -44,7 +44,7 @@ const EnhancedRouteList: React.FC = () => {
 
       console.log('Raw API response:', data);
 
-      const processedRoutes: Route[] = data.map((route: any) => ({
+      const processedRoutes: Route[] = data.map((route: Route) => ({
         ...route,
         scheduleStart: new Date(route.scheduleStart),
         scheduleEnd: new Date(route.scheduleEnd),

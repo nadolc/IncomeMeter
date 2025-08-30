@@ -157,12 +157,12 @@ export const getRoutesByDateRange = async (startDate: string, endDate: string): 
   return response.data;
 };
 
-export const createRoute = async (routeData: any): Promise<Route> => {
+export const createRoute = async (routeData: Partial<Route>): Promise<Route> => {
   const response = await api.post<Route>('/api/routes', routeData);
   return response.data;
 };
 
-export const updateRoute = async (routeId: string, routeData: any): Promise<Route> => {
+export const updateRoute = async (routeId: string, routeData: Partial<Route>): Promise<Route> => {
   const response = await api.put<Route>(`/api/routes/${routeId}`, routeData);
   return response.data;
 };
@@ -176,7 +176,7 @@ export const startRoute = async (routeData: { workType: string; startMile: numbe
   return response.data;
 };
 
-export const endRoute = async (routeData: { id: string; endMile: number; incomes: any[] }): Promise<Route> => {
+export const endRoute = async (routeData: { id: string; endMile: number; incomes: Array<{ source: string; amount: number }> }): Promise<Route> => {
   const response = await api.post<Route>('/api/routes/end', routeData);
   return response.data;
 };
@@ -255,14 +255,14 @@ export const deleteWorkTypeConfig = async (id: string): Promise<void> => {
 };
 
 // API Key endpoints
-export const generateApiKey = async (description: string): Promise<{ apiKey: string; apiKeyDetails: any }> => {
+export const generateApiKey = async (description: string): Promise<{ apiKey: string; apiKeyDetails: Record<string, unknown> }> => {
   const response = await api.post('/api/users/me/apikeys', { description });
   return response.data;
 };
 
 // Configuration API (using API key authentication)
 export const getConfigurationWithApiKey = async (apiKey: string): Promise<ConfigurationResponse> => {
-  const response = await axios.get(`${getApiBaseUrl()}/api/configuration`, {
+  const response = await axios.get(`${API_BASE_URL}/api/configuration`, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
@@ -272,7 +272,7 @@ export const getConfigurationWithApiKey = async (apiKey: string): Promise<Config
 };
 
 export const getWorkTypesWithApiKey = async (apiKey: string): Promise<{ workTypes: WorkTypeConfigResponseDto[] }> => {
-  const response = await axios.get(`${getApiBaseUrl()}/api/configuration/work-types`, {
+  const response = await axios.get(`${API_BASE_URL}/api/configuration/work-types`, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
@@ -282,7 +282,7 @@ export const getWorkTypesWithApiKey = async (apiKey: string): Promise<{ workType
 };
 
 export const getApiEndpointsWithApiKey = async (apiKey: string): Promise<ApiEndpoints> => {
-  const response = await axios.get(`${getApiBaseUrl()}/api/configuration/endpoints`, {
+  const response = await axios.get(`${API_BASE_URL}/api/configuration/endpoints`, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'

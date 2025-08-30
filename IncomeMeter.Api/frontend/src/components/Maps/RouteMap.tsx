@@ -8,192 +8,173 @@ import 'leaflet/dist/leaflet.css';
 
 // Create custom icons
 const createNumberedIcon = (number: number, isStart: boolean = false, isEnd: boolean = false) => {
-  let backgroundColor = '#3B82F6'; // Blue for regular points
-  if (isStart) backgroundColor = '#10B981'; // Green for start
-  if (isEnd) backgroundColor = '#EF4444'; // Red for end
+  let color = '#3b82f6'; // blue
+  if (isStart) color = '#10b981'; // green
+  if (isEnd) color = '#ef4444'; // red
 
-  return L.divIcon({
-    html: `<div style="
-      background-color: ${backgroundColor};
-      color: white;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 12px;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    ">${number}</div>`,
-    className: 'custom-numbered-icon',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15]
+  return new L.DivIcon({
+    html: `
+      <div style="
+        background-color: ${color};
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      ">
+        ${isStart ? 'S' : isEnd ? 'E' : number}
+      </div>
+    `,
+    className: 'custom-div-icon',
+    iconSize: [25, 25],
+    iconAnchor: [12.5, 12.5],
   });
 };
 
 interface RouteMapProps {
   locations: Location[];
+  height?: string;
+  showRoute?: boolean;
+  onLocationClick?: (location: Location) => void;
   className?: string;
 }
 
-const RouteMap: React.FC<RouteMapProps> = ({ locations, className = '' }) => {
+const RouteMap: React.FC<RouteMapProps> = ({ 
+  locations, 
+  height = '400px', 
+  showRoute = true, 
+  onLocationClick,
+  className = '' 
+}) => {
   const mapRef = useRef<L.Map | null>(null);
 
-  // Calculate bounds for all locations
-  const bounds = useMemo(() => {
-    if (locations.length === 0) return null;
-    
-    if (locations.length === 1) {
-      const loc = locations[0];
-      return L.latLngBounds([
-        [loc.latitude - 0.01, loc.longitude - 0.01],
-        [loc.latitude + 0.01, loc.longitude + 0.01]
-      ]);
+  // Calculate bounds and center
+  const { center, bounds, polylinePositions } = useMemo(() => {
+    if (!locations || locations.length === 0) {
+      return {
+        center: [51.505, -0.09] as [number, number], // Default to London
+        bounds: null,
+        polylinePositions: []
+      };
     }
 
-    const latitudes = locations.map(loc => loc.latitude);
-    const longitudes = locations.map(loc => loc.longitude);
-    
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
+    const positions: [number, number][] = locations.map(loc => [loc.latitude, loc.longitude]);
+    const latLngs = positions.map(([lat, lng]) => L.latLng(lat, lng));
+    const boundsObj = L.latLngBounds(latLngs);
 
-    // Add some padding around the bounds
-    const padding = 0.001;
-    return L.latLngBounds([
-      [minLat - padding, minLng - padding],
-      [maxLat + padding, maxLng + padding]
-    ]);
+    return {
+      center: [locations[0].latitude, locations[0].longitude] as [number, number],
+      bounds: boundsObj,
+      polylinePositions: positions
+    };
   }, [locations]);
 
-  // Create path for polyline
-  const pathPositions = useMemo(() => {
-    return locations.map(loc => [loc.latitude, loc.longitude] as [number, number]);
-  }, [locations]);
-
-  // Calculate center point
-  const center = useMemo(() => {
-    if (locations.length === 0) return [51.505, -0.09] as [number, number]; // Default London
-    if (locations.length === 1) return [locations[0].latitude, locations[0].longitude] as [number, number];
-    
-    const avgLat = locations.reduce((sum, loc) => sum + loc.latitude, 0) / locations.length;
-    const avgLng = locations.reduce((sum, loc) => sum + loc.longitude, 0) / locations.length;
-    return [avgLat, avgLng] as [number, number];
-  }, [locations]);
-
-  // Fit map to bounds when locations change
+  // Fit bounds when locations change
   useEffect(() => {
-    if (mapRef.current && bounds) {
-      mapRef.current.fitBounds(bounds, { padding: [20, 20] });
+    if (mapRef.current && bounds && locations.length > 1) {
+      setTimeout(() => {
+        mapRef.current?.fitBounds(bounds, { padding: [20, 20] });
+      }, 100);
     }
-  }, [bounds]);
+  }, [bounds, locations]);
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
-    });
-  };
-
-  const formatDistance = (distance: number | undefined | null) => {
-    if (!distance || distance <= 0) return '0.0 km';
-    return `${distance.toFixed(2)} km`;
-  };
-
-  if (locations.length === 0) {
+  if (!locations || locations.length === 0) {
     return (
-      <div className={`bg-gray-100 rounded-lg flex items-center justify-center h-96 ${className}`}>
-        <div className="text-center text-gray-500">
-          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          </svg>
-          <p>No location data available</p>
+      <div 
+        className={`bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center ${className}`}
+        style={{ height }}
+      >
+        <div className="text-center text-gray-600">
+          <div className="text-lg font-semibold mb-2">Route Map</div>
+          <div className="text-sm">No locations to display</div>
         </div>
       </div>
     );
   }
 
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return timestamp;
+    }
+  };
+
   return (
-    <div className={`rounded-lg overflow-hidden shadow-sm ${className}`}>
+    <div className={className} style={{ height, position: 'relative' }}>
       <MapContainer
         center={center}
         zoom={13}
-        style={{ height: '400px', width: '100%' }}
+        style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
         ref={mapRef}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
-        {/* Route polyline */}
-        {locations.length > 1 && (
+
+        {/* Draw route line if enabled */}
+        {showRoute && polylinePositions.length > 1 && (
           <Polyline
-            positions={pathPositions}
-            pathOptions={{
-              color: '#3B82F6',
-              weight: 3,
-              opacity: 0.7
+            positions={polylinePositions}
+            pathOptions={{ 
+              color: '#3b82f6', 
+              weight: 3, 
+              opacity: 0.8,
+              dashArray: '5, 5'
             }}
           />
         )}
-        
+
         {/* Location markers */}
         {locations.map((location, index) => {
           const isStart = index === 0;
           const isEnd = index === locations.length - 1;
-          const number = index + 1;
-          
+          const icon = createNumberedIcon(index + 1, isStart, isEnd);
+
           return (
             <Marker
-              key={location.id}
+              key={`${location.id || index}-${location.timestamp}`}
               position={[location.latitude, location.longitude]}
-              icon={createNumberedIcon(number, isStart, isEnd)}
+              icon={icon}
+              eventHandlers={{
+                click: () => onLocationClick?.(location)
+              }}
             >
               <Popup>
-                <div className="p-2 min-w-[200px]">
+                <div className="text-sm">
                   <div className="font-semibold mb-2">
-                    {isStart && <span className="text-green-600">Start - </span>}
-                    {isEnd && <span className="text-red-600">End - </span>}
-                    Point #{number}
+                    {isStart ? '🟢 Start Point' : isEnd ? '🔴 End Point' : `📍 Point ${index + 1}`}
                   </div>
                   
-                  <div className="space-y-1 text-sm">
-                    <div>
-                      <strong>Time:</strong> {formatTime(location.timestamp)}
-                    </div>
+                  <div className="space-y-1">
+                    <div><strong>Time:</strong> {formatTimestamp(location.timestamp)}</div>
+                    <div><strong>Coordinates:</strong> {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</div>
                     
                     {location.address && (
-                      <div>
-                        <strong>Address:</strong> {location.address}
-                      </div>
+                      <div><strong>Address:</strong> {location.address}</div>
                     )}
                     
-                    <div>
-                      <strong>Coordinates:</strong> {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                    </div>
-                    
-                    {location.distanceFromLastKm != null && location.distanceFromLastKm > 0 && (
-                      <div>
-                        <strong>Distance from previous:</strong> {formatDistance(location.distanceFromLastKm)}
-                      </div>
+                    {location.speed !== null && location.speed !== undefined && (
+                      <div><strong>Speed:</strong> {location.speed.toFixed(1)} km/h</div>
                     )}
                     
-                    {location.speed != null && (
-                      <div>
-                        <strong>Speed:</strong> {location.speed.toFixed(1)} m/s
-                      </div>
+                    {location.accuracy !== null && location.accuracy !== undefined && (
+                      <div><strong>GPS Accuracy:</strong> {location.accuracy.toFixed(0)}m</div>
                     )}
-                    
-                    {location.accuracy != null && (
-                      <div>
-                        <strong>GPS Accuracy:</strong> ±{location.accuracy.toFixed(1)}m
-                      </div>
+
+                    {location.distanceFromLastKm !== null && location.distanceFromLastKm !== undefined && index > 0 && (
+                      <div><strong>Distance from previous:</strong> {location.distanceFromLastKm.toFixed(2)} km</div>
                     )}
                   </div>
                 </div>
@@ -202,6 +183,31 @@ const RouteMap: React.FC<RouteMapProps> = ({ locations, className = '' }) => {
           );
         })}
       </MapContainer>
+
+      {/* Map legend */}
+      <div className="absolute top-2 right-2 bg-white rounded-lg shadow-md p-2 text-xs z-[1000]">
+        <div className="font-semibold mb-1">Legend</div>
+        <div className="flex items-center mb-1">
+          <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+          <span>Start</span>
+        </div>
+        <div className="flex items-center mb-1">
+          <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+          <span>End</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+          <span>Waypoints</span>
+        </div>
+      </div>
+
+      {/* Map info */}
+      <div className="absolute bottom-2 left-2 bg-white rounded-lg shadow-md p-2 text-xs z-[1000]">
+        <div className="font-semibold">{locations.length} location{locations.length === 1 ? '' : 's'}</div>
+        {locations.length > 1 && showRoute && (
+          <div>Route displayed</div>
+        )}
+      </div>
     </div>
   );
 };

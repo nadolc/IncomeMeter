@@ -5,6 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import type { DashboardStats, Route } from '../../types';
 import { getDashboardStats, getTodaysRoutes } from '../../utils/api';
 import { getDisplayDistance } from '../../utils/distance';
+import { formatHoursCompact, calculateHourlyRate } from '../../utils/time';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ const Dashboard: React.FC = () => {
               </svg>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-1">
             {(() => {
               const current = stats?.last7DaysIncome ?? 0;
               const previous = stats?.previous7DaysIncome ?? 0;
@@ -128,6 +129,9 @@ const Dashboard: React.FC = () => {
                 </span>
               );
             })()}
+            <div className="text-sm text-gray-600">
+              {getDisplayDistance(stats?.last7DaysMileage ?? 0, 'mi', settings.mileageUnit).formatted} {t('dashboard.mileage.totalDistance')}
+            </div>
           </div>
         </div>
 
@@ -139,26 +143,43 @@ const Dashboard: React.FC = () => {
               <p className="text-xl font-bold text-gray-900 mt-1">{t('dashboard.stats.incomeBySource')}</p>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {Object.entries(stats?.incomeBySource || {})
-              .sort(([,a], [,b]) => b - a) // Sort by income amount descending
-              .map(([workType, amount], index) => {
+              .sort(([,a], [,b]) => b.income - a.income) // Sort by income amount descending
+              .map(([workType, data], index) => {
                 const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500'];
                 const colorClass = colors[index % colors.length];
+                const hourlyRate = calculateHourlyRate(data.income, data.totalScheduledHours);
                 
                 return (
-                  <div key={workType} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 ${colorClass} rounded-full mr-2`}></div>
-                      <span className="text-gray-600 capitalize">{workType}</span>
+                  <div key={workType} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center">
+                        <div className={`w-3 h-3 ${colorClass} rounded-full mr-2`}></div>
+                        <span className="text-gray-800 font-medium capitalize">{workType}</span>
+                      </div>
+                      <span className="font-semibold text-gray-900">{formatCurrency(data.income)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(amount)}</span>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                      <div className="flex items-center justify-between">
+                        <span>{formatHoursCompact(data.totalScheduledHours)} {t('dashboard.mileage.scheduled')}</span>
+                        <span className="font-medium">
+                          {data.totalScheduledHours > 0 ? `${formatCurrency(hourlyRate)}/hr` : t('dashboard.mileage.noTimeData')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>{getDisplayDistance(data.totalMileage, 'mi', settings.mileageUnit).formatted}</span>
+                        <span className="font-medium">
+                          {data.totalMileage > 0 ? `${formatCurrency(data.income / data.totalMileage)}/${settings.mileageUnit}` : t('dashboard.mileage.noMileage')}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
             {Object.keys(stats?.incomeBySource || {}).length === 0 && (
               <div className="text-center py-4">
-                <span className="text-gray-500 text-sm">No completed routes this month</span>
+                <span className="text-gray-500 text-sm">{t('dashboard.trends.noCompletedRoutes')}</span>
               </div>
             )}
           </div>
@@ -180,9 +201,10 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-sm text-blue-600 font-medium">Current month total</span>
+            <span className="text-sm text-blue-600 font-medium">{t('dashboard.trends.currentMonthTotal')}</span>
           </div>
         </div>
+
       </div>
 
       {/* Charts Row */}
@@ -190,7 +212,7 @@ const Dashboard: React.FC = () => {
         {/* Bar Chart - Last 7 Days */}
         <div className="dashboard-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Last 7 Days Income</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('dashboard.trends.last7DaysIncomeChart')}</h3>
           </div>
           <div className="space-y-3">
             {(() => {
@@ -235,7 +257,7 @@ const Dashboard: React.FC = () => {
             {/* Show message if no data */}
             {(stats?.dailyIncomeData || []).length === 0 && (
               <div className="text-center py-8">
-                <span className="text-gray-500 text-sm">No income data for the last 7 days</span>
+                <span className="text-gray-500 text-sm">{t('dashboard.trends.noIncomeDataLast7Days')}</span>
               </div>
             )}
           </div>

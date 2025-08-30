@@ -146,10 +146,20 @@
       "netIncome": "淨收入",
       "incomeBySource": "按來源分類的收入"
     },
+    "mileage": {
+      "totalDistance": "總距離",
+      "scheduled": "預定",
+      "noMileage": "無里程數據",
+      "noTimeData": "無時間數據"
+    },
     "trends": {
       "fromLastWeek": "較上週",
       "newIncomeThisWeek": "本週新收入",
-      "noIncomeData": "沒有收入資料"
+      "noIncomeData": "沒有收入資料",
+      "currentMonthTotal": "本月總計",
+      "noCompletedRoutes": "本月沒有完成的路線",
+      "noIncomeDataLast7Days": "過去7天沒有收入數據",
+      "last7DaysIncomeChart": "過去7天收入"
     },
     "todayRoutes": {
       "title": "今日路線",
@@ -184,12 +194,12 @@
       "mileageUnit": "里程單位"
     },
     "currencies": {
-      "GBP": "英鎊 (GBP)",
-      "HKD": "港幣 (HKD)"
+      "GBP": "英鎊 (£)",
+      "HKD": "港幣 ($)"
     },
     "mileageUnits": {
-      "km": "公里",
-      "mi": "英里"
+      "km": "公里 (KM)",
+      "mi": "英里 (Mi)"
     },
     "notifications": {
       "title": "通知",

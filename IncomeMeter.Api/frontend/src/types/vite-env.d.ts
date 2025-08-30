@@ -14,5 +14,5 @@ interface ImportMeta {
     accept: (cb?: () => void) => void;
     on: (event: string, cb: () => void) => void;
   };
-  glob: (pattern: string, options?: any) => Record<string, any>;
+  glob: (pattern: string, options?: Record<string, unknown>) => Record<string, unknown>;
 }

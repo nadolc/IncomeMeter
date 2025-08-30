@@ -7,11 +7,16 @@ namespace IncomeMeter.Api.Services;
 public class MongoDbContext
 {
     // Define properties for all your collections
-    public IMongoCollection<User> Users { get; }
+    /*public IMongoCollection<User> Users { get; }
     public IMongoCollection<IncomeMeter.Api.Models.Route> Routes { get; }
     public IMongoCollection<Location> Locations { get; }
     public IMongoCollection<Transaction> Transactions { get; }
-    public IMongoCollection<WorkTypeConfig> WorkTypeConfigs { get; }
+    public IMongoCollection<WorkTypeConfig> WorkTypeConfigs { get; }*/
+    public virtual IMongoCollection<User> Users { get; }
+    public virtual IMongoCollection<IncomeMeter.Api.Models.Route> Routes { get; }
+    public virtual IMongoCollection<Location> Locations { get; }
+    public virtual IMongoCollection<Transaction> Transactions { get; }
+    public virtual IMongoCollection<WorkTypeConfig> WorkTypeConfigs { get; }
 
     public MongoDbContext(IOptions<DatabaseSettings> dbSettings)
     {

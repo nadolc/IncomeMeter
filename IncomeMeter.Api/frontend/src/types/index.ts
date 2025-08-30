@@ -62,7 +62,13 @@ export interface DashboardStats {
   previous7DaysIncome: number;
   currentMonthIncome: number;
   netIncome: number;
-  incomeBySource: Record<string, number>;
+  last7DaysMileage: number;
+  currentMonthMileage: number;
+  incomeBySource: Record<string, {
+    income: number;
+    totalScheduledHours: number;
+    totalMileage: number;
+  }>;
   dailyIncomeData: {
     date: string;
     income: number;

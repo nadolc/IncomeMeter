@@ -10,7 +10,7 @@ using FluentAssertions;
 using Xunit;
 using System.Security.Claims;
 
-namespace IncomeMeter.Tests.Controllers;
+namespace IncomeMeter.Api.Tests.Controllers;
 
 public class RoutesControllerTests
 {

@@ -1,6 +1,7 @@
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
+using IncomeMeter.Api.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -8,7 +9,7 @@ using Moq;
 using FluentAssertions;
 using Xunit;
 
-namespace IncomeMeter.Tests.Services;
+namespace IncomeMeter.Api.Tests.Services;
 
 public class LocationServiceTests
 {
