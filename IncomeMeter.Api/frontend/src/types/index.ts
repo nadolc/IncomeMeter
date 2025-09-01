@@ -1,3 +1,6 @@
+// Period types for dashboard
+export type PeriodType = 'weekly' | 'monthly' | 'annual';
+
 export interface User {
   id: string;
   name: string;
@@ -18,6 +21,7 @@ export interface UserSettings {
   defaultChartPeriod: string;
   showWeekends: boolean;
   mileageUnit: 'km' | 'mi';
+  fiscalYearStartDate: string; // Format: "MM-DD" (e.g., "04-06" for April 6th)
 }
 
 export interface AuthResponse {
@@ -74,6 +78,95 @@ export interface DashboardStats {
     income: number;
   }[];
 }
+
+export interface WeeklyIncomeData {
+  period: 'weekly';
+  weekNumber: number;
+  year: number;
+  fiscalYear: number;
+  startDate: string;
+  endDate: string;
+  totalIncome: number;
+  totalMileage: number;
+  dailyData: {
+    date: string;
+    dayOfWeek: number; // 0=Sunday, 1=Monday, etc.
+    income: number;
+    mileage: number;
+  }[];
+}
+
+export interface MonthlyIncomeData {
+  period: 'monthly';
+  month: number; // 1-12
+  year: number;
+  fiscalYear: number;
+  totalIncome: number;
+  totalMileage: number;
+  weeklyData: {
+    weekNumber: number;
+    startDate: string;
+    endDate: string;
+    income: number;
+    mileage: number;
+    isPartialWeek: boolean;
+  }[];
+}
+
+export interface AnnualIncomeData {
+  period: 'annual';
+  fiscalYear: number;
+  startDate: string; // Fiscal year start
+  endDate: string;   // Fiscal year end
+  totalIncome: number;
+  totalMileage: number;
+  monthlyData: {
+    month: number; // 1-12
+    year: number;
+    income: number;
+    mileage: number;
+    weekCount: number;
+  }[];
+}
+
+// Common chart data structure for all periods
+export interface ChartDataPoint {
+  label: string;
+  date: string;
+  income: number;
+  routes: number;
+  distance: number;
+}
+
+// Navigation controls for period browsing
+export interface PeriodNavigation {
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  currentPeriodDisplay: string;
+}
+
+// Unified period data interface
+export interface PeriodIncomeData {
+  period: PeriodType;
+  startDate: string;
+  endDate: string;
+  totalIncome: number;
+  totalRoutes: number;
+  totalDistance: number;
+  chartData: ChartDataPoint[];
+  navigation: PeriodNavigation;
+  incomeBySource: Record<string, {
+    income: number;
+    routes: number;
+    totalWorkingHours: number;
+    totalMileage: number;
+    hourlyRate: number;
+    earningsPerMile: number;
+    incomeBySource: Record<string, number>;
+  }>;
+}
+
+export type PeriodDataUnion = WeeklyIncomeData | MonthlyIncomeData | AnnualIncomeData;
 
 export interface RegisterFormData {
   name: string;

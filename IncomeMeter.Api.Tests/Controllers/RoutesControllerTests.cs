@@ -361,4 +361,217 @@ public class RoutesControllerTests
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeEquivalentTo(routes);
     }
+
+    #region Start With API Key Tests
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithValidDataAndWorkTypeId_ShouldCreateRouteSuccessfully()
+    {
+        // Arrange
+        var user = new User { Id = "user123", Email = "test@example.com" };
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Delivery", 
+            WorkTypeId = "507f1f77bcf86cd799439011",  // Valid ObjectId
+            StartMile = 12500.5, 
+            EstimatedIncome = 150.00m 
+        };
+
+        var createdRoute = new Route
+        {
+            Id = "route123",
+            UserId = user.Id,
+            WorkType = dto.WorkType,
+            WorkTypeId = dto.WorkTypeId,
+            StartMile = dto.StartMile,
+            EstimatedIncome = dto.EstimatedIncome ?? 0m,
+            Status = "in_progress",
+            ActualStartTime = DateTime.UtcNow
+        };
+
+        _controller.ControllerContext.HttpContext.Items["User"] = user;
+        _mockRouteService.Setup(x => x.StartRouteAsync(dto, user.Id))
+            .ReturnsAsync(createdRoute);
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var okResult = result as OkObjectResult;
+        var response = okResult!.Value;
+        
+        // Use reflection to check dynamic object properties
+        var responseType = response!.GetType();
+        responseType.GetProperty("success")!.GetValue(response).Should().Be(true);
+        responseType.GetProperty("routeId")!.GetValue(response).Should().Be("route123");
+        responseType.GetProperty("workTypeId")!.GetValue(response).Should().Be("507f1f77bcf86cd799439011");
+        responseType.GetProperty("workType")!.GetValue(response).Should().Be("Delivery");
+    }
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithValidDataWithoutWorkTypeId_ShouldCreateRouteSuccessfully()
+    {
+        // Arrange
+        var user = new User { Id = "user123", Email = "test@example.com" };
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Rideshare", 
+            WorkTypeId = null,  // No WorkTypeId provided
+            StartMile = 10000.0, 
+            EstimatedIncome = 100.00m 
+        };
+
+        var createdRoute = new Route
+        {
+            Id = "route456",
+            UserId = user.Id,
+            WorkType = dto.WorkType,
+            WorkTypeId = null,
+            StartMile = dto.StartMile,
+            EstimatedIncome = dto.EstimatedIncome ?? 0m,
+            Status = "in_progress"
+        };
+
+        _controller.ControllerContext.HttpContext.Items["User"] = user;
+        _mockRouteService.Setup(x => x.StartRouteAsync(dto, user.Id))
+            .ReturnsAsync(createdRoute);
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var okResult = result as OkObjectResult;
+        var response = okResult!.Value;
+        
+        var responseType = response!.GetType();
+        responseType.GetProperty("success")!.GetValue(response).Should().Be(true);
+        responseType.GetProperty("routeId")!.GetValue(response).Should().Be("route456");
+        responseType.GetProperty("workTypeId")!.GetValue(response).Should().BeNull();
+        responseType.GetProperty("workType")!.GetValue(response).Should().Be("Rideshare");
+    }
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithInvalidWorkTypeIdFormat_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var user = new User { Id = "user123", Email = "test@example.com" };
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Delivery", 
+            WorkTypeId = "invalid-id",  // Invalid ObjectId format
+            StartMile = 12500.5, 
+            EstimatedIncome = 150.00m 
+        };
+
+        _controller.ControllerContext.HttpContext.Items["User"] = user;
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>();
+        var badRequestResult = result as BadRequestObjectResult;
+        var errorResponse = badRequestResult!.Value;
+        
+        var errorType = errorResponse!.GetType();
+        errorType.GetProperty("success")!.GetValue(errorResponse).Should().Be(false);
+        var error = errorType.GetProperty("error")!.GetValue(errorResponse) as string;
+        error.Should().Contain("WorkTypeId must be a valid 24-character ObjectId format");
+    }
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithEmptyWorkTypeId_ShouldCreateRouteSuccessfully()
+    {
+        // Arrange
+        var user = new User { Id = "user123", Email = "test@example.com" };
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Delivery", 
+            WorkTypeId = "",  // Empty string should be treated as null
+            StartMile = 12500.5, 
+            EstimatedIncome = 150.00m 
+        };
+
+        var createdRoute = new Route
+        {
+            Id = "route789",
+            UserId = user.Id,
+            WorkType = dto.WorkType,
+            WorkTypeId = null,
+            StartMile = dto.StartMile,
+            EstimatedIncome = dto.EstimatedIncome ?? 0m,
+            Status = "in_progress"
+        };
+
+        _controller.ControllerContext.HttpContext.Items["User"] = user;
+        _mockRouteService.Setup(x => x.StartRouteAsync(dto, user.Id))
+            .ReturnsAsync(createdRoute);
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+        var okResult = result as OkObjectResult;
+        var response = okResult!.Value;
+        
+        var responseType = response!.GetType();
+        responseType.GetProperty("success")!.GetValue(response).Should().Be(true);
+        responseType.GetProperty("routeId")!.GetValue(response).Should().Be("route789");
+    }
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithoutUserInContext_ShouldReturnUnauthorized()
+    {
+        // Arrange
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Delivery", 
+            StartMile = 12500.5 
+        };
+
+        // Don't set User in HttpContext.Items to simulate missing API key authentication
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+        var unauthorizedResult = result as UnauthorizedObjectResult;
+        unauthorizedResult!.Value.Should().Be("Invalid API key - user not found via middleware");
+    }
+
+    [Fact]
+    public async Task StartRouteWithApiKey_WithServiceException_ShouldReturnInternalServerError()
+    {
+        // Arrange
+        var user = new User { Id = "user123", Email = "test@example.com" };
+        var dto = new StartRouteDto 
+        { 
+            WorkType = "Delivery", 
+            WorkTypeId = "507f1f77bcf86cd799439011",
+            StartMile = 12500.5 
+        };
+
+        _controller.ControllerContext.HttpContext.Items["User"] = user;
+        _mockRouteService.Setup(x => x.StartRouteAsync(dto, user.Id))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _controller.StartRouteWithApiKey(dto);
+
+        // Assert
+        result.Should().BeOfType<ObjectResult>();
+        var objectResult = result as ObjectResult;
+        objectResult!.StatusCode.Should().Be(500);
+        
+        var errorResponse = objectResult.Value;
+        var errorType = errorResponse!.GetType();
+        var message = errorType.GetProperty("message")!.GetValue(errorResponse) as string;
+        message.Should().Be("Failed to start route");
+    }
+
+    #endregion
 }

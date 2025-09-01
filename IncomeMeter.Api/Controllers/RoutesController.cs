@@ -280,7 +280,20 @@ public class RoutesController : ControllerBase
         return Ok(routes);
     }
 
-    // API Key compatible endpoint for iOS shortcuts
+    /// <summary>
+    /// Start a new route using API key authentication (compatible with iOS shortcuts)
+    /// </summary>
+    /// <param name="startRouteDto">Route start data including workType, optional workTypeId (ObjectId), startMile, and estimatedIncome</param>
+    /// <returns>Route creation response with routeId</returns>
+    /// <remarks>
+    /// POST Body Example:
+    /// {
+    ///   "workType": "Delivery",
+    ///   "workTypeId": "507f1f77bcf86cd799439011",  // Optional: ObjectId of work type configuration
+    ///   "startMile": 12500.5,
+    ///   "estimatedIncome": 150.00
+    /// }
+    /// </remarks>
     [HttpPost("start-with-apikey")]
     public async Task<IActionResult> StartRouteWithApiKey([FromBody] StartRouteDto startRouteDto)
     {
@@ -300,6 +313,23 @@ public class RoutesController : ControllerBase
 
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
         
+        // Validate workTypeId format if provided
+        if (!string.IsNullOrEmpty(startRouteDto.WorkTypeId) && startRouteDto.WorkTypeId.Length != 24)
+        {
+            Log.Logger
+                .ForContext("EventType", "RouteStartValidationError")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("WorkTypeId", startRouteDto.WorkTypeId)
+                .Warning("Invalid WorkTypeId format provided via API key");
+                
+            return BadRequest(new { 
+                success = false,
+                error = "WorkTypeId must be a valid 24-character ObjectId format",
+                workTypeId = startRouteDto.WorkTypeId
+            });
+        }
+        
         try
         {
             Log.Logger
@@ -307,6 +337,9 @@ public class RoutesController : ControllerBase
                 .ForContext("CorrelationId", correlationId)
                 .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
                 .ForContext("WorkType", startRouteDto.WorkType)
+                .ForContext("WorkTypeId", string.IsNullOrEmpty(startRouteDto.WorkTypeId) ? null : startRouteDto.WorkTypeId[..Math.Min(8, startRouteDto.WorkTypeId.Length)] + "***")
+                .ForContext("StartMile", startRouteDto.StartMile)
+                .ForContext("EstimatedIncome", startRouteDto.EstimatedIncome)
                 .Information("User started a new route via API key");
 
             var route = await _routeService.StartRouteAsync(startRouteDto, user.Id!);
@@ -317,6 +350,7 @@ public class RoutesController : ControllerBase
                 .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
                 .ForContext("RouteId", route.Id?[..Math.Min(8, route.Id.Length)] + "***")
                 .ForContext("WorkType", route.WorkType)
+                .ForContext("WorkTypeId", string.IsNullOrEmpty(route.WorkTypeId) ? null : route.WorkTypeId[..Math.Min(8, route.WorkTypeId.Length)] + "***")
                 .Information("Route created successfully via API key");
 
             // Return iOS-friendly response with prominent routeId
@@ -324,6 +358,10 @@ public class RoutesController : ControllerBase
                 success = true,
                 message = "Route started successfully",
                 routeId = route.Id,
+                workType = route.WorkType,
+                workTypeId = route.WorkTypeId,
+                startMile = route.StartMile,
+                estimatedIncome = route.EstimatedIncome,
                 route = route
             });
         }

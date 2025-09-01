@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../contexts/SettingsContext';
+import { getDisplayDistance, getDisplaySpeed } from '../../utils/distance';
 // import { useNavigate } from 'react-router-dom'; // Commented out as unused
 
 interface Location {
@@ -22,6 +24,7 @@ interface LocationListProps {
 
 const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
   const { t } = useTranslation();
+  const { settings } = useSettings();
   // const navigate = useNavigate(); // Commented out as unused
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,13 +171,13 @@ const LocationList: React.FC<LocationListProps> = ({ routeId }) => {
                     </div>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                       {location.speed && (
-                        <span>{t('locations.details.speed')}: {location.speed.toFixed(1)} km/h</span>
+                        <span>{t('locations.details.speed')}: {getDisplaySpeed(location.speed, 'km', settings.mileageUnit).formatted}</span>
                       )}
                       {location.accuracy && (
                         <span>{t('locations.details.accuracy')}: {location.accuracy.toFixed(1)}m</span>
                       )}
                       {location.distanceFromLastKm && (
-                        <span>{t('locations.details.distanceKm')}: {location.distanceFromLastKm}km</span>
+                        <span>{t('locations.details.distance')}: {getDisplayDistance(location.distanceFromLastKm || 0, 'km', settings.mileageUnit).formatted}</span>
                       )}
                     </div>
                   </div>

@@ -19,6 +19,7 @@ const defaultSettings: UserSettings = {
   defaultChartPeriod: '7',
   showWeekends: true,
   mileageUnit: 'mi',
+  fiscalYearStartDate: '04-06', // UK tax year default
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

@@ -1,6 +1,8 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
+import { useSettings } from '../../contexts/SettingsContext';
+import { getDisplayDistance, getDisplaySpeed } from '../../utils/distance';
 import type { Location } from '../../types';
 
 // Fix for default markers in React-Leaflet
@@ -52,6 +54,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
   onLocationClick,
   className = '' 
 }) => {
+  const { settings } = useSettings();
   const mapRef = useRef<L.Map | null>(null);
 
   // Calculate bounds and center
@@ -166,7 +169,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
                     )}
                     
                     {location.speed !== null && location.speed !== undefined && (
-                      <div><strong>Speed:</strong> {location.speed.toFixed(1)} km/h</div>
+                      <div><strong>Speed:</strong> {getDisplaySpeed(location.speed, 'km', settings.mileageUnit).formatted}</div>
                     )}
                     
                     {location.accuracy !== null && location.accuracy !== undefined && (
@@ -174,7 +177,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
                     )}
 
                     {location.distanceFromLastKm !== null && location.distanceFromLastKm !== undefined && index > 0 && (
-                      <div><strong>Distance from previous:</strong> {location.distanceFromLastKm.toFixed(2)} km</div>
+                      <div><strong>Distance from previous:</strong> {getDisplayDistance(location.distanceFromLastKm, 'km', settings.mileageUnit).formatted}</div>
                     )}
                   </div>
                 </div>

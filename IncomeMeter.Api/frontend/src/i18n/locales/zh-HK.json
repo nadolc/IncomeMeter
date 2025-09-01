@@ -144,7 +144,16 @@
       "last7Days": "過去7天",
       "currentMonth": "本月",
       "netIncome": "淨收入",
-      "incomeBySource": "按來源分類的收入"
+      "incomeBySource": "按來源分類的收入",
+      "workingTime": "工作時間",
+      "hourlyRate": "時薪",
+      "totalDistance": "總距離",
+      "earningsPerMile": "每里收入",
+      "incomeSources": "收入來源",
+      "expandDetails": "顯示詳情",
+      "collapseDetails": "隱藏詳情",
+      "sourceBreakdown": "來源明細",
+      "percentage": "佔總額{{percent}}%"
     },
     "mileage": {
       "totalDistance": "總距離",
@@ -160,6 +169,38 @@
       "noCompletedRoutes": "本月沒有完成的路線",
       "noIncomeDataLast7Days": "過去7天沒有收入數據",
       "last7DaysIncomeChart": "過去7天收入"
+    },
+    "periods": {
+      "weekly": "每週",
+      "monthly": "每月",
+      "annual": "每年"  
+    },
+    "navigation": {
+      "week": "{{year}}年第{{week}}週",
+      "month": "{{year}}年{{month}}",
+      "fiscalYear": "{{startYear}}-{{endYear}}財年",
+      "previousPeriod": "上一{{period}}",
+      "nextPeriod": "下一{{period}}"
+    },
+    "charts": {
+      "weekdays": {
+        "monday": "週一",
+        "tuesday": "週二",
+        "wednesday": "週三", 
+        "thursday": "週四",
+        "friday": "週五",
+        "saturday": "週六",
+        "sunday": "週日"
+      },
+      "months": {
+        "april": "4月", "may": "5月", "june": "6月",
+        "july": "7月", "august": "8月", "september": "9月", 
+        "october": "10月", "november": "11月", "december": "12月",
+        "january": "1月", "february": "2月", "march": "3月"
+      },
+      "weekLabel": "第{{number}}週",
+      "noData": "所選期間沒有數據",
+      "noDataPeriod": "此{{period}}沒有收入數據"
     },
     "todayRoutes": {
       "title": "今日路線",
@@ -186,6 +227,13 @@
       "timeZone": "時區",
       "dateFormat": "日期格式",
       "mileageUnit": "里程單位"
+    },
+    "fiscalYear": {
+      "title": "財政年度開始日期",
+      "description": "設定您的財政年度開始日期（影響儀表板圖表）",
+      "startDate": "開始日期", 
+      "ukDefault": "4月6日（英國稅務年度）",
+      "hkDefault": "4月1日（香港稅務年度）"
     },
     "form": {
       "currency": "貨幣",

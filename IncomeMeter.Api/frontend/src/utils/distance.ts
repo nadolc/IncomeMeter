@@ -44,3 +44,49 @@ export function getDisplayDistance(distance: number, sourceUnit: 'km' | 'mi', us
     formatted: formatDistance(convertedDistance, userUnit)
   };
 }
+
+/**
+ * Convert speed between km/h and mph
+ */
+export function convertSpeed(speed: number, fromUnit: 'km' | 'mi', toUnit: 'km' | 'mi'): number {
+  if (fromUnit === toUnit) {
+    return speed;
+  }
+  
+  if (fromUnit === 'km' && toUnit === 'mi') {
+    return speed * 0.621371; // km/h to mph
+  }
+  
+  if (fromUnit === 'mi' && toUnit === 'km') {
+    return speed * 1.60934; // mph to km/h
+  }
+  
+  return speed;
+}
+
+/**
+ * Format speed with appropriate unit
+ */
+export function formatSpeed(speed: number, unit: 'km' | 'mi', precision: number = 1): string {
+  if (typeof speed !== 'number' || isNaN(speed)) {
+    return 'N/A';
+  }
+  
+  const unitLabel = unit === 'km' ? 'km/h' : 'mph';
+  return `${speed.toFixed(precision)} ${unitLabel}`;
+}
+
+/**
+ * Get display speed based on user's preferred unit
+ */
+export function getDisplaySpeed(speed: number, sourceUnit: 'km' | 'mi', userUnit: 'km' | 'mi'): {
+  value: number;
+  formatted: string;
+} {
+  const convertedSpeed = convertSpeed(speed, sourceUnit, userUnit);
+  
+  return {
+    value: convertedSpeed,
+    formatted: formatSpeed(convertedSpeed, userUnit)
+  };
+}

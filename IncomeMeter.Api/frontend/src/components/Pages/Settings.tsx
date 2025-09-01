@@ -64,6 +64,7 @@ const Settings: React.FC = () => {
       defaultChartPeriod: '7',
       showWeekends: true,
       mileageUnit: 'km',
+      fiscalYearStartDate: '04-06', // UK tax year default
     };
     
     setFormData(defaultSettings);
@@ -225,6 +226,63 @@ const Settings: React.FC = () => {
                       <option value="30">Last 30 days</option>
                       <option value="90">Last 90 days</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fiscal Year Start Date
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="date"
+                        name="fiscalYearStartDate"
+                        value={`2024-${formData.fiscalYearStartDate}`} // Convert MM-DD to full date for input
+                        onChange={(e) => {
+                          const date = new Date(e.target.value);
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          handleChange({
+                            target: {
+                              name: 'fiscalYearStartDate',
+                              value: `${month}-${day}`,
+                              type: 'text'
+                            }
+                          } as React.ChangeEvent<HTMLInputElement>);
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleChange({
+                            target: { name: 'fiscalYearStartDate', value: '04-06', type: 'text' }
+                          } as React.ChangeEvent<HTMLInputElement>)}
+                          className={`px-3 py-1 text-xs rounded-md border ${
+                            formData.fiscalYearStartDate === '04-06' 
+                              ? 'bg-blue-100 border-blue-300 text-blue-700'
+                              : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          UK (Apr 6)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleChange({
+                            target: { name: 'fiscalYearStartDate', value: '04-01', type: 'text' }
+                          } as React.ChangeEvent<HTMLInputElement>)}
+                          className={`px-3 py-1 text-xs rounded-md border ${
+                            formData.fiscalYearStartDate === '04-01'
+                              ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                              : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          HK (Apr 1)
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Set your fiscal year start date for dashboard charts. This affects weekly and annual income calculations.
+                    </p>
                   </div>
 
                   <div className="flex items-center">

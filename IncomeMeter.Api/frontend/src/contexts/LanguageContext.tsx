@@ -6,6 +6,7 @@ import { useSettings } from './SettingsContext';
 
 interface LanguageContextType {
   currentLanguage: string;
+  language: string; // Add this for backward compatibility
   changeLanguage: (language: string) => Promise<void>;
   t: (key: string, options?: any) => string;
 }
@@ -71,6 +72,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
   const value: LanguageContextType = {
     currentLanguage: i18n.language || 'en-GB',
+    language: i18n.language || 'en-GB', // Add for backward compatibility
     changeLanguage,
     t,
   };

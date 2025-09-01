@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -123,6 +123,26 @@ export const getTodaysRoutes = async (): Promise<Route[]> => {
     actualStartTime: route.actualStartTime ? new Date(route.actualStartTime) : undefined,
     actualEndTime: route.actualEndTime ? new Date(route.actualEndTime) : undefined,
   }));
+};
+
+export const getPeriodStats = async (
+  period: 'weekly' | 'monthly' | 'annual',
+  offset: number = 0,
+  fiscalStartDate?: string
+): Promise<PeriodIncomeData> => {
+  const response = await api.post<PeriodIncomeData>('/api/dashboard/period-stats', {
+    period,
+    offset,
+    fiscalStartDate
+  });
+  
+  return {
+    ...response.data,
+    chartData: response.data.chartData.map((item: any) => ({
+      ...item,
+      date: new Date(item.date).toISOString()
+    }))
+  };
 };
 
 // Settings endpoints
