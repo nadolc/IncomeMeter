@@ -1,12 +1,14 @@
 ﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(AuthenticationSchemes = "Bearer")]
 public class TransactionsController : ControllerBase
 {
     private readonly ITransactionService _transactionService;

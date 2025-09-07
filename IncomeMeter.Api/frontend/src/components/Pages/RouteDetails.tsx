@@ -156,7 +156,7 @@ const RouteDetails: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header - Full Width */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-4 mb-4">
           <button
@@ -177,190 +177,201 @@ const RouteDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Route Overview */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Route Overview</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.date')}</p>
-                <p className="font-medium">{route.scheduleStart.toLocaleDateString()}</p>
+      {/* Desktop 2-Column Layout / Mobile Stacked */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Left Column - Main Content (2/3 width on desktop) */}
+        <div className="xl:col-span-2 space-y-6">
+
+          {/* Route Overview */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('routes.details.routeOverview')}</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.date')}</p>
+                    <p className="font-medium">{route.scheduleStart.toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.scheduleTime')}</p>
+                    <p className="font-medium">
+                      {formatTime(route.scheduleStart)} - {formatTime(route.scheduleEnd)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.actualTime')}</p>
+                    <p className="font-medium">
+                      {formatTime(route.actualStartTime)} - {formatTime(route.actualEndTime)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.distance')}</p>
+                    <p className="font-medium">{getDisplayDistance(route.distance, 'km', settings.mileageUnit).formatted}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.totalIncome')}</p>
+                    <p className="font-medium text-green-600 text-lg">{formatCurrency(route.totalIncome || route.estimatedIncome || 0)}</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.scheduleTime')}</p>
-                <p className="font-medium">
-                  {formatTime(route.scheduleStart)} - {formatTime(route.scheduleEnd)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.actualTime')}</p>
-                <p className="font-medium">
-                  {formatTime(route.actualStartTime)} - {formatTime(route.actualEndTime)}
-                </p>
-              </div>
+            {/* Work Type Details */}
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-600 mb-1">{t('routes.details.workType')}</p>
+              <p className="text-gray-900">{route.workType || 'Not specified'}</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-600">Distance</p>
-                <p className="font-medium">{getDisplayDistance(route.distance, 'km', settings.mileageUnit).formatted}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.totalIncome')}</p>
-                <p className="font-medium text-green-600 text-lg">{formatCurrency(route.totalIncome || route.estimatedIncome || 0)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Work Type Details */}
-        <div className="border-t pt-4">
-          <p className="text-sm text-gray-600 mb-1">Work Type</p>
-          <p className="text-gray-900">{route.workType || 'Not specified'}</p>
-        </div>
-      </div>
-
-      {/* Income Breakdown */}
-      {route.incomes && route.incomes.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Income Breakdown</h2>
-          <div className="space-y-3">
-            {route.incomes.map((income, index) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                <span className="text-gray-700">{income.source}</span>
-                <span className="font-medium">{formatCurrency(income.amount)}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between py-2 font-semibold text-lg border-t-2">
-              <span className="text-gray-900">Total</span>
-              <span className="text-green-600">{formatCurrency(route.totalIncome || route.estimatedIncome || 0)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Route Information */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('routes.details.routeInfo')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-600">{t('routes.details.routeId')}</span>
-            <span className="font-medium">{route.id}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-600">{t('routes.details.userId')}</span>
-            <span className="font-medium">{route.userId}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-600">{t('routes.details.created')}</span>
-            <span className="font-medium">{formatDateTime(route.createdAt)}</span>
-          </div>
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-600">{t('routes.details.updated')}</span>
-            <span className="font-medium">{formatDateTime(route.updatedAt || route.createdAt)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Route Map */}
-      {route.locations && route.locations.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t('routes.details.map.title')}</h2>
-            <span className="text-sm text-gray-600">{route.locations.length} locations</span>
-          </div>
-          
-          <RouteMap locations={route.locations} className="mb-6" />
-        </div>
-      )}
-
-      {/* Locations */}
-      {route.locations && route.locations.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{t('routes.details.locations.title')}</h2>
-            <span className="text-sm text-gray-600">{route.locations.length} locations</span>
-          </div>
-
-          {/* Odometer Information */}
-          {(route.startMile || route.endMile) && (
-            <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.locations.startMile')}</p>
-                <p className="font-medium">{getDisplayDistance(route.startMile || 0, 'mi', settings.mileageUnit).formatted}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">{t('routes.details.locations.endMile')}</p>
-                <p className="font-medium">{getDisplayDistance(route.endMile || 0, 'mi', settings.mileageUnit).formatted}</p>
+          {/* Income Breakdown */}
+          {route.incomes && route.incomes.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('routes.details.incomeBreakdown')}</h2>
+              <div className="space-y-3">
+                {route.incomes.map((income, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                    <span className="text-gray-700">{income.source}</span>
+                    <span className="font-medium">{formatCurrency(income.amount)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between py-2 font-semibold text-lg border-t-2">
+                  <span className="text-gray-900">Total</span>
+                  <span className="text-green-600">{formatCurrency(route.totalIncome || route.estimatedIncome || 0)}</span>
+                </div>
               </div>
             </div>
           )}
 
-          <div className="space-y-4">
-            {route.locations.map((location, index) => (
-              <div key={location.id} className="flex items-start space-x-4 p-4 border rounded-lg">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                  {index + 1}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">{new Date(location.timestamp).toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      hour12: false 
-                    })}</p>
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
-                      <span className="text-sm text-gray-600">
-                        {getDisplayDistance(location.distanceFromLastKm || 0, 'km', settings.mileageUnit).formatted}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    {location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
-                  </p>
-                  {(location.accuracy || location.speed) && (
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                      {location.accuracy && <span>Accuracy: {location.accuracy.toFixed(1)}m</span>}
-                      {location.speed && <span>Speed: {location.speed.toFixed(1)} m/s</span>}
-                    </div>
-                  )}
-                </div>
+          {/* Route Information */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('routes.details.routeInfo')}</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">{t('routes.details.routeId')}</span>
+                <span className="font-medium">{route.id}</span>
               </div>
-            ))}
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">{t('routes.details.userId')}</span>
+                <span className="font-medium">{route.userId}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">{t('routes.details.created')}</span>
+                <span className="font-medium">{formatDateTime(route.createdAt)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-gray-600">{t('routes.details.updated')}</span>
+                <span className="font-medium">{formatDateTime(route.updatedAt || route.createdAt)}</span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Right Column - Map & Locations (1/3 width on desktop) */}
+        <div className="xl:col-span-1 space-y-6">
+
+          {/* Route Map */}
+          {route.locations && route.locations.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">{t('routes.details.map.title')}</h2>
+                <span className="text-sm text-gray-600">{route.locations.length} {t('routes.details.location(s)')}</span>
+              </div>
+              
+              <RouteMap locations={route.locations} className="h-80" />
+            </div>
+          )}
+
+          {/* Locations */}
+          {route.locations && route.locations.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">{t('routes.details.locations.title')}</h2>
+                <span className="text-sm text-gray-600">{route.locations.length} {t('routes.details.location(s)')}</span>
+              </div>
+
+              {/* Odometer Information */}
+              {(route.startMile || route.endMile) && (
+                <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.locations.startMile')}</p>
+                    <p className="font-medium">{getDisplayDistance(route.startMile || 0, 'mi', settings.mileageUnit).formatted}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.locations.endMile')}</p>
+                    <p className="font-medium">{getDisplayDistance(route.endMile || 0, 'mi', settings.mileageUnit).formatted}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {route.locations.map((location, index) => (
+                  <div key={location.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-sm">{new Date(location.timestamp).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          hour12: false 
+                        })}</p>
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          </svg>
+                          <span className="text-xs text-gray-600">
+                            {getDisplayDistance(location.distanceFromLastKm || 0, 'km', settings.mileageUnit).formatted}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-700 truncate">
+                        {location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                      </p>
+                      {(location.accuracy || location.speed) && (
+                        <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                          {location.accuracy && <span>Acc: {location.accuracy.toFixed(1)}m</span>}
+                          {location.speed && <span>Speed: {location.speed.toFixed(1)} m/s</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

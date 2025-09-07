@@ -53,7 +53,7 @@ public class UserService : IUserService
         // Phase 1: Assign default work types to new user
         try
         {
-            var assignedWorkTypeIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(user.Id!);
+            var assignedWorkTypeIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(user.Id!, user.Settings.Language);
             
             // Update user with assigned work type IDs
             if (assignedWorkTypeIds.Any())
@@ -92,6 +92,12 @@ public class UserService : IUserService
         await _users.UpdateOneAsync(u => u.Id == userId, update);
 
         return new CreateApiKeyResponseDto { ApiKey = apiKey, ApiKeyDetails = newApiKey };
+    }
+
+    public async Task<User> UpdateUserAsync(User user)
+    {
+        await _users.ReplaceOneAsync(u => u.Id == user.Id, user);
+        return user;
     }
 
     // Phase 1: Helper method to update user's assigned work type IDs

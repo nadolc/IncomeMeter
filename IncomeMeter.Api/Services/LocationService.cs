@@ -1,6 +1,7 @@
 ﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
+using IncomeMeter.Api.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Serilog;
@@ -12,14 +13,18 @@ public class LocationService : ILocationService
     private readonly IMongoCollection<Location> _locations;
     private readonly IRouteService _routeService;
     private readonly IGeoCodingService _geoCodingService;
+    private readonly ITimezoneService _timezoneService;
+    private readonly ITimezoneManagementService _timezoneManagementService;
     private readonly GeocodingSettings _settings;
     private readonly ILogger<LocationService> _logger;
 
-    public LocationService(MongoDbContext context, IRouteService routeService, IGeoCodingService geoCodingService, IOptions<GeocodingSettings> settings, ILogger<LocationService> logger)
+    public LocationService(MongoDbContext context, IRouteService routeService, IGeoCodingService geoCodingService, ITimezoneService timezoneService, ITimezoneManagementService timezoneManagementService, IOptions<GeocodingSettings> settings, ILogger<LocationService> logger)
     {
         _locations = context.Locations;
         _routeService = routeService;
         _geoCodingService = geoCodingService;
+        _timezoneService = timezoneService;
+        _timezoneManagementService = timezoneManagementService;
         _settings = settings.Value;
         _logger = logger;
     }
@@ -98,6 +103,18 @@ public class LocationService : ILocationService
             .Information("GPS coordinates rounded to {Precision} decimal places", _settings.CoordinatePrecision);
 
         var now = DateTime.UtcNow;
+        
+        // Get timezone information for the location
+        var timezoneId = await _timezoneService.GetTimezoneFromCoordinatesAsync(roundedLatitude, roundedLongitude);
+        var timezoneOffset = _timezoneService.GetTimezoneOffset(timezoneId, now);
+        
+        Log.Logger
+            .ForContext("EventType", "LocationTimezoneDetected")
+            .ForContext("CorrelationId", correlationId)
+            .ForContext("TimezoneId", timezoneId)
+            .ForContext("TimezoneOffset", timezoneOffset)
+            .Information("Timezone detected for location: {TimezoneId} (offset: {TimezoneOffset}h)", timezoneId, timezoneOffset);
+        
         var newLocation = new Location
         {
             RouteId = dto.RouteId,
@@ -107,7 +124,9 @@ public class LocationService : ILocationService
             Timestamp = dto.Timestamp,
             Accuracy = dto.Accuracy,
             Speed = dto.Speed,
-            Address = await _geoCodingService.GetAddressFromCoordinatesAsync(roundedLatitude, roundedLongitude)
+            Address = await _geoCodingService.GetAddressFromCoordinatesAsync(roundedLatitude, roundedLongitude),
+            TimezoneId = timezoneId,
+            TimezoneOffset = timezoneOffset
         };
 
         // 2. Find the previous location to calculate distance (following JavaScript sample logic)
@@ -150,6 +169,21 @@ public class LocationService : ILocationService
                 .ForContext("DistanceKm", newLocation.DistanceFromLastKm)
                 .ForContext("DistanceMi", newLocation.DistanceFromLastMi)
                 .Information("Distance calculated and stored in both kilometers and miles");
+            
+            // Check for timezone changes
+            if (!string.IsNullOrEmpty(lastLocation.TimezoneId) && 
+                !string.Equals(lastLocation.TimezoneId, newLocation.TimezoneId, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Logger
+                    .ForContext("EventType", "TimezoneChangeDetected")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("PreviousTimezone", lastLocation.TimezoneId)
+                    .ForContext("NewTimezone", newLocation.TimezoneId)
+                    .ForContext("PreviousOffset", lastLocation.TimezoneOffset)
+                    .ForContext("NewOffset", newLocation.TimezoneOffset)
+                    .Warning("User crossed timezone boundary: {PreviousTimezone} → {NewTimezone}", 
+                        lastLocation.TimezoneId, newLocation.TimezoneId);
+            }
         }
         else
         {
@@ -173,6 +207,63 @@ public class LocationService : ILocationService
                 .ForContext("Longitude", roundedLongitude)
                 .ForContext("Address", newLocation.Address?[..Math.Min(50, newLocation.Address.Length)])
                 .Information("Location added successfully");
+
+            // Process location for automatic timezone detection (background task)
+            try
+            {
+                var timezoneChangeInfo = await _timezoneManagementService.ProcessLocationForTimezoneChangeAsync(newLocation);
+                if (timezoneChangeInfo != null)
+                {
+                    Log.Logger
+                        .ForContext("EventType", "AutomaticTimezoneChangeDetected")
+                        .ForContext("CorrelationId", correlationId)
+                        .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                        .ForContext("PreviousTimezone", timezoneChangeInfo.PreviousTimezone)
+                        .ForContext("NewTimezone", timezoneChangeInfo.NewTimezone)
+                        .ForContext("Confidence", timezoneChangeInfo.Confidence)
+                        .ForContext("ShouldPromptUser", timezoneChangeInfo.Recommendation.ShouldPromptUser)
+                        .ForContext("ShouldAutoUpdate", timezoneChangeInfo.Recommendation.ShouldAutoUpdate)
+                        .Warning("Automatic timezone change detected for user crossing timezone boundary");
+
+                    // Auto-update timezone if high confidence and recommendation suggests it
+                    if (timezoneChangeInfo.Recommendation.ShouldAutoUpdate && timezoneChangeInfo.Confidence >= 0.8)
+                    {
+                        var updateResult = await _timezoneManagementService.UpdateUserTimezoneAsync(
+                            userId, 
+                            timezoneChangeInfo.NewTimezone, 
+                            "Automatic GPS-based timezone detection"
+                        );
+
+                        if (updateResult.Success)
+                        {
+                            Log.Logger
+                                .ForContext("EventType", "AutomaticTimezoneUpdateSuccess")
+                                .ForContext("CorrelationId", correlationId)
+                                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                                .ForContext("PreviousTimezone", updateResult.PreviousTimezone)
+                                .ForContext("NewTimezone", updateResult.NewTimezone)
+                                .Information("User timezone automatically updated based on GPS location");
+                        }
+                        else
+                        {
+                            Log.Logger
+                                .ForContext("EventType", "AutomaticTimezoneUpdateFailed")
+                                .ForContext("CorrelationId", correlationId)
+                                .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+                                .ForContext("ErrorMessage", updateResult.ErrorMessage)
+                                .Warning("Failed to automatically update user timezone");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't fail location insertion if timezone processing fails
+                Log.Logger
+                    .ForContext("EventType", "TimezoneProcessingError")
+                    .ForContext("CorrelationId", correlationId)
+                    .Error(ex, "Error occurred during automatic timezone detection processing");
+            }
 
             return newLocation;
         }

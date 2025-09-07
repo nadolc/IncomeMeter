@@ -1,25 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSettings } from '../../contexts/SettingsContext';
 import RouteForm from './RouteForm';
-import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute } from '../../utils/api';
-import { getDisplayDistance } from '../../utils/distance';
-import type { Route } from '../../types';
+import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute, getActiveWorkTypeConfigs } from '../../utils/api';
+import MultiSelectDropdown from '../UI/MultiSelectDropdown';
+import TimeRangeFilter from '../UI/TimeRangeFilter';
+import { getDateRangeFromSelection } from '../../utils/timeRangeUtils';
+import { sortRoutes, getSortingOptions, type SortOption } from '../../utils/routeSorting';
+import CompactRouteItem from '../UI/CompactRouteItem';
+import type { Route, WorkTypeConfig, FilterOption } from '../../types';
 
 
 const EnhancedRouteList: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { formatCurrency, settings } = useSettings();
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [deletingRoute, setDeletingRoute] = useState<Route | null>(null);
+  
+  // Filter states
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [timeRange, setTimeRange] = useState<string>('7_days'); // Default to last 7 days
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([]);
+  const [selectedIncomeSources, setSelectedIncomeSources] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('newest'); // Default to newest first
+  
+  // Filter data
+  const [availableWorkTypes, setAvailableWorkTypes] = useState<WorkTypeConfig[]>([]);
+  const [availableIncomeSources, setAvailableIncomeSources] = useState<FilterOption[]>([]);
 
   const fetchRoutes = useCallback(async () => {
     try {
@@ -28,15 +38,19 @@ const EnhancedRouteList: React.FC = () => {
       
       let data: Route[] = [];
       
-      console.log('Fetching routes with filters:', { filterStatus, dateRange });
+      console.log('Fetching routes with filters:', { filterStatus, timeRange, selectedWorkTypes, selectedIncomeSources });
       
-      // Apply filters using centralized API functions
+      // Apply API filters (status and date range)
+      const dateRangeFilter = getDateRangeFromSelection(timeRange);
+      
       if (filterStatus !== 'all') {
         console.log(`Fetching routes by status: ${filterStatus}`);
         data = await getRoutesByStatus(filterStatus);
-      } else if (dateRange.start && dateRange.end) {
-        console.log(`Fetching routes by date range: ${dateRange.start} to ${dateRange.end}`);
-        data = await getRoutesByDateRange(dateRange.start, dateRange.end);
+      } else if (dateRangeFilter) {
+        console.log(`Fetching routes by date range: ${dateRangeFilter.start} to ${dateRangeFilter.end}`);
+        const startStr = dateRangeFilter.start.toISOString().split('T')[0];
+        const endStr = dateRangeFilter.end.toISOString().split('T')[0];
+        data = await getRoutesByDateRange(startStr, endStr);
       } else {
         console.log('Fetching all routes');
         data = await getRoutes();
@@ -44,7 +58,7 @@ const EnhancedRouteList: React.FC = () => {
 
       console.log('Raw API response:', data);
 
-      const processedRoutes: Route[] = data.map((route: Route) => ({
+      let processedRoutes: Route[] = data.map((route: Route) => ({
         ...route,
         scheduleStart: new Date(route.scheduleStart),
         scheduleEnd: new Date(route.scheduleEnd),
@@ -54,7 +68,23 @@ const EnhancedRouteList: React.FC = () => {
         updatedAt: new Date(route.updatedAt),
       }));
       
-      console.log('Processed routes:', processedRoutes);
+      // Apply client-side filters for work types and income sources
+      if (selectedWorkTypes.length > 0) {
+        processedRoutes = processedRoutes.filter(route => 
+          route.workType && selectedWorkTypes.includes(route.workType)
+        );
+      }
+      
+      if (selectedIncomeSources.length > 0) {
+        processedRoutes = processedRoutes.filter(route => 
+          route.incomes.some(income => selectedIncomeSources.includes(income.source))
+        );
+      }
+      
+      // Apply sorting
+      processedRoutes = sortRoutes(processedRoutes, sortOption);
+      
+      console.log('Filtered and sorted routes:', processedRoutes);
       setRoutes(processedRoutes);
     } catch (err) {
       console.error('Error fetching routes:', err);
@@ -80,11 +110,79 @@ const EnhancedRouteList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, dateRange]);
+  }, [filterStatus, timeRange, selectedWorkTypes, selectedIncomeSources, sortOption]);
+
+  // Fetch work types on component mount
+  const fetchWorkTypes = useCallback(async () => {
+    try {
+      const workTypes = await getActiveWorkTypeConfigs();
+      setAvailableWorkTypes(workTypes);
+    } catch (err) {
+      console.error('Failed to fetch work types:', err);
+    }
+  }, []);
+
+  // Build unique income sources from all routes
+  const buildIncomeSourcesOptions = useMemo(() => {
+    const sources = new Set<string>();
+    routes.forEach(route => {
+      route.incomes.forEach(income => {
+        if (income.source.trim()) {
+          sources.add(income.source);
+        }
+      });
+    });
+    
+    return Array.from(sources)
+      .sort()
+      .map(source => ({
+        id: source,
+        label: source
+      }));
+  }, [routes]);
+
+  useEffect(() => {
+    setAvailableIncomeSources(buildIncomeSourcesOptions);
+  }, [buildIncomeSourcesOptions]);
 
   useEffect(() => {
     fetchRoutes();
   }, [fetchRoutes]);
+
+  useEffect(() => {
+    fetchWorkTypes();
+  }, [fetchWorkTypes]);
+
+  // Memoized filter options
+  const workTypeOptions = useMemo(() => 
+    availableWorkTypes.map(workType => ({
+      id: workType.name,
+      label: workType.name
+    })),
+    [availableWorkTypes]
+  );
+
+  // Memoized sorting options
+  const sortingOptions = useMemo(() => getSortingOptions(t), [t]);
+
+  // Filter utility functions
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filterStatus !== 'all') count++;
+    if (timeRange !== 'all') count++;
+    if (selectedWorkTypes.length > 0) count++;
+    if (selectedIncomeSources.length > 0) count++;
+    if (sortOption !== 'newest') count++; // Count non-default sorting as active filter
+    return count;
+  };
+
+  const clearAllFilters = () => {
+    setFilterStatus('all');
+    setTimeRange('7_days'); // Reset to default
+    setSelectedWorkTypes([]);
+    setSelectedIncomeSources([]);
+    setSortOption('newest'); // Reset to default
+  };
 
   const handleCreateRoute = (route: Route) => {
     setRoutes(prev => [route, ...prev]);
@@ -109,37 +207,7 @@ const EnhancedRouteList: React.FC = () => {
     }
   };
 
-  // Removed unused handleStartRoute function
-
-  const getStatusColor = (status: string = 'unknown') => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'in_progress':
-        return 'bg-orange-500';
-      case 'scheduled':
-        return 'bg-blue-500';
-      case 'cancelled':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getStatusText = (status: string = 'unknown') => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return t('routes.status.completed');
-      case 'in_progress':
-        return t('routes.status.inProgress');
-      case 'scheduled':
-        return t('routes.status.scheduled');
-      case 'cancelled':
-        return t('routes.status.cancelled');
-      default:
-        return t('common.unknown');
-    }
-  };
+  // Removed unused helper functions - moved to CompactRouteItem
 
 
   if (loading && routes.length === 0) {
@@ -155,7 +223,7 @@ const EnhancedRouteList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Filters */}
+      {/* Header */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex flex-col space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -163,7 +231,23 @@ const EnhancedRouteList: React.FC = () => {
               <h1 className="text-2xl font-bold text-gray-900">{t('routes.list.title')}</h1>
               <p className="text-gray-600 mt-1">{routes.length} {t('routes.title').toLowerCase()}</p>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-2">
+              {/* Mobile Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="md:hidden flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586l-4-2V14.414a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span>{showFilters ? t('routes.filters.hideFilters') : t('routes.filters.showFilters')}</span>
+                {getActiveFilterCount() > 0 && (
+                  <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-blue-600 rounded-full">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </button>
+              
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -173,35 +257,79 @@ const EnhancedRouteList: React.FC = () => {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <div>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">{t('routes.filters.all')}</option>
-                <option value="scheduled">{t('routes.filters.scheduled')}</option>
-                <option value="in_progress">{t('routes.filters.inProgress')}</option>
-                <option value="completed">{t('routes.filters.completed')}</option>
-                <option value="cancelled">{t('routes.filters.cancelled')}</option>
-              </select>
-            </div>
-            
-            <div className="flex space-x-2">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+          {/* Filters - Always visible on desktop, toggleable on mobile */}
+          <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+              {/* First row: Status, Time Range, Work Types, Income Sources, and Sorting */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('routes.filters.all').replace(' Routes', '')}
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  >
+                    <option value="all">{t('routes.filters.all')}</option>
+                    <option value="scheduled">{t('routes.filters.scheduled')}</option>
+                    <option value="in_progress">{t('routes.filters.inProgress')}</option>
+                    <option value="completed">{t('routes.filters.completed')}</option>
+                    <option value="cancelled">{t('routes.filters.cancelled')}</option>
+                  </select>
+                </div>
+                
+                <TimeRangeFilter
+                  selectedRange={timeRange}
+                  onRangeChange={setTimeRange}
+                  label={t('routes.filters.timeRange.label')}
+                />
+                
+                <MultiSelectDropdown
+                  options={workTypeOptions}
+                  selectedValues={selectedWorkTypes}
+                  onSelectionChange={setSelectedWorkTypes}
+                  placeholder={t('common.selectAll')}
+                  label={t('routes.filters.workTypes')}
+                />
+                
+                <MultiSelectDropdown
+                  options={availableIncomeSources}
+                  selectedValues={selectedIncomeSources}
+                  onSelectionChange={setSelectedIncomeSources}
+                  placeholder={t('common.selectAll')}
+                  label={t('routes.filters.incomeSources')}
+                />
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('routes.filters.sorting.label')}
+                  </label>
+                  <select
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value as SortOption)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  >
+                    {sortingOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Clear filters button */}
+              {getActiveFilterCount() > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={clearAllFilters}
+                    className="text-sm text-gray-600 hover:text-gray-800 underline"
+                  >
+                    {t('common.clearAll')} ({getActiveFilterCount()})
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -254,72 +382,12 @@ const EnhancedRouteList: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {routes.map((route) => (
-            <div key={route.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {route.workType || 'Route'}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {new Date(route.scheduleStart).toLocaleDateString()} {' '}
-                      {new Date(route.scheduleStart).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - {' '}
-                      {new Date(route.scheduleEnd).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                    </p>
-                  </div>
-                </div>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(route.status)}`}>
-                  {getStatusText(route.status)}
-                </span>
-              </div>
-
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">{t('routes.list.totalIncome')}</p>
-                    <p className="text-lg font-semibold text-green-600">
-                      {formatCurrency(route.totalIncome || route.estimatedIncome || 0)}
-                    </p>
-                  </div>
-                  {route.distance > 0 && (
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Distance</p>
-                      <p className="text-lg font-semibold text-gray-900">{getDisplayDistance(route.distance, 'mi', settings.mileageUnit).formatted}</p>
-                    </div>
-                  )}
-                  {(route.startMile !== undefined || route.endMile !== undefined) && (
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Mileage</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {getDisplayDistance(route.startMile || 0, 'mi', settings.mileageUnit).value.toFixed(1)} - {getDisplayDistance(route.endMile || 0, 'mi', settings.mileageUnit).formatted}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Mobile-friendly Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                  <button
-                    onClick={() => navigate(`/routes/${route.id}`)}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
-                  >
-                    {t('routes.actions.view')}
-                  </button>
-                  <button
-                    onClick={() => setEditingRoute(route)}
-                    className="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
-                  >
-                    {t('routes.actions.edit')}
-                  </button>
-                  <button
-                    onClick={() => setDeletingRoute(route)}
-                    className="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 text-center"
-                  >
-                    {t('routes.actions.delete')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <CompactRouteItem
+              key={route.id}
+              route={route}
+              onEdit={setEditingRoute}
+              onDelete={setDeletingRoute}
+            />
           ))}
         </div>
       )}

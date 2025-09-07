@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Services.Interfaces;
+using IncomeMeter.Api.Services;
 using System.Security.Claims;
 using Serilog;
 
@@ -13,15 +14,52 @@ namespace IncomeMeter.Api.Controllers;
 public class WorkTypeConfigsController : ControllerBase
 {
     private readonly IWorkTypeConfigService _workTypeConfigService;
+    private readonly DefaultWorkTypeService _defaultWorkTypeService;
     private readonly ILogger<WorkTypeConfigsController> _logger;
 
-    public WorkTypeConfigsController(IWorkTypeConfigService workTypeConfigService, ILogger<WorkTypeConfigsController> logger)
+    public WorkTypeConfigsController(IWorkTypeConfigService workTypeConfigService, DefaultWorkTypeService defaultWorkTypeService, ILogger<WorkTypeConfigsController> logger)
     {
         _workTypeConfigService = workTypeConfigService;
+        _defaultWorkTypeService = defaultWorkTypeService;
         _logger = logger;
     }
 
     private string? GetCurrentUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    [HttpGet("defaults")]
+    public IActionResult GetSystemDefaultWorkTypes([FromQuery] string lang = "en-GB")
+    {
+        try
+        {
+            var systemDefaults = _defaultWorkTypeService.GetSystemDefaultWorkTypes(lang);
+            
+            var response = systemDefaults.Select(w => new WorkTypeConfigResponseDto
+            {
+                Id = w.Id,
+                Name = w.Name,
+                Description = w.Description,
+                IncomeSourceTemplates = w.IncomeSourceTemplates.Select(t => new IncomeSourceTemplateDto
+                {
+                    Name = t.Name,
+                    Category = t.Category,
+                    DefaultAmount = t.DefaultAmount,
+                    IsRequired = t.IsRequired,
+                    Description = t.Description,
+                    DisplayOrder = t.DisplayOrder
+                }).OrderBy(t => t.DisplayOrder).ToList(),
+                IsActive = w.IsActive,
+                CreatedAt = w.CreatedAt,
+                UpdatedAt = w.UpdatedAt
+            }).ToList();
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving system default work types for language {Language}", lang);
+            return StatusCode(500, "An error occurred while retrieving system default work types");
+        }
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetWorkTypeConfigs()

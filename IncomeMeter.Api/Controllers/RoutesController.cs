@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
+using IncomeMeter.Api.Middleware;
 using System.Security.Claims;
 using Serilog;
 
@@ -26,6 +27,7 @@ public class RoutesController : ControllerBase
 
     [HttpGet]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("read:routes")]
     public async Task<IActionResult> GetRoutes()
     {
         var userId = GetCurrentUserId();
@@ -40,11 +42,12 @@ public class RoutesController : ControllerBase
 
     [HttpPost("start")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> StartRoute([FromBody] StartRouteDto startRouteDto)
     {
         var userId = GetCurrentUserId();
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
@@ -58,7 +61,7 @@ public class RoutesController : ControllerBase
             .Information("User started a new route");
 
         var route = await _routeService.StartRouteAsync(startRouteDto, userId);
-        
+
         Log.Logger
             .ForContext("EventType", "RouteCreated")
             .ForContext("CorrelationId", correlationId)
@@ -67,12 +70,13 @@ public class RoutesController : ControllerBase
             .ForContext("WorkType", route.WorkType)
             .ForContext("Status", route.Status)
             .Information("Route created successfully");
-            
+
         return CreatedAtAction(nameof(GetRouteById), new { id = route!.Id }, route);
     }
 
     [HttpGet("{id}")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("read:routes")]
     public async Task<IActionResult> GetRouteById(string id)
     {
         var userId = GetCurrentUserId();
@@ -93,11 +97,12 @@ public class RoutesController : ControllerBase
 
     [HttpPost]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> CreateRoute([FromBody] CreateRouteDto createRouteDto)
     {
         var userId = GetCurrentUserId();
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
@@ -111,7 +116,7 @@ public class RoutesController : ControllerBase
             .Information("User initiated route creation");
 
         var route = await _routeService.CreateRouteAsync(createRouteDto, userId);
-        
+
         Log.Logger
             .ForContext("EventType", "RouteCreated")
             .ForContext("CorrelationId", correlationId)
@@ -120,17 +125,18 @@ public class RoutesController : ControllerBase
             .ForContext("WorkType", route.WorkType)
             .ForContext("Status", route.Status)
             .Information("Route created successfully");
-            
+
         return CreatedAtAction(nameof(GetRouteById), new { id = route!.Id }, route);
     }
 
     [HttpPost("end")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> EndRoute([FromBody] EndRouteDto endRouteDto)
     {
         var userId = GetCurrentUserId();
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
@@ -172,11 +178,12 @@ public class RoutesController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> UpdateRoute(string id, [FromBody] UpdateRouteDto updateRouteDto)
     {
         var userId = GetCurrentUserId();
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
@@ -213,11 +220,12 @@ public class RoutesController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("delete:routes")]
     public async Task<IActionResult> DeleteRoute(string id)
     {
         var userId = GetCurrentUserId();
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
+
         if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
@@ -254,6 +262,7 @@ public class RoutesController : ControllerBase
 
     [HttpGet("status/{status}")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("read:routes")]
     public async Task<IActionResult> GetRoutesByStatus(string status)
     {
         var userId = GetCurrentUserId();
@@ -268,6 +277,7 @@ public class RoutesController : ControllerBase
 
     [HttpGet("date-range")]
     [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("read:routes")]
     public async Task<IActionResult> GetRoutesByDateRange([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
         var userId = GetCurrentUserId();
@@ -295,66 +305,64 @@ public class RoutesController : ControllerBase
     /// }
     /// </remarks>
     [HttpPost("start-with-apikey")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> StartRouteWithApiKey([FromBody] StartRouteDto startRouteDto)
     {
         // Debug: Check what's in the Authorization header
-        var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
-        Log.Logger.Information("API Key endpoint called with Authorization header: {AuthHeader}", 
-            authHeader != null ? authHeader.Substring(0, Math.Min(20, authHeader.Length)) + "..." : "null");
 
-        // Get user from API key middleware (stored in HttpContext.Items)
-        var user = HttpContext.Items["User"] as User;
-        Log.Logger.Information("User found from API key middleware: {UserFound}", user != null);
-        
-        if (user == null)
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized("Invalid API key - user not found via middleware");
+            return Unauthorized(new { message = "Valid API key required" });
         }
-
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
-        
-        // Validate workTypeId format if provided
-        if (!string.IsNullOrEmpty(startRouteDto.WorkTypeId) && startRouteDto.WorkTypeId.Length != 24)
-        {
-            Log.Logger
-                .ForContext("EventType", "RouteStartValidationError")
-                .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
-                .ForContext("WorkTypeId", startRouteDto.WorkTypeId)
-                .Warning("Invalid WorkTypeId format provided via API key");
-                
-            return BadRequest(new { 
-                success = false,
-                error = "WorkTypeId must be a valid 24-character ObjectId format",
-                workTypeId = startRouteDto.WorkTypeId
-            });
-        }
-        
+
         try
         {
+
+            // Validate workTypeId format if provided
+            if (!string.IsNullOrEmpty(startRouteDto.WorkTypeId) && startRouteDto.WorkTypeId.Length != 24)
+            {
+                Log.Logger
+                    .ForContext("EventType", "RouteStartValidationError")
+                    .ForContext("CorrelationId", correlationId)
+                    .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
+                    .ForContext("WorkTypeId", startRouteDto.WorkTypeId)
+                    .Warning("Invalid WorkTypeId format provided via API key");
+
+                return BadRequest(new
+                {
+                    success = false,
+                    error = "WorkTypeId must be a valid 24-character ObjectId format",
+                    workTypeId = startRouteDto.WorkTypeId
+                });
+            }
+
             Log.Logger
                 .ForContext("EventType", "RouteStartRequested")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("WorkType", startRouteDto.WorkType)
                 .ForContext("WorkTypeId", string.IsNullOrEmpty(startRouteDto.WorkTypeId) ? null : startRouteDto.WorkTypeId[..Math.Min(8, startRouteDto.WorkTypeId.Length)] + "***")
                 .ForContext("StartMile", startRouteDto.StartMile)
                 .ForContext("EstimatedIncome", startRouteDto.EstimatedIncome)
                 .Information("User started a new route via API key");
 
-            var route = await _routeService.StartRouteAsync(startRouteDto, user.Id!);
-            
+            var route = await _routeService.StartRouteAsync(startRouteDto, userId!);
+
             Log.Logger
                 .ForContext("EventType", "RouteCreated")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", route.Id?[..Math.Min(8, route.Id.Length)] + "***")
                 .ForContext("WorkType", route.WorkType)
                 .ForContext("WorkTypeId", string.IsNullOrEmpty(route.WorkTypeId) ? null : route.WorkTypeId[..Math.Min(8, route.WorkTypeId.Length)] + "***")
                 .Information("Route created successfully via API key");
 
             // Return iOS-friendly response with prominent routeId
-            return Ok(new {
+            return Ok(new
+            {
                 success = true,
                 message = "Route started successfully",
                 routeId = route.Id,
@@ -370,23 +378,24 @@ public class RoutesController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "RouteStartFailed")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("Error", ex.Message)
                 .Error(ex, "Failed to start route via API key");
-            
+
             return StatusCode(500, new { message = "Failed to start route", error = ex.Message });
         }
     }
 
     // API Key compatible endpoint for ending routes via iOS shortcuts
     [HttpPost("end-with-apikey")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:routes")]
     public async Task<IActionResult> EndRouteWithApiKey([FromBody] EndRouteIOSDto endRouteDto)
     {
-        // Get user from API key middleware (stored in HttpContext.Items)
-        var user = HttpContext.Items["User"] as User;
-        if (user == null)
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized("Invalid API key - user not found via middleware");
+            return Unauthorized(new { message = "Valid API key required" });
         }
 
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
@@ -398,14 +407,14 @@ public class RoutesController : ControllerBase
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)
                 .ToList();
-                
+
             Log.Logger
                 .ForContext("EventType", "RouteEndValidationFailed")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("ValidationErrors", errors)
                 .Warning("iOS route end validation failed: {ValidationErrors}", string.Join(", ", errors));
-                
+
             return BadRequest(new { error = "Validation failed", details = errors });
         }
 
@@ -416,10 +425,10 @@ public class RoutesController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "RouteEndCustomValidationFailed")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("ValidationError", validationError)
                 .Warning("iOS route end custom validation failed: {ValidationError}", validationError);
-                
+
             return BadRequest(new { error = validationError });
         }
 
@@ -429,32 +438,32 @@ public class RoutesController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "RouteEndRouteIdValidationError")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", endRouteDto.RouteId)
                 .Warning("iOS route end RouteId format validation failed");
-                
+
             return BadRequest(new { error = "RouteId must be a valid 24-character ObjectId" });
         }
-        
+
         try
         {
             Log.Logger
                 .ForContext("EventType", "RouteEndingStarted")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
                 .ForContext("EndMile", endRouteDto.EndMile)
                 .ForContext("SchedulePeriod", endRouteDto.SchedulePeriod)
                 .Information("User ending route via API key - validation passed");
 
-            var route = await _routeService.EndRouteFromIOSAsync(endRouteDto, user.Id!);
-            
+            var route = await _routeService.EndRouteFromIOSAsync(endRouteDto, userId!);
+
             if (route == null)
             {
                 Log.Logger
                     .ForContext("EventType", "RouteEndFailed")
                     .ForContext("CorrelationId", correlationId)
-                    .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                    .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                     .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
                     .Warning("Route not found when attempting to end route via API key");
                 return NotFound(new { error = "Route not found or you do not have access to this route", routeId = endRouteDto.RouteId });
@@ -463,14 +472,15 @@ public class RoutesController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "RouteCompleted")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", route.Id?[..Math.Min(8, route.Id.Length)] + "***")
                 .ForContext("TotalIncome", route.TotalIncome)
                 .ForContext("Distance", route.Distance)
                 .Information("Route ended successfully via API key with income: {TotalIncome}", route.TotalIncome);
 
             // Return iOS-friendly response
-            return Ok(new {
+            return Ok(new
+            {
                 success = true,
                 message = "Route ended successfully",
                 routeId = route.Id,
@@ -484,11 +494,11 @@ public class RoutesController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "RouteEndFailed")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
                 .ForContext("Error", ex.Message)
                 .Error(ex, "Failed to end route via API key");
-            
+
             return StatusCode(500, new { message = "Failed to end route", error = ex.Message });
         }
     }
@@ -499,9 +509,9 @@ public class RoutesController : ControllerBase
     {
         var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
         var user = HttpContext.Items["User"] as User;
-        
-        return Ok(new 
-        { 
+
+        return Ok(new
+        {
             HasAuthHeader = !string.IsNullOrEmpty(authHeader),
             AuthHeaderPrefix = authHeader?.Substring(0, Math.Min(20, authHeader?.Length ?? 0)),
             UserFound = user != null,

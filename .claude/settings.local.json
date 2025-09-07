@@ -14,7 +14,12 @@
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
       "Bash(find:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(~/.dotnet/dotnet test IncomeMeter.Api.Tests/Controllers/RoutesControllerTests.cs --filter \"EndRouteWithApiKey\" --logger \"console;verbosity=normal\")",
+      "Read(//usr/**)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }

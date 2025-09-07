@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using IncomeMeter.Api.Services;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.DTOs;
+using IncomeMeter.Api.Middleware;
 using System.Security.Claims;
 using Serilog;
 
@@ -27,6 +28,7 @@ public class DashboardController : ControllerBase
     private string? GetCurrentUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     [HttpGet("stats")]
+    [RequireScopes("read:dashboard")]
     public async Task<IActionResult> GetDashboardStats()
     {
         var userId = GetCurrentUserId();
@@ -144,6 +146,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("todays-routes")]
+    [RequireScopes("read:dashboard")]
     public async Task<IActionResult> GetTodaysRoutes()
     {
         var userId = GetCurrentUserId();
@@ -196,6 +199,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpPost("period-stats")]
+    [RequireScopes("read:dashboard")]
     public async Task<IActionResult> GetPeriodStats([FromBody] PeriodIncomeRequestDto request)
     {
         var userId = GetCurrentUserId();

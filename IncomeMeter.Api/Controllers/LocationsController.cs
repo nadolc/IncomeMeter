@@ -1,10 +1,11 @@
 ﻿using IncomeMeter.Api.DTOs;
+using IncomeMeter.Api.Middleware;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Security.Claims;
 
 namespace IncomeMeter.Api.Controllers;
 
@@ -340,13 +341,14 @@ public class LocationsController : ControllerBase
 
     // API Key compatible endpoint for iOS shortcuts - Add location
     [HttpPost("add-with-apikey")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
+    [RequireScopes("write:locations")]
     public async Task<IActionResult> AddLocationWithApiKey([FromBody] CreateLocationIOSDto dto)
     {
-        // Get user from API key middleware (stored in HttpContext.Items)
-        var user = HttpContext.Items["User"] as User;
-        if (user == null)
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized("Invalid API key - user not found via middleware");
+            return Unauthorized(new { message = "Valid API key required" });
         }
 
         var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
@@ -362,7 +364,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationAdditionValidationFailed")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("ValidationErrors", errors)
                 .Warning("iOS location validation failed: {ValidationErrors}", string.Join(", ", errors));
                 
@@ -377,7 +379,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationCoordinatePrecisionError")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("PrecisionError", precisionError)
                 .Warning("iOS location coordinate precision validation failed: {PrecisionError}", precisionError);
                 
@@ -390,7 +392,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationRouteIdValidationError")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", dto.RouteId)
                 .Warning("iOS location RouteId format validation failed");
                 
@@ -402,19 +404,19 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationAdditionRequest")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
                 .ForContext("Latitude", Math.Round(dto.Latitude, 6))
                 .ForContext("Longitude", Math.Round(dto.Longitude, 6))
                 .Information("User adding location via API key - validation passed");
 
-            var location = await _locationService.AddLocationFromIOSAsync(dto, user.Id!);
+            var location = await _locationService.AddLocationFromIOSAsync(dto, userId!);
             if (location == null)
             {
                 Log.Logger
                     .ForContext("EventType", "LocationAdditionRouteNotFound")
                     .ForContext("CorrelationId", correlationId)
-                    .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                    .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                     .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
                     .Warning("Route not found or user does not have access to route for location addition via API key");
                     
@@ -424,7 +426,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationAdditionSuccess")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("LocationId", location.Id?[..Math.Min(8, location.Id.Length)] + "***")
                 .Information("Location added successfully via API key");
 
@@ -435,7 +437,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationAdditionValidationError")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("ValidationError", ex.Message)
                 .Warning("Location addition via API key failed validation: {ValidationError}", ex.Message);
                 
@@ -446,7 +448,7 @@ public class LocationsController : ControllerBase
             Log.Logger
                 .ForContext("EventType", "LocationAdditionError")
                 .ForContext("CorrelationId", correlationId)
-                .ForContext("UserId", user.Id?[..Math.Min(8, user.Id.Length)] + "***")
+                .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .Error(ex, "Failed to add location via API key");
                 
             return StatusCode(500, new { message = "Failed to add location", error = ex.Message });

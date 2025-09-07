@@ -65,7 +65,7 @@ public class MigrationService
                     if (!hasWorkTypes)
                     {
                         // Assign default work types
-                        var assignedWorkTypeIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(user.Id!);
+                        var assignedWorkTypeIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(user.Id!, user.Settings?.Language ?? "en-GB");
                         
                         if (assignedWorkTypeIds.Any())
                         {
@@ -112,7 +112,7 @@ public class MigrationService
             _logger.LogInformation("Testing default work type assignment");
 
             // Get system defaults
-            var systemDefaults = _defaultWorkTypeService.GetSystemDefaultWorkTypes();
+            var systemDefaults = _defaultWorkTypeService.GetSystemDefaultWorkTypes("en-GB");
             
             if (!systemDefaults.Any())
             {
@@ -128,7 +128,7 @@ public class MigrationService
             
             try
             {
-                var assignedIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(testUserId);
+                var assignedIds = await _defaultWorkTypeService.AssignDefaultWorkTypesToUserAsync(testUserId, "en-GB");
                 
                 _logger.LogInformation("Successfully assigned {Count} work types to test user: {Ids}", 
                     assignedIds.Count, string.Join(", ", assignedIds.Select(id => id[..8] + "***")));

@@ -1,0 +1,51 @@
+{
+  "deliveryDriver": {
+    "name": "Delivery Driver",
+    "description": "Multi-app delivery service including food delivery platforms",
+    "incomeSources": {
+      "uberEats": "Uber Eats",
+      "deliveroo": "Deliveroo",
+      "keeta": "Keeta",
+      "foodpanda": "Foodpanda",
+      "justEat": "Just Eat",
+      "tips": "Tips",
+      "bonuses": "Bonuses"
+    },
+    "incomeCategories": {
+      "delivery": "Delivery",
+      "tips": "Tips",
+      "incentives": "Incentives"
+    }
+  },
+  "taxiDriver": {
+    "name": "Taxi Driver", 
+    "description": "Traditional taxi service with meter-based fares",
+    "incomeSources": {
+      "fare": "Fare",
+      "tips": "Tips",
+      "airportSurcharge": "Airport Surcharge",
+      "lateNightPremium": "Late Night Premium"
+    },
+    "incomeCategories": {
+      "base": "Base",
+      "tips": "Tips",
+      "surcharge": "Surcharge"
+    }
+  },
+  "rideshareDriver": {
+    "name": "Rideshare Driver",
+    "description": "App-based rideshare service for passenger transport",
+    "incomeSources": {
+      "uber": "Uber",
+      "lyft": "Lyft", 
+      "bolt": "Bolt",
+      "tips": "Tips",
+      "surgePricing": "Surge Pricing"
+    },
+    "incomeCategories": {
+      "rideshare": "Rideshare",
+      "tips": "Tips",
+      "incentives": "Incentives"
+    }
+  }
+}

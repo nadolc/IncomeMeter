@@ -34,4 +34,10 @@ public class Location
     
     [BsonElement("distanceFromLastMi")]
     public double? DistanceFromLastMi { get; set; }
+    
+    [BsonElement("timezoneId")]
+    public string? TimezoneId { get; set; }
+    
+    [BsonElement("timezoneOffset")]
+    public double? TimezoneOffset { get; set; }
 }

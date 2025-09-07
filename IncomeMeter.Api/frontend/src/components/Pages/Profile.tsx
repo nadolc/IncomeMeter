@@ -90,7 +90,7 @@ const Profile: React.FC = () => {
       case 'en-GB':
         return 'English (UK)';
       case 'zh-HK':
-        return 'Chinese (Hong Kong)';
+        return '繁體中文 (HK)';
       default:
         return 'English (UK)';
     }
@@ -99,11 +99,11 @@ const Profile: React.FC = () => {
   const getTimeZoneDisplay = (timeZone: string) => {
     switch (timeZone) {
       case 'Europe/London':
-        return 'London (GMT)';
+        return t('profile.timeZones.GMT');
       case 'Asia/Hong_Kong':
-        return 'Hong Kong (HKT)';
+            return t('profile.timeZones.HKT');
       default:
-        return 'London (GMT)';
+            return t('profile.timeZones.GMT');
     }
   };
 
@@ -179,55 +179,55 @@ const Profile: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div>
-                    <h4 className="font-medium text-gray-900">Currency</h4>
+                                      <h4 className="font-medium text-gray-900">{t('profile.currency')}</h4>
                     <p className="text-sm text-gray-600">{settings.currency}</p>
                   </div>
                   <a
                     href="/settings"
                     className="text-blue-600 hover:text-blue-500 text-sm font-medium transition-colors"
                   >
-                    Change
+                    {t('profile.change')}
                   </a>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div>
-                    <h4 className="font-medium text-gray-900">Language</h4>
+                                      <h4 className="font-medium text-gray-900">{t('profile.language')}</h4>
                     <p className="text-sm text-gray-600">{getLanguageDisplay(settings.language)}</p>
                   </div>
                   <a
                     href="/settings"
                     className="text-blue-600 hover:text-blue-500 text-sm font-medium transition-colors"
                   >
-                    Change
+                    {t('profile.change')}
                   </a>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div>
-                    <h4 className="font-medium text-gray-900">Time Zone</h4>
+                                      <h4 className="font-medium text-gray-900">{t('profile.timeZone')}</h4>
                     <p className="text-sm text-gray-600">{getTimeZoneDisplay(settings.timeZone)}</p>
                   </div>
                   <a
                     href="/settings"
                     className="text-blue-600 hover:text-blue-500 text-sm font-medium transition-colors"
                   >
-                    Change
+                    {t('profile.change')}
                   </a>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                   <div>
-                    <h4 className="font-medium text-gray-900">Notifications</h4>
+                                      <h4 className="font-medium text-gray-900">{t('profile.notification')}</h4>
                     <p className="text-sm text-gray-600">
-                      {settings.emailNotifications ? 'Enabled' : 'Disabled'}
+                                          {settings.emailNotifications ? t('profile.enabled') : t('profile.disabled')}
                     </p>
                   </div>
                   <a
                     href="/settings"
                     className="text-blue-600 hover:text-blue-500 text-sm font-medium transition-colors"
                   >
-                    Change
+                    {t('profile.change')}
                   </a>
                 </div>
               </div>
@@ -236,7 +236,7 @@ const Profile: React.FC = () => {
 
           {/* Quick Stats */}
           <div className="mt-8 pt-8 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-6">Quick Stats</h3>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-6">{t('profile.quickStats')}</h3>
             
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -264,28 +264,28 @@ const Profile: React.FC = () => {
                   <div className="text-3xl font-bold text-blue-600 mb-1">
                     {quickStats.totalRoutes}
                   </div>
-                  <div className="text-sm text-gray-600">Total Routes</div>
+                  <div className="text-sm text-gray-600">{t('profile.totalRoutes')}</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600 mb-1">
                     {formatCurrency(quickStats.totalIncome)}
                   </div>
-                  <div className="text-sm text-gray-600">Total Income</div>
+                  <div className="text-sm text-gray-600">{t('profile.totalIncome')}</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-3xl font-bold text-purple-600 mb-1">
                     {quickStats.activeDays}
                   </div>
-                  <div className="text-sm text-gray-600">Active Days</div>
+                  <div className="text-sm text-gray-600">{t('profile.activeDays')}</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-3xl font-bold text-orange-600 mb-1">
                     {formatCurrency(quickStats.avgDailyIncome)}
                   </div>
-                  <div className="text-sm text-gray-600">Avg Daily Income</div>
+                  <div className="text-sm text-gray-600">{t('profile.avgDailyIncome')}</div>
                 </div>
               </div>
             )}
@@ -293,7 +293,7 @@ const Profile: React.FC = () => {
 
           {/* Recent Activity */}
           <div className="mt-8 pt-8 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-6">Recent Activity</h3>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-6">{t('profile.recentActivity')}</h3>
             <div className="space-y-4">
               <div className="flex items-center p-4 bg-gray-50 rounded-lg">
                 <div className="p-2 bg-green-100 rounded-full mr-4">
@@ -302,8 +302,8 @@ const Profile: React.FC = () => {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">Completed Route: City Center</p>
-                  <p className="text-sm text-gray-600">Earned {formatCurrency(185.50)} • 2 hours ago</p>
+                                  <p className="font-medium text-gray-900">{t('profile.completedRoutes')}:</p>
+                                  <p className="text-sm text-gray-600">{t('profile.earned')} {formatCurrency(185.50)} • 2 hours ago</p>
                 </div>
               </div>
 

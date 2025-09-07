@@ -1,0 +1,51 @@
+{
+  "deliveryDriver": {
+    "name": "送餐司機",
+    "description": "多平台送餐服務，包括外賣送餐平台",
+    "incomeSources": {
+      "uberEats": "Uber Eats",
+      "deliveroo": "Deliveroo",
+      "keeta": "美團 Keeta",
+      "foodpanda": "熊貓 Foodpanda",
+      "justEat": "Just Eat",
+      "tips": "小費",
+      "bonuses": "獎金"
+    },
+    "incomeCategories": {
+      "delivery": "送餐",
+      "tips": "小費",
+      "incentives": "獎勵"
+    }
+  },
+  "taxiDriver": {
+    "name": "計程車司機",
+    "description": "傳統計程車服務，按錶收費",
+    "incomeSources": {
+      "fare": "車費",
+      "tips": "小費",
+      "airportSurcharge": "機場附加費",
+      "lateNightPremium": "深夜加價"
+    },
+    "incomeCategories": {
+      "base": "基本",
+      "tips": "小費",
+      "surcharge": "附加費"
+    }
+  },
+  "rideshareDriver": {
+    "name": "共乘司機",
+    "description": "應用程式為主的共乘服務，載客運輸",
+    "incomeSources": {
+      "uber": "Uber",
+      "lyft": "Lyft",
+      "bolt": "Bolt", 
+      "tips": "小費",
+      "surgePricing": "尖峰加價"
+    },
+    "incomeCategories": {
+      "rideshare": "共乘",
+      "tips": "小費",
+      "incentives": "獎勵"
+    }
+  }
+}

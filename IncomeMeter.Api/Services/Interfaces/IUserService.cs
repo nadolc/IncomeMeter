@@ -11,4 +11,5 @@ public interface IUserService
     Task<User?> GetUserByIdAsync(string id);
     Task<User> CreateUserAsync(string googleId, string email, string displayName);
     Task<CreateApiKeyResponseDto> GenerateAndAddApiKeyAsync(string userId, string description);
+    Task<User> UpdateUserAsync(User user);
 }

@@ -12,10 +12,14 @@ public class CreateRouteDto
     public DateTime ScheduleStart { get; set; }
     [Required]
     public DateTime ScheduleEnd { get; set; }
+    public DateTime? ActualStartTime { get; set; }
+    public DateTime? ActualEndTime { get; set; }
     public List<IncomeItemDto> Incomes { get; set; } = new();
     public double? StartMile { get; set; }
+    public double? EndMile { get; set; }
     public decimal? EstimatedIncome { get; set; }
     public string? Description { get; set; }
+    public string? Status { get; set; }
 }
 
 // DTO for updating a route

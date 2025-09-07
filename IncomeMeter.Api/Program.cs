@@ -87,7 +87,20 @@ else
 builder.Services.AddScoped<DefaultWorkTypeService>();
 builder.Services.AddScoped<MigrationService>();
 
+// JWT Configuration
+builder.Services.Configure<IncomeMeter.Api.Models.JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+// Register JWT API Token Service
+builder.Services.AddScoped<IJwtApiTokenService, JwtApiTokenService>();
+
 builder.Services.AddHttpClient<IGeoCodingService, GeoCodingService>();
+
+// Register Timezone Service with HttpClient for coordinate-to-timezone lookup
+builder.Services.AddHttpClient<ITimezoneService, TimezoneService>();
+builder.Services.AddMemoryCache(); // Required for timezone caching
+
+// Register Timezone Management Service for automatic timezone detection
+builder.Services.AddScoped<ITimezoneManagementService, TimezoneManagementService>();
 
 // Configure Key Vault for Azure deployment (both Development and Production)
 // Use Key Vault when deployed to Azure or when explicitly configured to use it
@@ -196,21 +209,21 @@ builder.Services.AddCors(options =>
 // Get configuration values
 string googleClientId;
 string googleClientSecret;
-string jwtSecret;
 
 if (builder.Environment.IsDevelopment() &&
     !builder.Configuration.GetValue<bool>("Development:UseKeyVault"))
 {
     googleClientId = builder.Configuration["Development:GoogleClientId"]!;
     googleClientSecret = builder.Configuration["Development:GoogleClientSecret"]!;
-    jwtSecret = builder.Configuration["Development:JwtSecret"]!;
 }
 else
 {
     googleClientId = builder.Configuration["GoogleClientId"]!;
     googleClientSecret = builder.Configuration["GoogleClientSecret"]!;
-    jwtSecret = builder.Configuration["JwtSecret"]!;
 }
+
+// Use consistent JWT configuration key across all services
+string jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
 
 // Configure Authentication
 builder.Services.AddAuthentication(options =>
@@ -251,12 +264,36 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "IncomeMeter",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "IncomeMeter-API",
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+    
+    // Prevent redirect to login page for API calls - return 401 instead
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = context =>
+        {
+            // Skip the default logic and return 401 for API calls
+            context.HandleResponse();
+            
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("JWT Bearer authentication challenge for path: {Path}", context.HttpContext.Request.Path);
+            
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+            
+            var response = new { message = "Unauthorized - Invalid or expired JWT token" };
+            return context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+        }
+    };
 });
+
+// Authorization
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -289,16 +326,25 @@ app.UseHttpsRedirection();
 // Add global exception handling middleware (should be early in pipeline)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// Add custom API key authentication middleware EARLY - before logging
-app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
-
 // Add request logging middleware
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 // Add security logging middleware
 app.UseMiddleware<SecurityLoggingMiddleware>();
 
+// Add JWT debug middleware (temporary for debugging)
+app.UseMiddleware<JwtDebugMiddleware>();
+
+// Built-in authentication (handles cookie and JWT Bearer auth)
 app.UseAuthentication();
+
+// Add JWT API authentication middleware BEFORE authorization (supports both JWT and legacy API keys as fallback)
+app.UseMiddleware<JwtApiAuthenticationMiddleware>();
+
+// Add scope-based authorization middleware
+app.UseMiddleware<ScopeAuthorizationMiddleware>();
+
+// Built-in authorization (runs after all authentication attempts)
 app.UseAuthorization();
 
 // Enable static file serving for React frontend

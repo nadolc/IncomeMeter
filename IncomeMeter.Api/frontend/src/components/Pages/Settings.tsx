@@ -1,57 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import WorkTypeConfigSection from '../Settings/WorkTypeConfig';
 import ApiKeyGenerator from '../Settings/ApiKeyGenerator';
+import JwtApiTokenGenerator from '../Settings/JwtApiTokenGenerator';
 import type { UserSettings } from '../../types';
 
 const Settings: React.FC = () => {
   const { settings, updateSettings } = useSettings();
   const { t, changeLanguage } = useLanguage();
   const [formData, setFormData] = useState<UserSettings>(settings);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setFormData(settings);
   }, [settings]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Debounced auto-save function
+  const debouncedSave = useCallback((newSettings: UserSettings) => {
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set saving status immediately
+    setSaveStatus('saving');
+
+    // Set new timeout for actual save
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        updateSettings(newSettings);
+        setSaveStatus('saved');
+        
+        // Reset to idle after showing success briefly
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        setSaveStatus('error');
+        
+        // Reset to idle after showing error briefly
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 3000);
+      }
+    }, 300); // 300ms delay
+  }, [updateSettings]);
+
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
+    let newFormData: UserSettings;
+    
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [name]: checked,
-      }));
+      };
     } else {
-      setFormData(prev => ({
-        ...prev,
+      newFormData = {
+        ...formData,
         [name]: value,
-      }));
+      };
       
       // If language is being changed, immediately update the language context
       if (name === 'language' && (value === 'en-GB' || value === 'zh-HK')) {
         await changeLanguage(value);
       }
     }
+    
+    // Update form data
+    setFormData(newFormData);
+    
+    // Trigger debounced auto-save
+    debouncedSave(newFormData);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
-
-    try {
-      updateSettings(formData);
-      setMessage({ type: 'success', text: t('settings.messages.saveSuccess') });
-    } catch {
-      setMessage({ type: 'error', text: t('settings.messages.saveError') });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleReset = () => {
     const defaultSettings: UserSettings = {
@@ -68,7 +104,10 @@ const Settings: React.FC = () => {
     };
     
     setFormData(defaultSettings);
-    setMessage({ type: '', text: '' });
+    setSaveStatus('idle');
+    
+    // Trigger auto-save with default settings
+    debouncedSave(defaultSettings);
   };
 
   return (
@@ -76,12 +115,45 @@ const Settings: React.FC = () => {
       <div className="bg-white rounded-lg shadow">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
-          <p className="text-gray-600 mt-1">Manage your account preferences and settings.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
+              <p className="text-gray-600 mt-1">Manage your account preferences and settings.</p>
+            </div>
+            
+            {/* Save Status Indicator */}
+            <div className="flex items-center space-x-2">
+              {saveStatus === 'saving' && (
+                <div className="flex items-center text-blue-600">
+                  <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm">{t('settings.status.saving') || 'Saving...'}</span>
+                </div>
+              )}
+              {saveStatus === 'saved' && (
+                <div className="flex items-center text-green-600">
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  <span className="text-sm">{t('settings.status.saved') || 'Saved'}</span>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="flex items-center text-red-600">
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  <span className="text-sm">{t('settings.status.error') || 'Error saving'}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="p-6">
-          <form onSubmit={handleSubmit}>
+          <div>
             <div className="space-y-8">
               {/* Currency & Language Section */}
               <div>
@@ -300,9 +372,25 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              {/* API Keys Section */}
+              {/* API Access Section */}
               <div>
-                <ApiKeyGenerator />
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">{t('settings.apiAccess.title', 'API Access')}</h2>
+                
+                {/* JWT API Tokens (Recommended) */}
+                <JwtApiTokenGenerator />
+                
+                {/* Legacy API Keys */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('settings.apiAccess.legacyKeys', 'Legacy API Keys')}</h3>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                      <p className="text-sm text-yellow-800">
+                        <strong>{t('common.notice', 'Notice')}:</strong> {t('settings.apiAccess.deprecationNotice', 'Legacy API keys are still supported but JWT tokens are recommended for new integrations due to enhanced security features.')}
+                      </p>
+                    </div>
+                  </div>
+                  <ApiKeyGenerator />
+                </div>
               </div>
 
               {/* Work Types & Income Sources Section */}
@@ -311,61 +399,23 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {/* Message Display */}
-            {message.text && (
-              <div className={`mt-6 p-4 rounded-md ${
-                message.type === 'success' 
-                  ? 'bg-green-100 border border-green-400 text-green-700' 
-                  : 'bg-red-100 border border-red-400 text-red-700'
-              }`}>
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    {message.type === 'success' ? (
-                      <svg className="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">{message.text}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Action Buttons */}
-            <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between space-y-4 sm:space-y-0">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
-              >
-                Reset to Defaults
-              </button>
-              
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Saving...
-                  </span>
-                ) : (
-                  'Save Settings'
-                )}
-              </button>
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+                >
+                  Reset to Defaults
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {t('settings.autoSaveNote') || 'Changes are saved automatically'}
+              </p>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

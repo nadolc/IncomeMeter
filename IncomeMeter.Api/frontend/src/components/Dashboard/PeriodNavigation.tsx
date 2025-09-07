@@ -45,9 +45,9 @@ const PeriodNavigation: React.FC<PeriodNavigationProps> = ({
 
   const getPeriodName = () => {
     switch (period) {
-      case 'weekly': return t('dashboard.periods.weekly').toLowerCase();
-      case 'monthly': return t('dashboard.periods.monthly').toLowerCase();
-      case 'annual': return t('dashboard.periods.annual').toLowerCase();
+        case 'weekly': return t('dashboard.periods.every').toLowerCase() + t('dashboard.periods.weekly').toLowerCase();
+        case 'monthly': return t('dashboard.periods.every').toLowerCase() + t('dashboard.periods.monthly').toLowerCase();
+        case 'annual': return t('dashboard.periods.every').toLowerCase() + t('dashboard.periods.annual').toLowerCase();
       default: return period;
     }
   };
@@ -87,7 +87,7 @@ const PeriodNavigation: React.FC<PeriodNavigationProps> = ({
           title="Go to current period"
         >
           <TodayIcon />
-          <span className="ml-1 hidden sm:inline">Today</span>
+                  <span className="ml-1 hidden sm:inline">{t('dashboard.navigation.today')}</span>
         </button>
       </div>
 

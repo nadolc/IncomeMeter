@@ -83,4 +83,19 @@ public class InMemoryUserService : IUserService
             ApiKeyDetails = newApiKey 
         });
     }
+
+    public Task<User> UpdateUserAsync(User user)
+    {
+        if (user.Id == null || !_users.ContainsKey(user.Id))
+        {
+            throw new KeyNotFoundException("User not found.");
+        }
+
+        // Update all dictionaries
+        _users[user.Id] = user;
+        _usersByGoogleId[user.GoogleId] = user;
+        _usersByEmail[user.Email] = user;
+
+        return Task.FromResult(user);
+    }
 }

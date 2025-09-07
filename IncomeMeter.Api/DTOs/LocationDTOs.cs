@@ -53,6 +53,8 @@ public class LocationDto
     public double? Accuracy { get; set; }
     public double? DistanceFromLastKm { get; set; }
     public double? DistanceFromLastMi { get; set; }
+    public string? TimezoneId { get; set; }
+    public double? TimezoneOffset { get; set; }
 }
 
 public class LocationResponseDto
@@ -66,6 +68,8 @@ public class LocationResponseDto
     public double? Accuracy { get; set; }
     public double? DistanceFromLastKm { get; set; }
     public double? DistanceFromLastMi { get; set; }
+    public string? TimezoneId { get; set; }
+    public double? TimezoneOffset { get; set; }
 }
 
 public class CreateLocationIOSDto

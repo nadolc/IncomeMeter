@@ -310,3 +310,29 @@ export const getApiEndpointsWithApiKey = async (apiKey: string): Promise<ApiEndp
   });
   return response.data;
 };
+
+// JWT Token Management endpoints
+export const getAvailableScopes = async () => {
+  const response = await api.get('/api/tokens/scopes');
+  return response.data;
+};
+
+export const getUserTokens = async () => {
+  const response = await api.get('/api/tokens');
+  return response.data;
+};
+
+export const generateJwtToken = async (request: {
+  description: string;
+  scopes: string[];
+  expiryDays?: number;
+  generateRefreshToken?: boolean;
+}) => {
+  const response = await api.post('/api/tokens/generate', request);
+  return response.data;
+};
+
+export const revokeJwtToken = async (tokenId: string) => {
+  const response = await api.post('/api/tokens/revoke', { tokenId });
+  return response.data;
+};

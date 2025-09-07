@@ -22,6 +22,8 @@
       "title": "路線詳情",
       "loading": "載入路線詳情中...",
       "date": "日期",
+      "routeOverview": "路線概覽",
+      "location(s)": "位置",
       "scheduleTime": "預定時間",
       "actualTime": "實際時間",
       "workType": "工作類型",
@@ -69,6 +71,8 @@
     "list": {
       "title": "我的路線",
       "loading": "載入路線中...",
+      "distance": "距離",
+      "mileage": "里程",
       "add": "新增路線",
       "totalIncome": "總收入",
       "error": {
@@ -86,12 +90,25 @@
       },
       "create": {
         "title": "建立新路線",
+        "loadingWorkType": "載入工作類型...",
         "workType": "工作類型",
+        "selectWorkType": "工作種類...",
+        "other": "其他",
+        "enterCustomWorkType": "輸入其他工作種類",
         "scheduleStart": "開始時間",
         "scheduleEnd": "結束時間",
+        "scheduleSameToActual": "沿用時間為實際時間",
+        "actualStart": "實際開始時間",
+        "actualEnd": "實際結束時間",
+        "routeStatus": "路線狀態",
         "estimatedIncome": "預計收入",
         "startMile": "開始里程",
+        "endMile": "結束里程",
         "description": "描述",
+        "incomeSources": "收入種類",
+        "incomeSourcesPlaceholder": "收入種類 (例如美團,熊腦)",
+        "amountPlaceholder": "金額",
+        "totalAmount": "合計",
         "submit": "建立路線",
         "cancel": "取消"
       },
@@ -112,7 +129,8 @@
       "end": "結束路線",
       "edit": "編輯",
       "delete": "刪除",
-      "view": "查看詳情"
+      "view": "查看詳情",
+      "tapToView": "點擊查看"
     },
     "filters": {
       "all": "所有路線",
@@ -122,7 +140,29 @@
       "cancelled": "已取消",
       "dateRange": "日期範圍",
       "fromDate": "開始日期",
-      "toDate": "結束日期"
+      "toDate": "結束日期",
+      "showFilters": "顯示篩選器",
+      "hideFilters": "隱藏篩選器",
+      "workTypes": "工作類型",
+      "incomeSources": "收入來源",
+      "timeRange": {
+        "label": "時間範圍",
+        "all": "所有時間",
+        "last7Days": "過去 7 天",
+        "last14Days": "過去 14 天",
+        "last30Days": "過去 30 天"
+      },
+      "sorting": {
+        "label": "排序方式",
+        "newest": "最新優先",
+        "oldest": "最舊優先",
+        "highestEarn": "收入最高",
+        "lowestEarn": "收入最低",
+        "statusAsc": "狀態 A-Z",
+        "statusDesc": "狀態 Z-A",
+        "workTypeAZ": "工作類型 A-Z",
+        "workTypeZA": "工作類型 Z-A"
+      }
     }
   },
   "auth": {
@@ -140,6 +180,8 @@
   "dashboard": {
     "title": "儀表板",
     "welcome": "歡迎來到您的收入追蹤儀表板",
+    "incomeAnalysis": "收入分析",
+    "refresh": "重新整理",
     "stats": {
       "last7Days": "過去7天",
       "currentMonth": "本月",
@@ -171,13 +213,15 @@
       "last7DaysIncomeChart": "過去7天收入"
     },
     "periods": {
-      "weekly": "每週",
-      "monthly": "每月",
-      "annual": "每年"  
+      "every": "每",
+      "weekly": "週",
+      "monthly": "月",
+      "annual": "年"
     },
     "navigation": {
       "week": "{{year}}年第{{week}}週",
       "month": "{{year}}年{{month}}",
+      "today": "今日",
       "fiscalYear": "{{startYear}}-{{endYear}}財年",
       "previousPeriod": "上一{{period}}",
       "nextPeriod": "下一{{period}}"
@@ -186,17 +230,25 @@
       "weekdays": {
         "monday": "週一",
         "tuesday": "週二",
-        "wednesday": "週三", 
+        "wednesday": "週三",
         "thursday": "週四",
         "friday": "週五",
         "saturday": "週六",
         "sunday": "週日"
       },
       "months": {
-        "april": "4月", "may": "5月", "june": "6月",
-        "july": "7月", "august": "8月", "september": "9月", 
-        "october": "10月", "november": "11月", "december": "12月",
-        "january": "1月", "february": "2月", "march": "3月"
+        "april": "4月",
+        "may": "5月",
+        "june": "6月",
+        "july": "7月",
+        "august": "8月",
+        "september": "9月",
+        "october": "10月",
+        "november": "11月",
+        "december": "12月",
+        "january": "1月",
+        "february": "2月",
+        "march": "3月"
       },
       "weekLabel": "第{{number}}週",
       "noData": "所選期間沒有數據",
@@ -286,11 +338,47 @@
       "descriptionRequired": "需要描述"
     }
   },
+  "workTypes": {
+    "title": "工作類型",
+    "systemDefaults": {
+      "deliveryDriver": {
+        "name": "送餐司機",
+        "description": "多平台送餐服務，包括外賣送餐平台"
+      },
+      "taxiDriver": {
+        "name": "計程車司機", 
+        "description": "傳統計程車服務，按錶收費"
+      },
+      "rideshareDriver": {
+        "name": "共乘司機",
+        "description": "應用程式為主的共乘服務，載客運輸"
+      }
+    }
+  },
   "profile": {
     "title": "個人檔案",
     "loading": "載入個人檔案中...",
     "personalInfo": "個人資料",
     "accountDetails": "帳戶詳情",
+    "currency": "貨幣",
+    "language": "語言",
+    "timeZone": "時區",
+    "notification": "通知",
+    "enabled": "啟用",
+    "disabled": "停用",
+    "timeZones": {
+      "GMT": "倫敦 (GMT)",
+      "HKT": "香港 (HKT)"
+    },
+    "change": "更改",
+    "quickStats": "資料統計",
+    "totalRoutes": "路線合計",
+    "totalIncome": "總收入",
+    "activeDays": "工作日數",
+    "avgDailyIncome": "每日平均收入",
+    "recentActivity": "近期動態",
+    "completedRoute": "已完成路線",
+    "earned": "賺取",
     "form": {
       "name": "姓名",
       "email": "電郵",
@@ -385,6 +473,9 @@
     "success": "成功",
     "error": "錯誤",
     "warning": "警告",
+    "selectAll": "選擇全部",
+    "clearAll": "清除全部",
+    "noOptions": "沒有可用選項",
     "info": "資訊"
   },
   "errors": {

@@ -267,3 +267,18 @@ export interface ApiEndpoints {
   getRoute: string;
 }
 
+// Filter state types for route list
+export interface RouteListFilters {
+  status: string;
+  timeRange: string;
+  selectedWorkTypes: string[];
+  selectedIncomeSources: string[];
+  showFilters?: boolean; // for mobile toggle
+}
+
+export interface FilterOption {
+  id: string;
+  label: string;
+  count?: number;
+}
+

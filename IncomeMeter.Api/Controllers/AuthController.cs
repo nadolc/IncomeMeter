@@ -185,7 +185,7 @@ namespace IncomeMeter.Api.Controllers
         }
 
         [HttpGet("profile")]
-        [Authorize(AuthenticationSchemes = "Bearer")]
+        [Authorize(AuthenticationSchemes = "Cookies,Bearer")]
         public async Task<IActionResult> GetProfile()
         {
             var userId = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -350,25 +350,22 @@ namespace IncomeMeter.Api.Controllers
 
         private string GenerateJwtToken(ClaimsPrincipal user)
         {
-            string jwtSecret;
-
-            if (HttpContext.RequestServices.GetService<IWebHostEnvironment>()!.IsDevelopment() &&
-                !_configuration.GetValue<bool>("Development:UseKeyVault"))
-            {
-                jwtSecret = _configuration["Development:JwtSecret"]!;
-            }
-            else
-            {
-                jwtSecret = _configuration["JwtSecret"]!;
-            }
+            // Use same configuration key as JwtApiTokenService
+            var jwtSecret = _configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+            // Get issuer and audience values to match Program.cs configuration
+            var issuer = _configuration["Jwt:Issuer"] ?? "IncomeMeter";
+            var audience = _configuration["Jwt:Audience"] ?? "IncomeMeter-API";
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(user.Claims),
                 Expires = DateTime.UtcNow.AddHours(1),
+                Issuer = issuer,
+                Audience = audience,
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)
             };

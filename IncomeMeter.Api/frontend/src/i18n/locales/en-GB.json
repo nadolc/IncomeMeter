@@ -22,6 +22,8 @@
       "title": "Route Details",
       "loading": "Loading route details...",
       "date": "Date",
+      "routeOverview": "Route Overview",
+      "location(s)": "Location(s)",
       "scheduleTime": "Scheduled Time",
       "actualTime": "Actual Time",
       "workType": "Work Type",
@@ -69,6 +71,8 @@
     "list": {
       "title": "My Routes",
       "loading": "Loading routes...",
+      "distance": "Distance",
+      "mileage": "Mileage",
       "add": "Add New Route",
       "totalIncome": "Total Income",
       "error": {
@@ -86,12 +90,25 @@
       },
       "create": {
         "title": "Create New Route",
+        "loadingWorkType": "Loading work types...",
         "workType": "Work Type",
+        "selectWorkType": "Select Work Type",
+        "other": "Others",
+        "enterCustomWorkType": "Enter Custom Work Type",
         "scheduleStart": "Start Time",
         "scheduleEnd": "End Time",
+        "scheduleSameToActual": "Use schedule time",
+        "actualStart": "Actual Start Time",
+        "actualEnd": "Actual End Time",
+        "routeStatus": "Route Status",
         "estimatedIncome": "Estimated Income",
         "startMile": "Start Mileage",
+        "endMile": "End Mileage",
         "description": "Description",
+        "incomeSources": "Income Sources",
+        "incomeSourcesPlaceholder": "Income source (e.g., Base fare, Tips)",
+        "amountPlaceholder": "Amount",
+        "totalAmount": "Total amount",
         "submit": "Create Route",
         "cancel": "Cancel"
       },
@@ -112,7 +129,8 @@
       "end": "End Route",
       "edit": "Edit",
       "delete": "Delete",
-      "view": "View Details"
+      "view": "View Details",
+      "tapToView": "Tap to view"
     },
     "filters": {
       "all": "All Routes",
@@ -122,7 +140,29 @@
       "cancelled": "Cancelled",
       "dateRange": "Date Range",
       "fromDate": "From Date",
-      "toDate": "To Date"
+      "toDate": "To Date",
+      "showFilters": "Show Filters",
+      "hideFilters": "Hide Filters",
+      "workTypes": "Work Types",
+      "incomeSources": "Income Sources",
+      "timeRange": {
+        "label": "Time Range",
+        "all": "All time",
+        "last7Days": "Last 7 days",
+        "last14Days": "Last 14 days",
+        "last30Days": "Last 30 days"
+      },
+      "sorting": {
+        "label": "Sort by",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "highestEarn": "Highest earnings",
+        "lowestEarn": "Lowest earnings",
+        "statusAsc": "Status A-Z",
+        "statusDesc": "Status Z-A",
+        "workTypeAZ": "Work type A-Z",
+        "workTypeZA": "Work type Z-A"
+      }
     }
   },
   "auth": {
@@ -140,6 +180,8 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to your income tracking dashboard",
+    "incomeAnalysis": "Income Analysis",
+    "refresh": "Refresh",
     "stats": {
       "last7Days": "Last 7 Days",
       "currentMonth": "Current Month",
@@ -171,13 +213,15 @@
       "last7DaysIncomeChart": "Last 7 Days Income"
     },
     "periods": {
+      "every": "",
       "weekly": "Weekly",
-      "monthly": "Monthly", 
+      "monthly": "Monthly",
       "annual": "Annual"
     },
     "navigation": {
       "week": "Week {{week}}, {{year}}",
       "month": "{{month}} {{year}}",
+      "today": "Today",
       "fiscalYear": "FY {{startYear}}-{{endYear}}",
       "previousPeriod": "Previous {{period}}",
       "nextPeriod": "Next {{period}}"
@@ -185,7 +229,7 @@
     "charts": {
       "weekdays": {
         "monday": "Mon",
-        "tuesday": "Tue", 
+        "tuesday": "Tue",
         "wednesday": "Wed",
         "thursday": "Thu",
         "friday": "Fri",
@@ -193,10 +237,18 @@
         "sunday": "Sun"
       },
       "months": {
-        "april": "Apr", "may": "May", "june": "Jun",
-        "july": "Jul", "august": "Aug", "september": "Sep",
-        "october": "Oct", "november": "Nov", "december": "Dec",
-        "january": "Jan", "february": "Feb", "march": "Mar"
+        "april": "Apr",
+        "may": "May",
+        "june": "Jun",
+        "july": "Jul",
+        "august": "Aug",
+        "september": "Sep",
+        "october": "Oct",
+        "november": "Nov",
+        "december": "Dec",
+        "january": "Jan",
+        "february": "Feb",
+        "march": "Mar"
       },
       "noData": "No data available for the selected period",
       "noDataPeriod": "No data available for {{period}}",
@@ -287,11 +339,47 @@
       "descriptionRequired": "Description is required"
     }
   },
+  "workTypes": {
+    "title": "Work Types",
+    "systemDefaults": {
+      "deliveryDriver": {
+        "name": "Delivery Driver",
+        "description": "Multi-app delivery service including food delivery platforms"
+      },
+      "taxiDriver": {
+        "name": "Taxi Driver", 
+        "description": "Traditional taxi service with meter-based fares"
+      },
+      "rideshareDriver": {
+        "name": "Rideshare Driver",
+        "description": "App-based rideshare service for passenger transport"
+      }
+    }
+  },
   "profile": {
     "title": "Profile",
     "loading": "Loading profile...",
     "personalInfo": "Personal Information",
     "accountDetails": "Account Details",
+    "currency": "Currency",
+    "language": "Language",
+    "timeZone": "Time Zone",
+    "notification": "Notification",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "timeZones": {
+      "GMT": "London (GMT)",
+      "HKT": "Hong Kong (HKT)"
+    },
+    "change": "Change",
+    "quickStats": "Quick Stats",
+    "totalRoutes": "Total Routes",
+    "totalIncome": "Total Income",
+    "activeDays": "Active Days",
+    "avgDailyIncome": "AVG Daily Income",
+    "recentActivity": "Recent Activity",
+    "completedRoute": "Completed Route",
+    "earned": "Earned",
     "form": {
       "name": "Name",
       "email": "Email",
@@ -386,6 +474,9 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
+    "selectAll": "Select All",
+    "clearAll": "Clear All",
+    "noOptions": "No options available",
     "info": "Information"
   },
   "errors": {

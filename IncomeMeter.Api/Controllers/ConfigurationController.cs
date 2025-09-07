@@ -2,6 +2,7 @@ using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using IncomeMeter.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -9,6 +10,7 @@ namespace IncomeMeter.Api.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize(AuthenticationSchemes = "Bearer")]
 public class ConfigurationController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -87,9 +89,9 @@ public class ConfigurationController : ControllerBase
                 }).Where(wt => wt.IsActive).ToList(),
                 ApiEndpoints = new ApiEndpoints
                 {
-                    StartRoute = $"{baseUrl}/routes/start-with-apikey",
-                    AddLocation = $"{baseUrl}/locations/add-with-apikey",
-                    EndRoute = $"{baseUrl}/routes/end-with-apikey",
+                    StartRoute = $"{baseUrl}/routes/start",
+                    AddLocation = $"{baseUrl}/locations/add",
+                    EndRoute = $"{baseUrl}/routes/end",
                     GetRoutes = $"{baseUrl}/routes",
                     GetRoute = $"{baseUrl}/routes/{{id}}"
                 }
@@ -156,9 +158,9 @@ public class ConfigurationController : ControllerBase
         
         var endpoints = new ApiEndpoints
         {
-            StartRoute = $"{baseUrl}/routes/start",
-            AddLocation = $"{baseUrl}/locations",
-            EndRoute = $"{baseUrl}/routes/end",
+            StartRoute = $"{baseUrl}/routes/start-with-apikey",
+            AddLocation = $"{baseUrl}/locations/add-with-apikey",
+            EndRoute = $"{baseUrl}/routes/end-with-apikey",
             GetRoutes = $"{baseUrl}/routes",
             GetRoute = $"{baseUrl}/routes/{{id}}"
         };
