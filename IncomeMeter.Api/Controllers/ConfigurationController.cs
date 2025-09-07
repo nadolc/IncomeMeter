@@ -89,9 +89,9 @@ public class ConfigurationController : ControllerBase
                 }).Where(wt => wt.IsActive).ToList(),
                 ApiEndpoints = new ApiEndpoints
                 {
-                    StartRoute = $"{baseUrl}/routes/start",
-                    AddLocation = $"{baseUrl}/locations/add",
-                    EndRoute = $"{baseUrl}/routes/end",
+                    StartRoute = $"{baseUrl}/routes/start-with-apikey",
+                    AddLocation = $"{baseUrl}/locations/add-with-apikey",
+                    EndRoute = $"{baseUrl}/routes/end-with-apikey",
                     GetRoutes = $"{baseUrl}/routes",
                     GetRoute = $"{baseUrl}/routes/{{id}}"
                 }
