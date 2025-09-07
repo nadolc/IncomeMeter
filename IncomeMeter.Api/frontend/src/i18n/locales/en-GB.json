@@ -262,9 +262,15 @@
   },
   "settings": {
     "title": "Settings",
+    "description": "Manage your account preferences and settings.",
     "sections": {
       "localization": "Localization",
       "apiKeys": "API Keys"
+    },
+    "status": {
+      "saving": "Saving...",
+      "saved": "Saved",
+      "error": "Error saving"
     },
     "profile": {
       "title": "Profile Information",
@@ -292,8 +298,50 @@
       "currency": "Currency",
       "language": "Language", 
       "timeZone": "Time Zone",
-      "mileageUnit": "Mileage Unit"
+      "mileageUnit": "Mileage Unit",
+      "dateFormat": "Date Format"
     },
+    "helpText": {
+      "currency": "Choose your preferred currency for displaying income",
+      "language": "Select your preferred language",
+      "mileageUnit": "Choose your preferred unit for displaying distances",
+      "fiscalYear": "Set your fiscal year start date for dashboard charts. This affects weekly and annual income calculations."
+    },
+    "timeZones": {
+      "londonGMT": "London (GMT)",
+      "hongKongHKT": "Hong Kong (HKT)"
+    },
+    "chartPeriods": {
+      "7days": "Last 7 days",
+      "30days": "Last 30 days", 
+      "90days": "Last 90 days"
+    },
+    "quickButtons": {
+      "ukApril6": "UK (Apr 6)",
+      "hkApril1": "HK (Apr 1)"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "emailTitle": "Email Notifications",
+      "emailDescription": "Receive email updates about your income reports",
+      "pushTitle": "Push Notifications",
+      "pushDescription": "Get notified about route completions and income updates"
+    },
+    "dashboard": {
+      "title": "Dashboard Settings",
+      "defaultChartPeriod": "Default Chart Period",
+      "fiscalYearStartDate": "Fiscal Year Start Date",
+      "includeWeekends": "Include weekends in reports"
+    },
+    "apiAccess": {
+      "title": "API Access",
+      "legacyKeys": "Legacy API Keys",
+      "deprecationNotice": "Legacy API keys are still supported but JWT tokens are recommended for new integrations due to enhanced security features."
+    },
+    "actions": {
+      "resetToDefaults": "Reset to Defaults"
+    },
+    "autoSaveNote": "Changes are saved automatically",
     "currencies": {
       "GBP": "British Pound (£)",
       "HKD": "Hong Kong Dollar ($)"
@@ -467,6 +515,8 @@
     "close": "Close",
     "confirm": "Confirm",
     "yes": "Yes",
+    "notice": "Notice",
+    "unknown": "Unknown",
     "no": "No",
     "unknown": "Unknown",
     "noDate": "No date",

@@ -261,9 +261,15 @@
   },
   "settings": {
     "title": "設定",
+    "description": "管理您的帳戶偏好設定和配置。",
     "sections": {
       "localization": "本地化設定",
       "apiKeys": "API 密鑰"
+    },
+    "status": {
+      "saving": "儲存中...",
+      "saved": "已儲存",
+      "error": "儲存失敗"
     },
     "profile": {
       "title": "個人資料",
@@ -291,8 +297,50 @@
       "currency": "貨幣",
       "language": "語言",
       "timeZone": "時區", 
-      "mileageUnit": "里程單位"
+      "mileageUnit": "里程單位",
+      "dateFormat": "日期格式"
     },
+    "helpText": {
+      "currency": "選擇您偏好的收入顯示貨幣",
+      "language": "選擇您偏好的語言",
+      "mileageUnit": "選擇您偏好的距離顯示單位",
+      "fiscalYear": "設定您的財政年度開始日期用於儀表板圖表。這會影響每周和年度收入計算。"
+    },
+    "timeZones": {
+      "londonGMT": "倫敦 (GMT)",
+      "hongKongHKT": "香港 (HKT)"
+    },
+    "chartPeriods": {
+      "7days": "過去7天",
+      "30days": "過去30天",
+      "90days": "過去90天"
+    },
+    "quickButtons": {
+      "ukApril6": "英國 (4月6日)",
+      "hkApril1": "香港 (4月1日)"
+    },
+    "notifications": {
+      "title": "通知",
+      "emailTitle": "電郵通知",
+      "emailDescription": "接收關於您收入報告的電郵更新",
+      "pushTitle": "推送通知",
+      "pushDescription": "獲得路線完成和收入更新的通知"
+    },
+    "dashboard": {
+      "title": "儀表板設定",
+      "defaultChartPeriod": "預設圖表期間",
+      "fiscalYearStartDate": "財政年度開始日期",
+      "includeWeekends": "報告中包含週末"
+    },
+    "apiAccess": {
+      "title": "API 存取",
+      "legacyKeys": "舊版 API 密鑰",
+      "deprecationNotice": "舊版 API 密鑰仍受支援，但建議新整合使用 JWT 令牌，因為它們具有增強的安全功能。"
+    },
+    "actions": {
+      "resetToDefaults": "重設為預設值"
+    },
+    "autoSaveNote": "更改會自動儲存",
     "currencies": {
       "GBP": "英鎊 (£)",
       "HKD": "港幣 ($)"
@@ -466,6 +514,8 @@
     "close": "關閉",
     "confirm": "確認",
     "yes": "是",
+    "notice": "注意",
+    "unknown": "未知",
     "no": "否",
     "unknown": "未知",
     "noDate": "無日期",

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { COMMON_TIMEZONES, getBrowserTimezone, getTimezoneDisplayName } from '../../utils/timezoneUtils';
 
 interface TimezoneSelectorProps {
@@ -23,7 +23,6 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
   label = "Timezone",
   placeholder = "Select timezone..."
 }) => {
-  const [showBrowserOption, setShowBrowserOption] = useState(false);
   const browserTimezone = getBrowserTimezone();
 
   // Prepare timezone options
@@ -50,7 +49,6 @@ export const TimezoneSelector: React.FC<TimezoneSelectorProps> = ({
 
   const handleUseBrowserTimezone = () => {
     handleTimezoneChange(browserTimezone);
-    setShowBrowserOption(false);
   };
 
   return (
@@ -185,7 +183,6 @@ export const TimezoneDisplay: React.FC<{
   className?: string;
 }> = ({
   timezone,
-  showOffset = false,
   className = ""
 }) => {
   const displayName = getTimezoneDisplayName(timezone);

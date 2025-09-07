@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLanguage } from '../../contexts/LanguageContext';
 import { getAvailableScopes, getUserTokens, generateJwtToken, revokeJwtToken } from '../../utils/api';
 
 
@@ -34,7 +33,6 @@ interface AvailableScopes {
 }
 
 const JwtApiTokenGenerator: React.FC = () => {
-  const { t } = useLanguage();
   
   // Form state
   const [description, setDescription] = useState('');

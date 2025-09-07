@@ -118,7 +118,7 @@ const Settings: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
-              <p className="text-gray-600 mt-1">Manage your account preferences and settings.</p>
+              <p className="text-gray-600 mt-1">{t('settings.description')}</p>
             </div>
             
             {/* Save Status Indicator */}
@@ -172,7 +172,7 @@ const Settings: React.FC = () => {
                       <option value="GBP">{t('settings.currencies.GBP')}</option>
                       <option value="HKD">{t('settings.currencies.HKD')}</option>
                     </select>
-                    <p className="text-sm text-gray-500 mt-1">Choose your preferred currency for displaying income</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('settings.helpText.currency')}</p>
                   </div>
 
                   <div>
@@ -188,7 +188,7 @@ const Settings: React.FC = () => {
                       <option value="en-GB">{t('settings.languages.en-GB')}</option>
                       <option value="zh-HK">{t('settings.languages.zh-HK')}</option>
                     </select>
-                    <p className="text-sm text-gray-500 mt-1">Select your preferred language</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('settings.helpText.language')}</p>
                   </div>
 
                   <div>
@@ -201,14 +201,14 @@ const Settings: React.FC = () => {
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="Europe/London">London (GMT)</option>
-                      <option value="Asia/Hong_Kong">Hong Kong (HKT)</option>
+                      <option value="Europe/London">{t('settings.timeZones.londonGMT')}</option>
+                      <option value="Asia/Hong_Kong">{t('settings.timeZones.hongKongHKT')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date Format
+                      {t('settings.form.dateFormat')}
                     </label>
                     <select
                       name="dateFormat"
@@ -235,19 +235,19 @@ const Settings: React.FC = () => {
                       <option value="km">{t('settings.mileageUnits.km')}</option>
                       <option value="mi">{t('settings.mileageUnits.mi')}</option>
                     </select>
-                    <p className="text-sm text-gray-500 mt-1">Choose your preferred unit for displaying distances</p>
+                    <p className="text-sm text-gray-500 mt-1">{t('settings.helpText.mileageUnit')}</p>
                   </div>
                 </div>
               </div>
 
               {/* Notifications Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Notifications</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('settings.notifications.title')}</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <h4 className="font-medium text-gray-900">Email Notifications</h4>
-                      <p className="text-sm text-gray-600">Receive email updates about your income reports</p>
+                      <h4 className="font-medium text-gray-900">{t('settings.notifications.emailTitle')}</h4>
+                      <p className="text-sm text-gray-600">{t('settings.notifications.emailDescription')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -263,8 +263,8 @@ const Settings: React.FC = () => {
 
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <h4 className="font-medium text-gray-900">Push Notifications</h4>
-                      <p className="text-sm text-gray-600">Get notified about route completions and income updates</p>
+                      <h4 className="font-medium text-gray-900">{t('settings.notifications.pushTitle')}</h4>
+                      <p className="text-sm text-gray-600">{t('settings.notifications.pushDescription')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -282,11 +282,11 @@ const Settings: React.FC = () => {
 
               {/* Dashboard Settings */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Dashboard Settings</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('settings.dashboard.title')}</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default Chart Period
+                      {t('settings.dashboard.defaultChartPeriod')}
                     </label>
                     <select
                       name="defaultChartPeriod"
@@ -294,15 +294,15 @@ const Settings: React.FC = () => {
                       onChange={handleChange}
                       className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="7">Last 7 days</option>
-                      <option value="30">Last 30 days</option>
-                      <option value="90">Last 90 days</option>
+                      <option value="7">{t('settings.chartPeriods.7days')}</option>
+                      <option value="30">{t('settings.chartPeriods.30days')}</option>
+                      <option value="90">{t('settings.chartPeriods.90days')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fiscal Year Start Date
+                      {t('settings.dashboard.fiscalYearStartDate')}
                     </label>
                     <div className="flex items-center space-x-4">
                       <input
@@ -335,7 +335,7 @@ const Settings: React.FC = () => {
                               : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
-                          UK (Apr 6)
+                          {t('settings.quickButtons.ukApril6')}
                         </button>
                         <button
                           type="button"
@@ -348,12 +348,12 @@ const Settings: React.FC = () => {
                               : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
-                          HK (Apr 1)
+                          {t('settings.quickButtons.hkApril1')}
                         </button>
                       </div>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      Set your fiscal year start date for dashboard charts. This affects weekly and annual income calculations.
+                      {t('settings.helpText.fiscalYear')}
                     </p>
                   </div>
 
@@ -366,7 +366,7 @@ const Settings: React.FC = () => {
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <label className="ml-2 text-sm font-medium text-gray-700">
-                      Include weekends in reports
+                      {t('settings.dashboard.includeWeekends')}
                     </label>
                   </div>
                 </div>
@@ -408,11 +408,11 @@ const Settings: React.FC = () => {
                   onClick={handleReset}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
                 >
-                  Reset to Defaults
+                  {t('settings.actions.resetToDefaults')}
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {t('settings.autoSaveNote') || 'Changes are saved automatically'}
+                {t('settings.autoSaveNote')}
               </p>
             </div>
           </div>
