@@ -267,6 +267,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 Console.WriteLine($"Data Protection configured for Azure: {useKeyVault}");
 
+// Add distributed cache for session state
+builder.Services.AddDistributedMemoryCache();
+
 // Configure Authentication
 builder.Services.AddAuthentication(options =>
 {
