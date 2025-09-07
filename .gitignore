@@ -396,3 +396,15 @@ logs/
 **/*.crt
 /IncomeMeter.Api/appsettings.json
 /IncomeMeter.Api/%HOME%/LogFiles
+/IncomeMeter.Api/frontend/src/components/Settings/__tests__
+/IncomeMeter.Api.Tests/Controllers/ApiTokenControllerTests.cs
+/IncomeMeter.Api.Tests/Controllers/AuthControllerTests.cs
+/IncomeMeter.Api.Tests/Controllers/LocationsControllerTests.cs
+/IncomeMeter.Api.Tests/Controllers/RoutesControllerTests.cs
+/IncomeMeter.Api.Tests/Middleware/JwtApiAuthenticationMiddlewareTests.cs
+/IncomeMeter.Api.Tests/Services/JwtApiTokenServiceTests.cs
+/IncomeMeter.Api.Tests/Services/LocationServiceTests.cs
+/IncomeMeter.Api.Tests/Services/RouteServiceTests.cs
+/IncomeMeter.Api.Tests/Services/UserServiceTests.cs
+/.gitignore
+/.gitignore
