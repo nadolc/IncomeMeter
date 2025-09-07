@@ -373,5 +373,34 @@ namespace IncomeMeter.Api.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        [HttpGet("error")]
+        public IActionResult AuthError(string? message = null)
+        {
+            var correlationId = HttpContext.Items["CorrelationId"]?.ToString();
+            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+            
+            _logger.LogWarning("OAuth authentication error endpoint accessed - IP: {RemoteIP}, Message: {Message}, CorrelationId: {CorrelationId}", 
+                remoteIp, message, correlationId);
+
+            var errorMessage = message ?? "Authentication failed. Please try again.";
+            
+            // Return JSON error response for API clients or redirect for browsers
+            if (Request.Headers.Accept.ToString().Contains("application/json"))
+            {
+                return BadRequest(new { 
+                    error = "authentication_failed", 
+                    message = errorMessage,
+                    correlationId = correlationId
+                });
+            }
+            
+            // For browser requests, redirect to frontend with error
+            var frontendUrl = _appSettings.FrontendBaseUrl ?? "https://localhost:5173";
+            var redirectUrl = $"{frontendUrl}/login?error={Uri.EscapeDataString(errorMessage)}";
+            
+            _logger.LogInformation("Redirecting OAuth error to frontend: {RedirectUrl}", redirectUrl);
+            return Redirect(redirectUrl);
+        }
     }
 }

@@ -18,6 +18,8 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using System.Text;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -225,6 +227,46 @@ else
 // Use consistent JWT configuration key across all services
 string jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
 
+// Configure Data Protection for Azure App Service (fixes OAuth correlation issues)
+// This ensures data protection keys persist across application restarts, fixing OAuth correlation failures
+var dataProtectionBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName("IncomeMeter.Api");
+
+// Use file system persistence for both development and production
+// This is sufficient to fix OAuth session persistence issues in Azure App Service
+var keysPath = useKeyVault 
+    ? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys")  // Azure App Service
+    : Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys");           // Development
+
+Directory.CreateDirectory(keysPath);
+dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
+Console.WriteLine($"Data Protection: Persisting keys to {keysPath}");
+Console.WriteLine($"Data Protection: Application Name = IncomeMeter.Api");
+
+// Add session state for OAuth correlation persistence
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = "IncomeMeter.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.IdleTimeout = TimeSpan.FromHours(2);
+    options.Cookie.IsEssential = true;
+});
+
+// Configure forwarded headers for Azure App Service load balancer
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+Console.WriteLine($"Data Protection configured for Azure: {useKeyVault}");
+
 // Configure Authentication
 builder.Services.AddAuthentication(options =>
 {
@@ -240,6 +282,9 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
         ? CookieSecurePolicy.SameAsRequest
         : CookieSecurePolicy.Always;
+    // Configure for Azure App Service load balancer
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.IsEssential = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
 })
@@ -256,6 +301,32 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("https://www.googleapis.com/auth/userinfo.profile");
 
     options.CallbackPath = "/signin-google";
+    
+    // Configure for Azure App Service load balancer and session persistence
+    options.Events.OnRemoteFailure = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError("Google OAuth Remote Failure: {Error} - Path: {Path}", 
+            context.Failure?.Message, context.Request.Path);
+        
+        // Clear any problematic cookies and redirect to retry
+        context.Response.Cookies.Delete("IncomeMeterAuth");
+        context.Response.Cookies.Delete("IncomeMeter.Session");
+        
+        context.Response.Redirect("/api/auth/error?message=" + 
+            Uri.EscapeDataString("Google authentication failed. Please try logging in again."));
+        context.HandleResponse();
+        return Task.CompletedTask;
+    };
+    
+    // Add correlation failure handling
+    options.Events.OnAccessDenied = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning("Google OAuth Access Denied - Path: {Path}", 
+            context.Request.Path);
+        return Task.CompletedTask;
+    };
 })
 // Add JWT Bearer to the existing authentication configuration  
 .AddJwtBearer("Bearer", options =>
@@ -321,7 +392,13 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Configure forwarded headers for Azure App Service load balancer (must be early)
+app.UseForwardedHeaders();
+
 app.UseHttpsRedirection();
+
+// Add session support for OAuth correlation (must be before authentication)
+app.UseSession();
 
 // Add global exception handling middleware (should be early in pipeline)
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -355,6 +432,32 @@ app.MapGet("/api/config", (IConfiguration config) => new
 {
     ApiBaseUrl = config["AppSettings:ApiBaseUrl"],
     FrontendBaseUrl = config["AppSettings:FrontendBaseUrl"]
+});
+
+// Add authentication health check endpoint
+app.MapGet("/api/auth/health", (IConfiguration config, HttpContext context) =>
+{
+    var healthData = new
+    {
+        status = "healthy",
+        timestamp = DateTime.UtcNow,
+        authentication = new
+        {
+            googleClientIdConfigured = !string.IsNullOrEmpty(config["GoogleClientId"]) || 
+                                      !string.IsNullOrEmpty(config["Development:GoogleClientId"]),
+            jwtSecretConfigured = !string.IsNullOrEmpty(config["Jwt:SecretKey"]),
+            dataProtectionConfigured = true, // We always configure it now
+            sessionEnabled = context.Session != null,
+            environment = app.Environment.EnvironmentName
+        },
+        dataProtection = new
+        {
+            keyVaultEnabled = useKeyVault,
+            applicationName = "IncomeMeter.Api"
+        }
+    };
+    
+    return Results.Ok(healthData);
 });
 
 // Phase 1: Development endpoints for testing default work types

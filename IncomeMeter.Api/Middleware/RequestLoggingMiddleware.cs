@@ -88,6 +88,44 @@ public class RequestLoggingMiddleware
         _logger.LogInformation("HTTP Request started: {Method} {Path} by User {UserId} [{CorrelationId}]",
             request.Method, request.Path, userId ?? "Anonymous", correlationId);
 
+        // Add specific logging for OAuth endpoints to track correlation issues
+        if (request.Path.StartsWithSegments("/signin-google"))
+        {
+            var queryParams = new Dictionary<string, string>();
+            foreach (var query in request.Query)
+            {
+                // Log OAuth parameters (but sanitize sensitive data)
+                if (query.Key.Equals("state", StringComparison.OrdinalIgnoreCase))
+                {
+                    queryParams[query.Key] = query.Value.ToString().Length > 10 ? 
+                        query.Value.ToString()[..10] + "..." : query.Value.ToString();
+                }
+                else if (query.Key.Equals("code", StringComparison.OrdinalIgnoreCase))
+                {
+                    queryParams[query.Key] = "***REDACTED***";
+                }
+                else
+                {
+                    queryParams[query.Key] = query.Value.ToString();
+                }
+            }
+            
+            // Check for correlation cookie presence
+            var hasCorrelationCookie = request.Cookies.Any(c => c.Key.Contains("Correlation"));
+            var hasSessionCookie = request.Cookies.Any(c => c.Key.Contains("Session"));
+            var hasAuthCookie = request.Cookies.Any(c => c.Key == "IncomeMeterAuth");
+            
+            Log.Logger
+                .ForContext("EventType", "OAuthCallback")
+                .ForContext("CorrelationId", correlationId)
+                .ForContext("OAuthParameters", queryParams)
+                .ForContext("HasCorrelationCookie", hasCorrelationCookie)
+                .ForContext("HasSessionCookie", hasSessionCookie) 
+                .ForContext("HasAuthCookie", hasAuthCookie)
+                .ForContext("CookieCount", request.Cookies.Count)
+                .Information("OAuth callback request received with parameters and cookie status");
+        }
+
         Log.Logger
             .ForContext("EventType", "HttpRequest")
             .ForContext("RequestData", logData, destructureObjects: true)
