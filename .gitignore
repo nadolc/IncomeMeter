@@ -408,3 +408,7 @@ logs/
 /IncomeMeter.Api.Tests/Services/UserServiceTests.cs
 /.gitignore
 /.gitignore
+/IncomeMeter.Api/appsettings.Development.json
+/IncomeMeter.Api/appsettings.Secret.json
+/IncomeMeter.Api/appsettings.Development.json
+/IncomeMeter.Api/appsettings.Secret.json
