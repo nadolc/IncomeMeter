@@ -445,9 +445,13 @@ public class RouteService : IRouteService
 
     public async Task<List<Models.Route>> GetRoutesByDateRangeAsync(string userId, DateTime startDate, DateTime endDate)
     {
+        // Ensure date-only comparison by setting time components
+        var startOfStartDate = startDate.Date; // 00:00:00.000
+        var endOfEndDate = endDate.Date.AddDays(1).AddTicks(-1); // 23:59:59.999 of endDate
+        
         return await _routes.Find(r => r.UserId == userId && 
-                                     r.ScheduleStart >= startDate && 
-                                     r.ScheduleStart <= endDate)
+                                     r.ScheduleStart >= startOfStartDate && 
+                                     r.ScheduleStart <= endOfEndDate)
             .SortByDescending(r => r.ScheduleStart)
             .ToListAsync();
     }
