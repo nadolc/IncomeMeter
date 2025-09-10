@@ -118,6 +118,36 @@ describe('RouteForm Component', () => {
     expect(estimatedIncomeInput).toHaveValue(100);
   });
 
+  it('maintains input values without rollback when typing', async () => {
+    renderRouteForm();
+    
+    const estimatedIncomeInput = screen.getByLabelText('Estimated Income');
+    const startMileInput = screen.getByLabelText('Start Mile');
+    
+    // Type multiple characters in sequence
+    fireEvent.change(estimatedIncomeInput, { target: { value: '1' } });
+    expect(estimatedIncomeInput).toHaveValue(1);
+    
+    fireEvent.change(estimatedIncomeInput, { target: { value: '12' } });
+    expect(estimatedIncomeInput).toHaveValue(12);
+    
+    fireEvent.change(estimatedIncomeInput, { target: { value: '123' } });
+    expect(estimatedIncomeInput).toHaveValue(123);
+    
+    // Test another field
+    fireEvent.change(startMileInput, { target: { value: '500' } });
+    expect(startMileInput).toHaveValue(500);
+    
+    // First field should still maintain its value
+    expect(estimatedIncomeInput).toHaveValue(123);
+    
+    // Wait a bit to ensure no async updates interfere
+    await waitFor(() => {
+      expect(estimatedIncomeInput).toHaveValue(123);
+      expect(startMileInput).toHaveValue(500);
+    });
+  });
+
   it('validates required fields', async () => {
     renderRouteForm();
     

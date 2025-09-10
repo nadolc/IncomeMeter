@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTimezone } from '../../hooks/useTimezone';
@@ -40,15 +40,15 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
     const { timezone } = useTimezone(settings.timeZone);
 
     // Helper function to format Date for datetime-local input in user's timezone
-    const formatForDateTimeInput = (date: Date): string => {
+    const formatForDateTimeInput = useCallback((date: Date): string => {
         // Convert to user's timezone
         const userDate = toUserTimezone(date, timezone);
         // Format as YYYY-MM-DDTHH:MM (required by datetime-local input)
         return userDate.toISOString().slice(0, 16);
-    };
+    }, [timezone]);
 
     // Helper function to create initial dates in user's timezone
-    const getInitialScheduleDates = () => {
+    const getInitialScheduleDates = useCallback(() => {
         // Get current time formatted in user's timezone
         const now = new Date();
         
@@ -75,23 +75,20 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
             scheduleStart,
             scheduleEnd
         };
-    };
-    const [formData, setFormData] = useState<RouteFormData>(() => {
-        const initialDates = getInitialScheduleDates();
-        return {
-            workType: '',
-            workTypeId: undefined,
-            scheduleStart: initialDates.scheduleStart,
-            scheduleEnd: initialDates.scheduleEnd,
-            actualStartTime: initialDates.scheduleStart, // Default to same as schedule since checkbox is checked by default
-            actualEndTime: initialDates.scheduleEnd, // Default to same as schedule since checkbox is checked by default
-            estimatedIncome: undefined,
-            startMile: undefined,
-            endMile: undefined,
-            status: 'scheduled',
-            description: undefined,
-            incomes: [],
-        };
+    }, [timezone]);
+    const [formData, setFormData] = useState<RouteFormData>({
+        workType: '',
+        workTypeId: undefined,
+        scheduleStart: '',
+        scheduleEnd: '',
+        actualStartTime: '',
+        actualEndTime: '',
+        estimatedIncome: undefined,
+        startMile: undefined,
+        endMile: undefined,
+        status: 'scheduled',
+        description: undefined,
+        incomes: [],
     });
     const [workTypeConfigs, setWorkTypeConfigs] = useState<WorkTypeConfig[]>([]);
     const [loading, setLoading] = useState(false);
@@ -124,18 +121,31 @@ const RouteForm: React.FC<RouteFormProps> = ({ route, onSave, onCancel }) => {
             };
             setFormData(editFormData);
             setInitialFormData(editFormData);
-        } else {
-            // For new routes, set initial data after form data is set
-            setInitialFormData(formData);
         }
     }, [route, formatForDateTimeInput]);
 
-    // Set initial form data for new routes after first render
+    // Set initial form data for new routes - only run once when component mounts
     useEffect(() => {
         if (!route && !initialFormData) {
-            setInitialFormData(formData);
+            const initialDates = getInitialScheduleDates();
+            const newRouteFormData = {
+                workType: '',
+                workTypeId: undefined,
+                scheduleStart: initialDates.scheduleStart,
+                scheduleEnd: initialDates.scheduleEnd,
+                actualStartTime: initialDates.scheduleStart,
+                actualEndTime: initialDates.scheduleEnd,
+                estimatedIncome: undefined,
+                startMile: undefined,
+                endMile: undefined,
+                status: 'scheduled' as const,
+                description: undefined,
+                incomes: [],
+            };
+            setFormData(newRouteFormData);
+            setInitialFormData(newRouteFormData);
         }
-    }, [formData, route, initialFormData]);
+    }, [route, initialFormData, getInitialScheduleDates]);
 
     // Function to check if form has unsaved changes
     const isFormDirty = (): boolean => {
