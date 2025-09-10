@@ -25,12 +25,12 @@ namespace IncomeMeter.Api.Controllers
         private readonly IJwtTokenService _jwtTokenService;
 
         public MobileController(
-            ITwoFactorAuthService twoFactorService,
+            //ITwoFactorAuthService twoFactorService,
             IUserService userService,
             IRouteService routeService,
             IJwtTokenService jwtTokenService)
         {
-            _twoFactorService = twoFactorService;
+            //_twoFactorService = twoFactorService;
             _userService = userService;
             _routeService = routeService;
             _jwtTokenService = jwtTokenService;
@@ -677,7 +677,7 @@ namespace IncomeMeter.Api.Controllers
                 ActualEndTime = route.ActualEndTime,
                 Incomes = route.Incomes.Select(i => new IncomeItemDto { Source = i.Source, Amount = i.Amount }).ToList(),
                 TotalIncome = route.TotalIncome,
-                EstimatedIncome = route.EstimatedIncome ?? 0m,
+                EstimatedIncome = route.EstimatedIncome,
                 Distance = route.Distance,
                 StartMile = route.StartMile,
                 EndMile = route.EndMile,

@@ -20,7 +20,15 @@
       "Bash(npm run typecheck:*)",
       "Bash(npm run:*)",
       "Bash(npx eslint:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(npx react-native:*)",
+      "Bash(npx @react-native-community/cli init:*)",
+      "Bash(git add:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(npm start)",
+      "Bash(refreshenv)",
+      "Bash(npm start:*)",
+      "Bash(./gradlew:*)"
     ],
     "deny": []
   }

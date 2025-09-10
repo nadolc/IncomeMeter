@@ -9,7 +9,6 @@
   <ItemGroup>
     <Compile Remove="Controllers\IOSIntegrationController.cs" />
     <Compile Remove="Controllers\TwoFactorController.cs" />
-    <Compile Remove="Services\Interfaces\ITwoFactorAuthService.cs" />
     <Compile Remove="Services\TwoFactorAuthService.cs" />
   </ItemGroup>
 

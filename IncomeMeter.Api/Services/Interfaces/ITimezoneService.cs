@@ -12,7 +12,7 @@ public interface ITimezoneService
     /// <param name="latitude">Latitude coordinate</param>
     /// <param name="longitude">Longitude coordinate</param>
     /// <returns>IANA timezone ID (e.g., "Europe/London", "America/New_York")</returns>
-    Task<string> GetTimezoneFromCoordinatesAsync(double latitude, double longitude);
+    Task<string> GetTimezoneFromCoordinatesAsync(double latitude, double longitude); 
 
     /// <summary>
     /// Validates if a timezone ID is valid

@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Metro Server",
+      "type": "shell",
+      "command": "npm",
+      "args": ["start"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new",
+        "showReuseMessage": true
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Android",
+      "type": "shell",
+      "command": "npx",
+      "args": ["react-native", "run-android"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "dependsOn": "Start Metro Server"
+    },
+    {
+      "label": "Run iOS",
+      "type": "shell",
+      "command": "npx",
+      "args": ["react-native", "run-ios"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "dependsOn": "Start Metro Server"
+    },
+    {
+      "label": "Clean and Rebuild",
+      "type": "shell",
+      "command": "npx",
+      "args": ["react-native", "clean"],
+      "group": "build"
+    }
+  ]
+}

@@ -13,6 +13,11 @@ public class User
     public string DisplayName { get; set; } = null!;
     public string Email { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLoginAt { get; set; }
+    public string? ProfilePicture { get; set; }
+    public bool TwoFactorEnabled { get; set; } = false;
+    public TwoFactorAuth? TwoFactorAuth { get; set; }
+    public List<RefreshToken> RefreshTokens { get; set; } = new();
     public List<ApiKey> ApiKeys { get; set; } = new();
     public List<ApiToken> ApiTokens { get; set; } = new(); // New JWT-based API tokens
     public UserSettings Settings { get; set; } = new();
@@ -106,6 +111,7 @@ public class ApiToken
     /// </summary>
     public string? LastUsedIp { get; set; }
 }
+
 
 public class UserSettings
 {

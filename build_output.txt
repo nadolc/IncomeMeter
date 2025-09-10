@@ -1,0 +1,19 @@
+  Determining projects to restore...
+  Restored /mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj (in 1.42 sec).
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(10,7): warning CS0105: The using directive for 'Microsoft.AspNetCore.Authentication' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(11,7): warning CS0105: The using directive for 'System.Security.Claims' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(12,7): warning CS0105: The using directive for 'System.Text' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Controllers/MobileController.cs(22,26): error CS0246: The type or namespace name 'ITwoFactorAuthService' could not be found (are you missing a using directive or an assembly reference?) [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Controllers/MobileController.cs(28,13): error CS0246: The type or namespace name 'ITwoFactorAuthService' could not be found (are you missing a using directive or an assembly reference?) [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+
+Build FAILED.
+
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(10,7): warning CS0105: The using directive for 'Microsoft.AspNetCore.Authentication' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(11,7): warning CS0105: The using directive for 'System.Security.Claims' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Services/GmailService.cs(12,7): warning CS0105: The using directive for 'System.Text' appeared previously in this namespace [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Controllers/MobileController.cs(22,26): error CS0246: The type or namespace name 'ITwoFactorAuthService' could not be found (are you missing a using directive or an assembly reference?) [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/Controllers/MobileController.cs(28,13): error CS0246: The type or namespace name 'ITwoFactorAuthService' could not be found (are you missing a using directive or an assembly reference?) [/mnt/d/OneDrive/nadol_c/OneDrive/文件/Code/IncomeMeter/IncomeMeter.Api/IncomeMeter.Api.csproj]
+    3 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:12.02

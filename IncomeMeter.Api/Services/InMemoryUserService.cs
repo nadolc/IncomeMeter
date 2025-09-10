@@ -98,4 +98,10 @@ public class InMemoryUserService : IUserService
 
         return Task.FromResult(user);
     }
+
+    public Task<User?> ValidateUserCredentialsAsync(string email, string password)
+    {
+        // InMemoryUserService placeholder - OAuth system doesn't use password validation
+        return Task.FromResult<User?>(null);
+    }
 }

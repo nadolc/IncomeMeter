@@ -100,6 +100,15 @@ public class UserService : IUserService
         return user;
     }
 
+    public async Task<User?> ValidateUserCredentialsAsync(string email, string password)
+    {
+        // Note: This is a placeholder implementation since the system uses Google OAuth
+        // In a real implementation, this would validate email/password credentials
+        // For now, return null to indicate invalid credentials (OAuth flow should be used)
+        await Task.CompletedTask;
+        return null;
+    }
+
     // Phase 1: Helper method to update user's assigned work type IDs
     private async Task UpdateUserWorkTypeIdsAsync(string userId, List<string> workTypeIds)
     {
