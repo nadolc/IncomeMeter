@@ -58,6 +58,34 @@ public class EndRouteDto
     public double EndMile { get; set; }
     [Required]
     public List<IncomeItemDto> Incomes { get; set; } = new();
+    public string? SchedulePeriod { get; set; }
+
+    /// <summary>
+    /// Sanitizes SchedulePeriod by removing colons (e.g., "08:00-17:00" → "0800-1700")
+    /// </summary>
+    public void SanitizeSchedulePeriod()
+    {
+        if (!string.IsNullOrWhiteSpace(SchedulePeriod))
+        {
+            SchedulePeriod = SchedulePeriod.Replace(":", "");
+        }
+    }
+
+    public bool HasValidSchedulePeriod()
+    {
+        if (string.IsNullOrWhiteSpace(SchedulePeriod) || !SchedulePeriod.Contains('-'))
+            return false;
+
+        var parts = SchedulePeriod.Split('-');
+        if (parts.Length != 2)
+            return false;
+
+        var startPart = parts[0].Trim();
+        var endPart = parts[1].Trim();
+
+        return startPart.Length == 4 && endPart.Length == 4
+            && int.TryParse(startPart, out _) && int.TryParse(endPart, out _);
+    }
 }
 
 // Response DTO for route details

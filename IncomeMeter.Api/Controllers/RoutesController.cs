@@ -142,13 +142,21 @@ public class RoutesController : ControllerBase
             return Unauthorized();
         }
 
+        // Sanitize SchedulePeriod (strip colons: "08:00-17:00" → "0800-1700")
+        endRouteDto.SanitizeSchedulePeriod();
+
+        var useFallbackSchedule = !endRouteDto.HasValidSchedulePeriod();
+
         Log.Logger
             .ForContext("EventType", "RouteEndingStarted")
             .ForContext("CorrelationId", correlationId)
             .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
             .ForContext("RouteId", endRouteDto.Id?[..Math.Min(8, endRouteDto.Id.Length)] + "***")
             .ForContext("EndMile", endRouteDto.EndMile)
-            .Information("User initiated route ending");
+            .ForContext("SchedulePeriod", endRouteDto.SchedulePeriod ?? "(fallback: actualStartTime → now)")
+            .Information(useFallbackSchedule
+                ? "User initiated route ending - no SchedulePeriod, using ActualStartTime and current time"
+                : "User initiated route ending");
 
         var route = await _routeService.EndRouteAsync(endRouteDto, userId);
         if (route == null)

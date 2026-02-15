@@ -93,6 +93,9 @@ public class RouteService : IRouteService
 
     public async Task<Models.Route?> EndRouteAsync(EndRouteDto routeDto, string userId)
     {
+        // Sanitize SchedulePeriod (remove colons like "08:00-17:00" → "0800-1700")
+        routeDto.SanitizeSchedulePeriod();
+
         var filter = Builders<Models.Route>.Filter.And(
             Builders<Models.Route>.Filter.Eq(r => r.Id, routeDto.Id),
             Builders<Models.Route>.Filter.Eq(r => r.UserId, userId)
@@ -102,15 +105,39 @@ public class RouteService : IRouteService
             .Set(r => r.EndMile, routeDto.EndMile)
             .Set(r => r.ActualEndTime, DateTime.UtcNow)
             .Set(r => r.Status, "completed")
-            .Set(r => r.Incomes, routeDto.Incomes.Select(dto => new IncomeItem 
-            { 
-                Source = dto.Source, 
-                Amount = dto.Amount 
+            .Set(r => r.Incomes, routeDto.Incomes.Select(dto => new IncomeItem
+            {
+                Source = dto.Source,
+                Amount = dto.Amount
             }).ToList())
             .Set(r => r.TotalIncome, routeDto.Incomes.Sum(i => i.Amount))
             .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
-        var result = await _routes.FindOneAndUpdateAsync(filter, update, 
+        // Parse SchedulePeriod if provided, otherwise fall back to ActualStartTime and current time
+        if (routeDto.HasValidSchedulePeriod())
+        {
+            var currentRoute = await GetRouteByIdAsync(routeDto.Id, userId);
+            var actualStartTime = currentRoute?.ActualStartTime ?? DateTime.UtcNow;
+            var (scheduleStart, scheduleEnd) = await ParseSchedulePeriodByUserIdAsync(routeDto.SchedulePeriod!, actualStartTime, userId);
+            update = update
+                .Set(r => r.ScheduleStart, scheduleStart)
+                .Set(r => r.ScheduleEnd, scheduleEnd);
+        }
+        else if (!string.IsNullOrWhiteSpace(routeDto.SchedulePeriod))
+        {
+            // SchedulePeriod was provided but invalid — skip (already sanitized)
+        }
+        else
+        {
+            // No SchedulePeriod — fall back to ActualStartTime and current time
+            var currentRoute = await GetRouteByIdAsync(routeDto.Id, userId);
+            var actualStartTime = currentRoute?.ActualStartTime ?? DateTime.UtcNow;
+            update = update
+                .Set(r => r.ScheduleStart, actualStartTime)
+                .Set(r => r.ScheduleEnd, DateTime.UtcNow);
+        }
+
+        var result = await _routes.FindOneAndUpdateAsync(filter, update,
             new FindOneAndUpdateOptions<Models.Route> { ReturnDocument = ReturnDocument.After });
 
         if (result != null && result.StartMile.HasValue && result.EndMile.HasValue)
