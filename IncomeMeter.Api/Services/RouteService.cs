@@ -143,9 +143,23 @@ public class RouteService : IRouteService
         var incomeItems = routeDto.ConvertToIncomeItems();
         var totalIncome = incomeItems.Sum(i => i.Amount);
 
+        // Sanitize SchedulePeriod (remove colons like "08:00-17:00" → "0800-1700")
+        routeDto.SanitizeSchedulePeriod();
+
         // Parse schedule period and combine with actual start time (timezone-aware)
         var actualStartTime = currentRoute.ActualStartTime ?? DateTime.UtcNow;
-        var (scheduleStart, scheduleEnd) = await ParseSchedulePeriodByUserIdAsync(routeDto.SchedulePeriod, actualStartTime, userId);
+        DateTime scheduleStart, scheduleEnd;
+
+        if (routeDto.HasValidSchedulePeriod())
+        {
+            (scheduleStart, scheduleEnd) = await ParseSchedulePeriodByUserIdAsync(routeDto.SchedulePeriod!, actualStartTime, userId);
+        }
+        else
+        {
+            // No valid schedule period provided — fall back to ActualStartTime and current time
+            scheduleStart = actualStartTime;
+            scheduleEnd = DateTime.UtcNow;
+        }
 
         // Use provided actualEndTime or current time
         var actualEndTime = routeDto.ActualEndTime ?? DateTime.UtcNow;

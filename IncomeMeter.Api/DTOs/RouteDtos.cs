@@ -100,18 +100,44 @@ public class EndRouteIOSDto
     [Range(0, double.MaxValue, ErrorMessage = "EndMile must be a positive number")]
     public double EndMile { get; set; }
 
-    [Required(ErrorMessage = "SchedulePeriod is required")]
-    public string SchedulePeriod { get; set; } = null!;
+    public string? SchedulePeriod { get; set; }
 
     [Required(ErrorMessage = "Incomes are required")]
     public List<Dictionary<string, object>> Incomes { get; set; } = new();
 
     public DateTime? ActualEndTime { get; set; }
 
+    /// <summary>
+    /// Sanitizes SchedulePeriod by removing colons (e.g., "08:00-17:00" → "0800-1700")
+    /// </summary>
+    public void SanitizeSchedulePeriod()
+    {
+        if (!string.IsNullOrWhiteSpace(SchedulePeriod))
+        {
+            SchedulePeriod = SchedulePeriod.Replace(":", "");
+        }
+    }
+
     // Validation methods
     public bool IsValidSchedulePeriod()
     {
         return !string.IsNullOrWhiteSpace(SchedulePeriod) && SchedulePeriod.Contains('-');
+    }
+
+    public bool HasValidSchedulePeriod()
+    {
+        if (string.IsNullOrWhiteSpace(SchedulePeriod) || !SchedulePeriod.Contains('-'))
+            return false;
+
+        var parts = SchedulePeriod.Split('-');
+        if (parts.Length != 2)
+            return false;
+
+        var startPart = parts[0].Trim();
+        var endPart = parts[1].Trim();
+
+        return startPart.Length == 4 && endPart.Length == 4
+            && int.TryParse(startPart, out _) && int.TryParse(endPart, out _);
     }
 
     public bool IsValidIncomes()
@@ -158,9 +184,10 @@ public class EndRouteIOSDto
 
     public string GetValidationError()
     {
-        if (!IsValidSchedulePeriod())
-            return "SchedulePeriod must be in format 'HHMM-HHMM'";
-        
+        // If SchedulePeriod is provided but not valid after sanitization, return error
+        if (!string.IsNullOrWhiteSpace(SchedulePeriod) && !HasValidSchedulePeriod())
+            return "SchedulePeriod must be in format 'HHMM-HHMM' or 'HH:MM-HH:MM'";
+
         if (!IsValidIncomes())
             return "Incomes must be an array of objects with source-amount pairs";
 

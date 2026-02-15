@@ -418,6 +418,9 @@ public class RoutesController : ControllerBase
             return BadRequest(new { error = "Validation failed", details = errors });
         }
 
+        // Sanitize SchedulePeriod (strip colons: "08:00-17:00" → "0800-1700")
+        endRouteDto.SanitizeSchedulePeriod();
+
         // Additional custom validation
         var validationError = endRouteDto.GetValidationError();
         if (!string.IsNullOrEmpty(validationError))
@@ -447,14 +450,18 @@ public class RoutesController : ControllerBase
 
         try
         {
+            var useFallbackSchedule = !endRouteDto.HasValidSchedulePeriod();
+
             Log.Logger
                 .ForContext("EventType", "RouteEndingStarted")
                 .ForContext("CorrelationId", correlationId)
                 .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
                 .ForContext("RouteId", endRouteDto.RouteId[..Math.Min(8, endRouteDto.RouteId.Length)] + "***")
                 .ForContext("EndMile", endRouteDto.EndMile)
-                .ForContext("SchedulePeriod", endRouteDto.SchedulePeriod)
-                .Information("User ending route via API key - validation passed");
+                .ForContext("SchedulePeriod", endRouteDto.SchedulePeriod ?? "(fallback: actualStartTime → now)")
+                .Information(useFallbackSchedule
+                    ? "User ending route via API key - no SchedulePeriod, using ActualStartTime and current time"
+                    : "User ending route via API key - validation passed");
 
             var route = await _routeService.EndRouteFromIOSAsync(endRouteDto, userId!);
 
