@@ -182,6 +182,20 @@ export const createRoute = async (routeData: Partial<Route>): Promise<Route> => 
   return response.data;
 };
 
+export const createBulkRoutes = async (routesData: Array<{
+  workType: string;
+  scheduleStart: Date;
+  scheduleEnd: Date;
+  actualStartTime: Date;
+  actualEndTime: Date;
+  startMile: number;
+  endMile: number;
+  incomes: Array<{ source: string; amount: number }>;
+}>): Promise<Route[]> => {
+  const response = await api.post<Route[]>('/api/routes/bulk', routesData);
+  return response.data;
+};
+
 export const updateRoute = async (routeId: string, routeData: Partial<Route>): Promise<Route> => {
   const response = await api.put<Route>(`/api/routes/${routeId}`, routeData);
   return response.data;

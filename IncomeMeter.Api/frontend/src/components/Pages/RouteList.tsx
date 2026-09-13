@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { Route } from '../../types';
+import type { Route, WorkTypeConfig } from '../../types';
 import { getDisplayDistance } from '../../utils/distance';
-import { getRoutes } from '../../utils/api';
+import { getRoutes, createBulkRoutes, getActiveWorkTypeConfigs } from '../../utils/api';
+import BulkRouteImport from '../Import/BulkRouteImport';
 
 const RouteList: React.FC = () => {
   const navigate = useNavigate();
@@ -13,15 +14,17 @@ const RouteList: React.FC = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [workTypes, setWorkTypes] = useState<WorkTypeConfig[]>([]);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const loadRoutes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch routes from API
       const routesData = await getRoutes();
-      
+
       // Convert date strings to Date objects if needed
       const processedRoutes: Route[] = routesData.map(route => ({
         ...route,
@@ -30,7 +33,7 @@ const RouteList: React.FC = () => {
         actualStartTime: route.actualStartTime ? new Date(route.actualStartTime) : undefined,
         actualEndTime: route.actualEndTime ? new Date(route.actualEndTime) : undefined,
       }));
-      
+
       setRoutes(processedRoutes);
     } catch (err) {
       setError(t('routes.list.error.message'));
@@ -40,9 +43,19 @@ const RouteList: React.FC = () => {
     }
   }, [t]);
 
+  const loadWorkTypes = useCallback(async () => {
+    try {
+      const workTypesData = await getActiveWorkTypeConfigs();
+      setWorkTypes(workTypesData);
+    } catch (err) {
+      console.error('Error loading work types:', err);
+    }
+  }, []);
+
   useEffect(() => {
     loadRoutes();
-  }, [loadRoutes]);
+    loadWorkTypes();
+  }, [loadRoutes, loadWorkTypes]);
 
   const getStatusColor = (status: string = 'unknown') => {
     switch (status.toLowerCase()) {
@@ -82,6 +95,40 @@ const RouteList: React.FC = () => {
     // Placeholder for add route functionality
     alert(t('routes.list.add'));
   };
+
+  const handleBulkImport = useCallback(async (parsedRoutes: Array<{
+    workTypeName: string;
+    scheduleStart: Date;
+    scheduleEnd: Date;
+    startMile: number;
+    endMile: number;
+    incomes: Array<{ source: string; amount: number }>;
+  }>) => {
+    try {
+      // Convert parsed routes to API format
+      const routesToCreate = parsedRoutes.map(route => ({
+        workType: route.workTypeName,
+        scheduleStart: route.scheduleStart,
+        scheduleEnd: route.scheduleEnd,
+        actualStartTime: route.scheduleStart, // Set actual start = schedule start as per requirements
+        actualEndTime: route.scheduleEnd,     // Set actual end = schedule end as per requirements
+        startMile: route.startMile,
+        endMile: route.endMile,
+        incomes: route.incomes,
+      }));
+
+      // Call the bulk create API
+      await createBulkRoutes(routesToCreate);
+
+      // Reload routes to show the new ones
+      await loadRoutes();
+
+      setShowBulkImport(false);
+    } catch (error) {
+      console.error('Failed to import routes:', error);
+      throw error; // Re-throw to let the import component handle the error display
+    }
+  }, [loadRoutes]);
 
   if (loading) {
     return (
@@ -123,7 +170,16 @@ const RouteList: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">{t('routes.list.title')}</h1>
             <p className="text-gray-600 mt-1">{routes.length} {t('routes.title').toLowerCase()}</p>
           </div>
-          <div className="mt-4 sm:mt-0">
+          <div className="mt-4 sm:mt-0 flex space-x-3">
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              {t('routes.bulkImport.title', 'Bulk Import')}
+            </button>
             <button
               onClick={handleAddRoute}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -227,6 +283,14 @@ const RouteList: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Bulk Import Modal */}
+      <BulkRouteImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onImport={handleBulkImport}
+        workTypes={workTypes}
+      />
     </div>
   );
 };

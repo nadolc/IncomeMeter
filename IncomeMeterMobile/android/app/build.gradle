@@ -84,6 +84,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // Only build for x86_64 architecture to avoid long path issues on Windows
+        ndk {
+            abiFilters "x86_64"
+        }
     }
     signingConfigs {
         debug {

@@ -28,7 +28,13 @@
       "Bash(npm start)",
       "Bash(refreshenv)",
       "Bash(npm start:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(adb:*)",
+      "Bash(emulator:*)",
+      "Bash($ANDROID_HOME/emulator/emulator:*)",
+      "Bash(gradlew.bat app:installDebug:*)",
+      "Bash(chmod:*)",
+      "Bash(gradlew:*)"
     ],
     "deny": []
   }

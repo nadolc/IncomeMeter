@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { COLORS, TYPOGRAPHY, ACCESSIBILITY_CONFIG } from '../../constants/config';
-import { AccessibleButton } from '../ui';
+import { AccessibleButton } from '../UI';
 import { OnboardingStep as OnboardingStepType } from '../../types';
 
 interface OnboardingStepProps {

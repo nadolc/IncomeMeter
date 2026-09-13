@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import RouteForm from './RouteForm';
-import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute, getActiveWorkTypeConfigs } from '../../utils/api';
+import { getRoutes, getRoutesByStatus, getRoutesByDateRange, deleteRoute, getActiveWorkTypeConfigs, createBulkRoutes } from '../../utils/api';
 import MultiSelectDropdown from '../UI/MultiSelectDropdown';
 import TimeRangeFilter from '../UI/TimeRangeFilter';
 import { getDateRangeFromSelection } from '../../utils/timeRangeUtils';
 import { sortRoutes, getSortingOptions, type SortOption } from '../../utils/routeSorting';
 import CompactRouteItem from '../UI/CompactRouteItem';
+import BulkRouteImport from '../Import/BulkRouteImport';
 import type { Route, WorkTypeConfig, FilterOption } from '../../types';
 
 
@@ -18,6 +19,7 @@ const EnhancedRouteList: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [deletingRoute, setDeletingRoute] = useState<Route | null>(null);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   
   // Filter states
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -207,6 +209,40 @@ const EnhancedRouteList: React.FC = () => {
     }
   };
 
+  const handleBulkImport = useCallback(async (parsedRoutes: Array<{
+    workTypeName: string;
+    scheduleStart: Date;
+    scheduleEnd: Date;
+    startMile: number;
+    endMile: number;
+    incomes: Array<{ source: string; amount: number }>;
+  }>) => {
+    try {
+      // Convert parsed routes to API format
+      const routesToCreate = parsedRoutes.map(route => ({
+        workType: route.workTypeName,
+        scheduleStart: route.scheduleStart,
+        scheduleEnd: route.scheduleEnd,
+        actualStartTime: route.scheduleStart, // Set actual start = schedule start as per requirements
+        actualEndTime: route.scheduleEnd,     // Set actual end = schedule end as per requirements
+        startMile: route.startMile,
+        endMile: route.endMile,
+        incomes: route.incomes,
+      }));
+
+      // Call the bulk create API
+      await createBulkRoutes(routesToCreate);
+
+      // Reload routes to show the new ones
+      await fetchRoutes();
+
+      setShowBulkImport(false);
+    } catch (error) {
+      console.error('Failed to import routes:', error);
+      throw error; // Re-throw to let the import component handle the error display
+    }
+  }, [fetchRoutes]);
+
   // Removed unused helper functions - moved to CompactRouteItem
 
 
@@ -247,7 +283,17 @@ const EnhancedRouteList: React.FC = () => {
                   </span>
                 )}
               </button>
-              
+
+              <button
+                onClick={() => setShowBulkImport(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span className="hidden sm:inline">{t('routes.bulkImport.title', 'Bulk Import')}</span>
+              </button>
+
               <button
                 onClick={() => setShowCreateForm(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
@@ -436,6 +482,14 @@ const EnhancedRouteList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Import Modal */}
+      <BulkRouteImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onImport={handleBulkImport}
+        workTypes={availableWorkTypes}
+      />
     </div>
   );
 };
