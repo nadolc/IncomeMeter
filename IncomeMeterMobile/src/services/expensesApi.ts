@@ -41,6 +41,7 @@ export interface AttachmentUploadResult {
     tripMiles: number | null;
     mpg: number | null;
     confidence: number;
+    rawText?: string | null;
   } | null;
 }
 

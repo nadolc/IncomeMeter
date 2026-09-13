@@ -629,7 +629,10 @@
       "noVehicle": "未指定",
       "fromOcr": "日期來自收據 (OCR)",
       "ocrHint": "商家 / 金額由 OCR 預填 – 請核對",
-      "dashboardDetected": "儀表板相片 → 里程表"
+      "dashboardDetected": "儀表板相片 → 里程表",
+      "showOcrText": "顯示 OCR 文字",
+      "hideOcrText": "隱藏 OCR 文字",
+      "setDashboardHint": "（將同一站嘅儀表板相改成「里程表讀數」即會自動填入）"
     }
   },
   "vehicles": {

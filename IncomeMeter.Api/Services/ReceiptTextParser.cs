@@ -36,12 +36,13 @@ public static partial class ReceiptTextParser
     [GeneratedRegex(@"(?:BALANCE\s*DUE|TOTAL(?:\s*TO\s*PAY)?|AMOUNT\s*DUE)\s*[:\-]?\s*£?\s*(\d{1,5}\.\d{2})(?!\d)", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
     private static partial Regex Total();
 
-    // Dashboard: "84299 mi" (odometer, no decimals, ≥ 4 digits) vs "402.3 mi" (trip) vs "57.1 MPG"
-    [GeneratedRegex(@"(?<![\d.])(\d{4,7})\s*(?:mi|miles)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
+    // Dashboard: "84299 mi" (odometer, no decimals, >= 4 digits) vs "402.3 mi" (trip) vs "57.1 MPG".
+    // OCR regularly reads "mi" as "ml", "m1" or "mI" and inserts thousands separators, so accept those too.
+    [GeneratedRegex(@"(?<![\d.,])(\d{1,3}(?:,\d{3})+|\d{4,7})\s*(?:mi|ml|m1|mI|miles)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
     private static partial Regex OdometerMiles();
-    [GeneratedRegex(@"(?<![\d.])(\d{1,5}\.\d)\s*(?:mi|miles)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![\d.,])(\d{1,5}[.,]\d)\s*(?:mi|ml|m1|mI|miles)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
     private static partial Regex TripMiles();
-    [GeneratedRegex(@"(?<![\d.])(\d{1,3}(?:\.\d)?)\s*MPG\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![\d.,])(\d{1,3}(?:[.,]\d)?)\s*(?:MPG|MPC|M\.P\.G)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
     private static partial Regex Mpg();
     [GeneratedRegex(@"ACCUMULATED\s*INFO|TRIP\s*(?:A|B|INFO|COMPUTER)|SINCE\s*(?:REFUEL|LAST\s*FUEL|START)|AVG\.?\s*(?:FUEL|CONSUMPTION)|DRIVE\s*INFO", RegexOptions.Compiled | RegexOptions.IgnoreCase)]
     private static partial Regex DashboardWords();
@@ -53,13 +54,13 @@ public static partial class ReceiptTextParser
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
 
-        var result = new AttachmentOcr();
+        var result = new AttachmentOcr { RawText = text.Length > 8000 ? text[..8000] : text };
         var receiptScore = ReceiptWords().Matches(text).Count;
         var dashboardScore = DashboardWords().Matches(text).Count;
 
         // ---- dashboard trip screen ----
-        var odo = OdometerMiles().Matches(text).Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).ToList();
-        var trip = TripMiles().Matches(text).Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).ToList();
+        var odo = OdometerMiles().Matches(text).Select(m => double.Parse(m.Groups[1].Value.Replace(",", ""), CultureInfo.InvariantCulture)).ToList();
+        var trip = TripMiles().Matches(text).Select(m => double.Parse(m.Groups[1].Value.Replace(',', '.'), CultureInfo.InvariantCulture)).ToList();
         var mpg = Mpg().Match(text);
 
         if (odo.Count > 0 && (dashboardScore > 0 || mpg.Success || trip.Count > 0) && receiptScore == 0)
@@ -67,7 +68,7 @@ public static partial class ReceiptTextParser
             result.Kind = KindDashboard;
             result.OdometerMiles = odo.Max();                // the odometer is the biggest "NNNNN mi" on screen
             if (trip.Count > 0) result.TripMiles = trip.Max();
-            if (mpg.Success) result.Mpg = double.Parse(mpg.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (mpg.Success) result.Mpg = double.Parse(mpg.Groups[1].Value.Replace(',', '.'), CultureInfo.InvariantCulture);
             result.Confidence = Math.Max(result.Confidence, 0.7f);
             return result;
         }

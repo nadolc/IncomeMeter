@@ -79,6 +79,20 @@ D 11°C
         r.Total.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("Accumulated info\n402.3 ml\n57.1 MPG\n84299 ml", 84299, 402.3)]       // "mi" read as "ml"
+    [InlineData("Accumulated info\n402,3 mi\n57,1 MPG\n84,299 mi", 84299, 402.3)]       // separators
+    [InlineData("Trip A 12.5 m1  Odometer 120345 m1  48.2 mpg", 120345, 12.5)]         // "m1", lower-case mpg
+    public void Dashboard_parsing_tolerates_common_ocr_misreads(string text, double odometer, double trip)
+    {
+        var r = ReceiptTextParser.Parse(text)!;
+
+        r.Kind.Should().Be("dashboard");
+        r.OdometerMiles.Should().Be(odometer);
+        r.TripMiles.Should().Be(trip);
+        r.RawText.Should().Be(text);
+    }
+
     [Fact]
     public void Receipt_date_prefers_the_line_with_a_time_over_bare_dates()
     {

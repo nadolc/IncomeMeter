@@ -59,6 +59,51 @@ const formatBytes = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const assignGroups = (list: ReviewRow[]): ReviewRow[] => {
+  // Sort dated rows by time; consecutive rows within the window share a group.
+  const dated = list
+    .filter(r => r.date)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  let group = 0;
+  let lastTime: number | null = null;
+  const groupByKey = new Map<string, number>();
+  const sizeByGroup = new Map<number, number>();
+  for (const r of dated) {
+    const time = new Date(r.date).getTime();
+    if (lastTime === null || time - lastTime > GROUP_WINDOW_MINUTES * 60 * 1000) {
+      group += 1;
+    }
+    groupByKey.set(r.key, group);
+    sizeByGroup.set(group, (sizeByGroup.get(group) ?? 0) + 1);
+    lastTime = time;
+  }
+  // Only label groups with more than one photo – a lone photo is not a "stop".
+  return list.map(r => {
+    const g = groupByKey.get(r.key);
+    return { ...r, groupIndex: g !== undefined && (sizeByGroup.get(g) ?? 0) > 1 ? g : null };
+  });
+};
+
+/**
+ * Within one "stop" (photos taken minutes apart) copy the dashboard's odometer figure onto the fuel
+ * receipt so the expense carries the mileage without retyping it.
+ */
+const pairOdometerWithReceipts = (list: ReviewRow[]): ReviewRow[] => {
+  const byGroup = new Map<number, ReviewRow[]>();
+  for (const r of list) if (r.groupIndex !== null) byGroup.set(r.groupIndex, [...(byGroup.get(r.groupIndex) ?? []), r]);
+  const milesForKey = new Map<string, string>();
+  for (const members of byGroup.values()) {
+    const dash = members.find(m => m.kind === 'odometer' && m.miles);
+    if (!dash) continue;
+    for (const m of members) if (m.kind === 'expense' && m.category === 'fuel' && !m.miles) milesForKey.set(m.key, dash.miles);
+  }
+  return milesForKey.size === 0 ? list : list.map(r => (milesForKey.has(r.key) ? { ...r, miles: milesForKey.get(r.key)! } : r));
+};
+
+
+/** Re-derive stop groups and odometer pairing after any edit. Only ever fills EMPTY fuel odometer fields. */
+const recompute = (list: ReviewRow[]): ReviewRow[] => pairOdometerWithReceipts(assignGroups(list));
+
 const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, onImported }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +116,14 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
   const [saveResult, setSaveResult] = useState<BatchImportResult | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState<string>('');
+  const [ocrTextOpen, setOcrTextOpen] = useState<Set<string>>(new Set());
+
+  const toggleOcrText = (key: string) =>
+    setOcrTextOpen(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
 
   // Load vehicles once the modal opens so expenses can be tagged to one.
   useEffect(() => {
@@ -107,47 +160,6 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
   }, [step, reset, onClose]);
 
   // ---------- Step 1: pick + upload ----------
-
-  const assignGroups = (list: ReviewRow[]): ReviewRow[] => {
-    // Sort dated rows by time; consecutive rows within the window share a group.
-    const dated = list
-      .filter(r => r.date)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    let group = 0;
-    let lastTime: number | null = null;
-    const groupByKey = new Map<string, number>();
-    const sizeByGroup = new Map<number, number>();
-    for (const r of dated) {
-      const time = new Date(r.date).getTime();
-      if (lastTime === null || time - lastTime > GROUP_WINDOW_MINUTES * 60 * 1000) {
-        group += 1;
-      }
-      groupByKey.set(r.key, group);
-      sizeByGroup.set(group, (sizeByGroup.get(group) ?? 0) + 1);
-      lastTime = time;
-    }
-    // Only label groups with more than one photo – a lone photo is not a "stop".
-    return list.map(r => {
-      const g = groupByKey.get(r.key);
-      return { ...r, groupIndex: g !== undefined && (sizeByGroup.get(g) ?? 0) > 1 ? g : null };
-    });
-  };
-
-  /**
-   * Within one "stop" (photos taken minutes apart) copy the dashboard's odometer figure onto the fuel
-   * receipt so the expense carries the mileage without retyping it.
-   */
-  const pairOdometerWithReceipts = (list: ReviewRow[]): ReviewRow[] => {
-    const byGroup = new Map<number, ReviewRow[]>();
-    for (const r of list) if (r.groupIndex !== null) byGroup.set(r.groupIndex, [...(byGroup.get(r.groupIndex) ?? []), r]);
-    const milesForKey = new Map<string, string>();
-    for (const members of byGroup.values()) {
-      const dash = members.find(m => m.kind === 'odometer' && m.miles);
-      if (!dash) continue;
-      for (const m of members) if (m.kind === 'expense' && m.category === 'fuel' && !m.miles) milesForKey.set(m.key, dash.miles);
-    }
-    return milesForKey.size === 0 ? list : list.map(r => (milesForKey.has(r.key) ? { ...r, miles: milesForKey.get(r.key)! } : r));
-  };
 
   const handleFiles = useCallback(async (fileList: FileList | File[]) => {
     const files = Array.from(fileList).filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
@@ -206,7 +218,7 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
         };
       });
 
-      setRows(pairOdometerWithReceipts(assignGroups(newRows)));
+      setRows(recompute(newRows));
       setStep('review');
     } catch (err) {
       console.error('Bulk receipt upload failed', err);
@@ -234,7 +246,7 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
   // ---------- Step 2: review ----------
 
   const updateRow = useCallback((key: string, patch: Partial<ReviewRow>) => {
-    setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch, errors: [] } : r)));
+    setRows(prev => recompute(prev.map(r => (r.key === key ? { ...r, ...patch, errors: [] } : r))));
   }, []);
 
   const setDate = useCallback((key: string, value: string) => {
@@ -543,7 +555,15 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
                             {t('expenses.bulkImport.stop', { defaultValue: 'Stop #{{n}}', n: row.groupIndex })}
                           </span>
                         )}
+                        {row.upload.ocr?.rawText && (
+                          <button type="button" onClick={() => toggleOcrText(row.key)} className="text-gray-400 hover:text-gray-600 underline">
+                            {ocrTextOpen.has(row.key) ? t('expenses.bulkImport.hideOcrText', 'hide OCR text') : t('expenses.bulkImport.showOcrText', 'show OCR text')}
+                          </button>
+                        )}
                       </div>
+                      {ocrTextOpen.has(row.key) && row.upload.ocr?.rawText && (
+                        <pre className="mb-2 max-h-40 overflow-auto rounded bg-gray-50 border border-gray-200 p-2 text-[11px] text-gray-600 whitespace-pre-wrap">{row.upload.ocr.rawText}</pre>
+                      )}
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <label className="block">
@@ -617,7 +637,12 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
                                   />
                                 </label>
                                 <label className="block">
-                                  <span className="block text-xs text-gray-500 mb-0.5">{t('expenses.fields.odometerAtFill', 'Odometer at fill (mi)')}</span>
+                                  <span className="block text-xs text-gray-500 mb-0.5">
+                                    {t('expenses.fields.odometerAtFill', 'Odometer at fill (mi)')}
+                                    {row.groupIndex !== null && !row.miles && (
+                                      <span className="ml-1 text-amber-600">{t('expenses.bulkImport.setDashboardHint', '(set the dashboard photo in this stop to "Odometer reading")')}</span>
+                                    )}
+                                  </span>
                                   <input
                                     type="number"
                                     step="1"

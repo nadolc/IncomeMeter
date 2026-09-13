@@ -144,7 +144,8 @@ public class AttachmentService : IAttachmentService
         OdometerMiles = ocr.OdometerMiles,
         TripMiles = ocr.TripMiles,
         Mpg = ocr.Mpg,
-        Confidence = ocr.Confidence
+        Confidence = ocr.Confidence,
+        RawText = ocr.RawText
     };
 
     public async Task<Attachment?> GetByIdAsync(string id, string userId) =>

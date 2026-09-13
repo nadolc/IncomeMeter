@@ -66,4 +66,7 @@ public class AttachmentOcr
     public double? Mpg { get; set; }
 
     public float Confidence { get; set; }
+
+    /// <summary>Plain text returned by the OCR engine (truncated). Kept so photos can be re-parsed and problems diagnosed.</summary>
+    public string? RawText { get; set; }
 }

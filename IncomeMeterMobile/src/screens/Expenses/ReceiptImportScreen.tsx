@@ -220,7 +220,8 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
   // ---------- review ----------
 
   const updateRow = useCallback((key: string, patch: Partial<ReviewRow>) => {
-    setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch, error: null } : r)));
+    // Re-derive stop groups and odometer pairing on every edit (only fills EMPTY fuel odometer fields).
+    setRows(prev => pairOdometerWithReceipts(assignGroups(prev.map(r => (r.key === key ? { ...r, ...patch, error: null } : r)))));
   }, []);
 
   const included = useMemo(() => rows.filter(r => r.include), [rows]);

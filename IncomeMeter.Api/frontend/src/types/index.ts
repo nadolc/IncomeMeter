@@ -325,6 +325,7 @@ export interface AttachmentOcr {
   tripMiles: number | null;
   mpg: number | null;
   confidence: number;
+  rawText?: string | null;
 }
 
 export interface BackfillVehicleOptions {

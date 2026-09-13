@@ -36,6 +36,7 @@ public class AttachmentOcrDto
     public double? TripMiles { get; set; }
     public double? Mpg { get; set; }
     public float Confidence { get; set; }
+    public string? RawText { get; set; }
 }
 
 public class AttachmentDto

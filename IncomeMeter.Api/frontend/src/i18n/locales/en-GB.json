@@ -629,7 +629,10 @@
       "noVehicle": "Not assigned",
       "fromOcr": "date from receipt (OCR)",
       "ocrHint": "Merchant / amount pre-filled by OCR – please check",
-      "dashboardDetected": "Dashboard photo → odometer"
+      "dashboardDetected": "Dashboard photo → odometer",
+      "showOcrText": "show OCR text",
+      "hideOcrText": "hide OCR text",
+      "setDashboardHint": "(set the dashboard photo in this stop to \"Odometer reading\")"
     }
   },
   "vehicles": {

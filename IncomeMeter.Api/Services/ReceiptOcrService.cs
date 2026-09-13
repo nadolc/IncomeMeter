@@ -68,8 +68,11 @@ public class AzureReceiptOcrService : IReceiptOcrService
 
             // Regex pass over the raw text first: it understands UK dd/MM dates, litres, £/litre and the
             // dashboard trip screen, none of which the receipt model returns as fields.
-            var result = ReceiptTextParser.Parse(analysis.Content) ?? new AttachmentOcr();
+            var result = ReceiptTextParser.Parse(analysis.Content)
+                         ?? new AttachmentOcr { RawText = analysis.Content is { Length: > 8000 } c ? c[..8000] : analysis.Content };
             float best = result.Confidence;
+            _logger.LogInformation("OCR parsed kind={Kind} date={Date} total={Total} litres={Litres} odometer={Odometer} textLength={Len}",
+                result.Kind ?? "unknown", result.Date, result.Total, result.Litres, result.OdometerMiles, analysis.Content?.Length ?? 0);
 
             var doc = analysis.Documents.FirstOrDefault();
             if (doc == null || result.Kind == ReceiptTextParser.KindDashboard)
@@ -98,7 +101,8 @@ public class AzureReceiptOcrService : IReceiptOcrService
             result.Confidence = best;
             result.Kind ??= ReceiptTextParser.KindReceipt;
 
-            return result.Merchant == null && result.Date == null && result.Total == null && result.Litres == null ? null : result;
+            // Return even an empty result when there is text, so the client can show what the OCR saw.
+            return result.Merchant == null && result.Date == null && result.Total == null && result.Litres == null && string.IsNullOrWhiteSpace(result.RawText) ? null : result;
         }
         catch (Exception ex)
         {
