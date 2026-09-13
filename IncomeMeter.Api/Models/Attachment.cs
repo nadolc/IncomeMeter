@@ -25,7 +25,11 @@ public class Attachment
     /// <summary>Key/path inside the configured storage provider.</summary>
     public string StorageKey { get; set; } = null!;
 
-    /// <summary>When the photo was taken, derived from EXIF or the filename. Null if unknown.</summary>
+    /// <summary>
+    /// When the photo was taken, derived from EXIF or the filename. Null if unknown.
+    /// EXIF has no timezone, so this is a wall-clock value stored and returned without UTC conversion.
+    /// </summary>
+    [BsonDateTimeOptions(Kind = DateTimeKind.Unspecified)]
     public DateTime? TakenAt { get; set; }
 
     /// <summary>"exif" | "filename" | null</summary>
@@ -41,6 +45,7 @@ public class AttachmentOcr
 {
     public string? Merchant { get; set; }
     /// <summary>Transaction date printed on the receipt (local wall-clock, no zone).</summary>
+    [BsonDateTimeOptions(Kind = DateTimeKind.Unspecified)]
     public DateTime? Date { get; set; }
     public decimal? Total { get; set; }
     public string? Currency { get; set; }
