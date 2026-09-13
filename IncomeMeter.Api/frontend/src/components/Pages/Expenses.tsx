@@ -6,6 +6,8 @@ import { EXPENSE_CATEGORIES } from '../../types';
 import BulkReceiptImport from '../Import/BulkReceiptImport';
 import AttachmentImage from '../Common/AttachmentImage';
 import ExpensesSubNav from '../Expenses/ExpensesSubNav';
+import ExpenseFormModal from '../Expenses/ExpenseFormModal';
+import OdometerFormModal from '../Expenses/OdometerFormModal';
 
 /** UK tax year runs 6 April – 5 April. Returns the start year for the tax year containing `date`. */
 const taxYearStartFor = (date: Date): number => {
@@ -29,6 +31,8 @@ const Expenses: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [expenseForm, setExpenseForm] = useState<{ open: boolean; expense: Expense | null }>({ open: false, expense: null });
+  const [showOdometerForm, setShowOdometerForm] = useState(false);
   const [tab, setTab] = useState<'expenses' | 'odometer'>('expenses');
   const [previewId, setPreviewId] = useState<string | null>(null);
 
@@ -115,6 +119,19 @@ const Expenses: React.FC = () => {
             {t('expenses.subtitle', 'Receipts and odometer readings for your Self Assessment (actual cost method).')}
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setExpenseForm({ open: true, expense: null })}
+          className="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
+        >
+          + {t('expenses.addExpense', 'Add expense')}
+        </button>
+        <button
+          onClick={() => setShowOdometerForm(true)}
+          className="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
+        >
+          + {t('expenses.addOdometer', 'Add odometer')}
+        </button>
         <button
           onClick={() => setShowImport(true)}
           className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
@@ -124,6 +141,7 @@ const Expenses: React.FC = () => {
           </svg>
           {t('expenses.importReceipts', 'Import receipts')}
         </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -256,7 +274,13 @@ const Expenses: React.FC = () => {
                         <span className="px-1.5 py-0.5 rounded bg-green-100 text-green-700">100%</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => setExpenseForm({ open: true, expense: e })}
+                        className="text-xs text-blue-600 hover:text-blue-800 mr-3"
+                      >
+                        {t('common.edit', 'Edit')}
+                      </button>
                       <button
                         onClick={() => handleDeleteExpense(e.id)}
                         className="text-xs text-red-600 hover:text-red-800"
@@ -345,6 +369,17 @@ const Expenses: React.FC = () => {
         isOpen={showImport}
         onClose={() => setShowImport(false)}
         onImported={() => load()}
+      />
+      <ExpenseFormModal
+        isOpen={expenseForm.open}
+        expense={expenseForm.expense}
+        onClose={() => setExpenseForm({ open: false, expense: null })}
+        onSaved={() => load()}
+      />
+      <OdometerFormModal
+        isOpen={showOdometerForm}
+        onClose={() => setShowOdometerForm(false)}
+        onSaved={() => load()}
       />
     </div>
   );

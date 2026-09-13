@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, CreateExpenseRequest, CreateOdometerReadingRequest, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -436,12 +436,22 @@ export const getExpenses = async (params?: { from?: string; to?: string; categor
   return response.data;
 };
 
+export const createExpense = async (data: CreateExpenseRequest): Promise<Expense> => {
+  const response = await api.post<Expense>('/api/expenses', data);
+  return response.data;
+};
+
+export const createOdometerReading = async (data: CreateOdometerReadingRequest): Promise<OdometerReading> => {
+  const response = await api.post<OdometerReading>('/api/expenses/odometer', data);
+  return response.data;
+};
+
 export const createExpensesBatch = async (items: BatchImportItem[]): Promise<BatchImportResult> => {
   const response = await api.post<BatchImportResult>('/api/expenses/batch', { items });
   return response.data;
 };
 
-export const updateExpense = async (id: string, data: Partial<Expense>): Promise<Expense> => {
+export const updateExpense = async (id: string, data: Partial<Expense> | CreateExpenseRequest): Promise<Expense> => {
   const response = await api.put<Expense>(`/api/expenses/${id}`, data);
   return response.data;
 };

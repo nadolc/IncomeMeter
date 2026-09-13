@@ -520,7 +520,8 @@
     "clearAll": "清除全部",
     "noOptions": "沒有可用選項",
     "info": "資訊",
-    "saving": "儲存中…"
+    "saving": "儲存中…",
+    "remove": "移除"
   },
   "errors": {
     "generic": "發生了一些問題，請重試。",
@@ -634,6 +635,22 @@
       "showOcrText": "顯示 OCR 文字",
       "hideOcrText": "隱藏 OCR 文字",
       "setDashboardHint": "（將同一站嘅儀表板相改成「里程表讀數」即會自動填入）"
+    },
+    "addExpense": "新增費用",
+    "addOdometer": "新增里程讀數",
+    "form": {
+      "addTitle": "新增費用",
+      "editTitle": "編輯費用",
+      "addOdometerTitle": "新增里程表讀數",
+      "attachPhoto": "附加相片",
+      "changePhoto": "更換相片",
+      "noReceiptHint": "無收據？網上交嘅保險之類無問題 – 保留保單文件或銀行月結單就得。",
+      "odometerHint": "提示：每年 4 月 6 日同 4 月 5 日各記錄一次里程 – 呢兩個數決定你嘅業務使用比例。",
+      "errors": {
+        "required": "必須填寫日期及有效金額。",
+        "milesRequired": "必須填寫日期及有效里程讀數。",
+        "save": "儲存失敗。"
+      }
     }
   },
   "vehicles": {

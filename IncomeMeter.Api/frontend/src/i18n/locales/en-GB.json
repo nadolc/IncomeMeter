@@ -520,7 +520,8 @@
     "clearAll": "Clear All",
     "noOptions": "No options available",
     "info": "Information",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "remove": "Remove"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -634,6 +635,22 @@
       "showOcrText": "show OCR text",
       "hideOcrText": "hide OCR text",
       "setDashboardHint": "(set the dashboard photo in this stop to \"Odometer reading\")"
+    },
+    "addExpense": "Add expense",
+    "addOdometer": "Add odometer",
+    "form": {
+      "addTitle": "Add expense",
+      "editTitle": "Edit expense",
+      "addOdometerTitle": "Add odometer reading",
+      "attachPhoto": "Attach photo",
+      "changePhoto": "Change photo",
+      "noReceiptHint": "No receipt? Fine for items like insurance paid online – keep the policy document or bank statement instead.",
+      "odometerHint": "Tip: log a reading on 6 April and 5 April each year – those two numbers set your business-use percentage.",
+      "errors": {
+        "required": "Date and a valid amount are required.",
+        "milesRequired": "Date and a valid odometer reading are required.",
+        "save": "Failed to save."
+      }
     }
   },
   "vehicles": {
