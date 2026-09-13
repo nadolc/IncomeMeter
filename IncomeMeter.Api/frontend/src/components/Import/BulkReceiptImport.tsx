@@ -219,6 +219,12 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
       });
 
       setRows(recompute(newRows));
+      const failed = results.filter(r => r.error).length;
+      if (failed > 0 && failed === results.length) {
+        setGlobalError(results[0].error ?? t('expenses.bulkImport.errors.uploadFailed', 'Upload failed. Please try again.'));
+      } else if (failed > 0) {
+        setGlobalError(t('expenses.bulkImport.errors.partialUpload', { defaultValue: '{{failed}} of {{total}} photos failed to upload – see the red badges. The rest can still be saved.', failed, total: results.length }));
+      }
       setStep('review');
     } catch (err) {
       console.error('Bulk receipt upload failed', err);

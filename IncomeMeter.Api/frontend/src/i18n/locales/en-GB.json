@@ -623,7 +623,8 @@
         "amountRequired": "Amount is required",
         "litresInvalid": "Litres must be a number",
         "milesInvalid": "Odometer must be a number",
-        "milesRequired": "Odometer reading is required"
+        "milesRequired": "Odometer reading is required",
+        "partialUpload": "{{failed}} of {{total}} photos failed to upload – see the red badges. The rest can still be saved."
       },
       "vehicle": "Vehicle for these receipts",
       "noVehicle": "Not assigned",

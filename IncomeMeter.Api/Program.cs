@@ -90,6 +90,15 @@ builder.Services.AddScoped<DefaultWorkTypeService>();
 builder.Services.AddScoped<MigrationService>();
 
 // Receipt / odometer photo storage and vehicle expenses
+const long MaxUploadBytes = 512L * 1024 * 1024;
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = MaxUploadBytes);
+builder.Services.Configure<Microsoft.AspNetCore.Builder.IISServerOptions>(o => o.MaxRequestBodySize = MaxUploadBytes);
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = MaxUploadBytes;
+    o.MultipartHeadersLengthLimit = 64 * 1024;
+    o.ValueLengthLimit = int.MaxValue;
+});
 builder.Services.Configure<StorageSettings>(builder.Configuration.GetSection("Storage"));
 var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
 if (string.Equals(storageProvider, "AzureBlob", StringComparison.OrdinalIgnoreCase))

@@ -623,7 +623,8 @@
         "amountRequired": "必須填寫金額",
         "litresInvalid": "公升必須是數字",
         "milesInvalid": "里程必須是數字",
-        "milesRequired": "必須填寫里程表讀數"
+        "milesRequired": "必須填寫里程表讀數",
+        "partialUpload": "{{total}} 張中有 {{failed}} 張上傳失敗 – 見紅色標記。其餘可以照常儲存。"
       },
       "vehicle": "呢批收據屬於邊部車",
       "noVehicle": "未指定",

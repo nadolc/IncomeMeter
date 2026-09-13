@@ -356,19 +356,67 @@ export const revokeJwtToken = async (tokenId: string) => {
  * Upload many photos in one multipart request. The server reads EXIF / filename dates
  * and de-duplicates by content hash; results come back in the same order as `files`.
  */
+/** Photos per HTTP request. Keeps each request well under proxy/IIS body limits and lets OCR run per chunk. */
+const UPLOAD_CHUNK_SIZE = 4;
+const UPLOAD_CHUNK_MAX_BYTES = 20 * 1024 * 1024;
+
 export const uploadAttachmentsBatch = async (
   files: File[],
   onProgress?: (percent: number) => void
 ): Promise<AttachmentUploadResult[]> => {
-  const form = new FormData();
-  files.forEach(f => form.append('files', f, f.name));
-  const response = await api.post<AttachmentUploadResult[]>('/api/attachments/batch', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: evt => {
-      if (onProgress && evt.total) onProgress(Math.round((evt.loaded * 100) / evt.total));
-    },
-  });
-  return response.data;
+  // Split into chunks by count and by total size.
+  const chunks: File[][] = [];
+  let current: File[] = [];
+  let currentBytes = 0;
+  for (const f of files) {
+    if (current.length > 0 && (current.length >= UPLOAD_CHUNK_SIZE || currentBytes + f.size > UPLOAD_CHUNK_MAX_BYTES)) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(f);
+    currentBytes += f.size;
+  }
+  if (current.length > 0) chunks.push(current);
+
+  const totalBytes = files.reduce((s, f) => s + f.size, 0) || 1;
+  let doneBytes = 0;
+  const results: AttachmentUploadResult[] = [];
+
+  for (const chunk of chunks) {
+    const chunkBytes = chunk.reduce((s, f) => s + f.size, 0);
+    const form = new FormData();
+    chunk.forEach(f => form.append('files', f, f.name));
+    try {
+      const response = await api.post<AttachmentUploadResult[]>('/api/attachments/batch', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 5 * 60 * 1000,
+        onUploadProgress: evt => {
+          if (onProgress && evt.total) {
+            const loaded = Math.min(evt.loaded, chunkBytes);
+            onProgress(Math.min(99, Math.round(((doneBytes + loaded) * 100) / totalBytes)));
+          }
+        },
+      });
+      results.push(...response.data);
+    } catch (err: unknown) {
+      // One failed chunk must not lose the others: report each file in it as failed and carry on.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      const message = status === 413
+        ? 'Request too large (413) – the server rejected this chunk'
+        : status
+          ? `Upload failed (HTTP ${status})`
+          : 'Upload failed (network error or timeout)';
+      chunk.forEach(f => results.push({
+        attachmentId: null, fileName: f.name, contentType: f.type, sizeBytes: f.size, sha256: null,
+        takenAt: null, dateSource: null, isDuplicate: false, error: message, ocr: null
+      }));
+    }
+    doneBytes += chunkBytes;
+    onProgress?.(Math.min(99, Math.round((doneBytes * 100) / totalBytes)));
+  }
+  onProgress?.(100);
+  return results;
 };
 
 /** Fetch a private attachment with the bearer token and return an object URL usable in <img src>. */

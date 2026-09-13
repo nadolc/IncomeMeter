@@ -90,23 +90,44 @@ export class ExpensesApiService {
    * de-duplicates by content hash; results are returned in the same order as `assets`.
    */
   static async uploadAttachments(assets: Asset[], onProgress?: (percent: number) => void): Promise<AttachmentUploadResult[]> {
-    const form = new FormData();
-    assets.forEach((a, i) => {
-      form.append('files', {
-        uri: a.uri,
-        type: a.type ?? 'image/jpeg',
-        name: a.fileName ?? `photo_${i}.jpg`,
-      } as unknown as Blob);
-    });
-
-    const response = await apiClient.post<AttachmentUploadResult[]>('/attachments/batch', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 5 * 60 * 1000,
-      onUploadProgress: evt => {
-        if (onProgress && evt.total) onProgress(Math.round((evt.loaded * 100) / evt.total));
-      },
-    });
-    return response.data;
+    // Upload a few photos per request so no single request approaches server body limits,
+    // and a failure in one chunk does not lose the others.
+    const CHUNK = 4;
+    const results: AttachmentUploadResult[] = [];
+    for (let start = 0; start < assets.length; start += CHUNK) {
+      const chunk = assets.slice(start, start + CHUNK);
+      const form = new FormData();
+      chunk.forEach((a, i) => {
+        form.append('files', {
+          uri: a.uri,
+          type: a.type ?? 'image/jpeg',
+          name: a.fileName ?? `photo_${start + i}.jpg`,
+        } as unknown as Blob);
+      });
+      try {
+        const response = await apiClient.post<AttachmentUploadResult[]>('/attachments/batch', form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 5 * 60 * 1000,
+          onUploadProgress: evt => {
+            if (onProgress && evt.total) {
+              const chunkFraction = Math.min(1, evt.loaded / evt.total);
+              onProgress(Math.min(99, Math.round(((start + chunkFraction * chunk.length) * 100) / assets.length)));
+            }
+          },
+        });
+        results.push(...response.data);
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        const message = status === 413 ? 'Request too large (413)' : status ? `Upload failed (HTTP ${status})` : 'Upload failed (network error or timeout)';
+        chunk.forEach(a => results.push({
+          attachmentId: null, fileName: a.fileName ?? 'photo', contentType: a.type ?? null, sizeBytes: a.fileSize ?? 0,
+          sha256: null, takenAt: null, dateSource: null, isDuplicate: false, error: message, ocr: null,
+        }));
+      }
+      onProgress?.(Math.min(99, Math.round(((start + chunk.length) * 100) / assets.length)));
+    }
+    onProgress?.(100);
+    return results;
   }
 
   static async createBatch(items: BatchImportItem[]): Promise<BatchImportResult> {
