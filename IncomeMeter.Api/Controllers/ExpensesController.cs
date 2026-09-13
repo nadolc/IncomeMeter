@@ -18,8 +18,6 @@ public class ExpensesController : ControllerBase
         _expenseService = expenseService;
     }
 
-    private User? GetCurrentUser() => HttpContext.Items["User"] as User;
-
     [HttpGet("categories")]
     [AllowAnonymous]
     public IActionResult GetCategories() => Ok(ExpenseCategories.All);
@@ -27,33 +25,33 @@ public class ExpensesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetExpenses([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? category)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var expenses = await _expenseService.GetExpensesAsync(user.Id!, from, to, category);
+        var expenses = await _expenseService.GetExpensesAsync(userId, from, to, category);
         return Ok(expenses);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetExpense(string id)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var expense = await _expenseService.GetExpenseByIdAsync(id, user.Id!);
+        var expense = await _expenseService.GetExpenseByIdAsync(id, userId);
         return expense == null ? NotFound() : Ok(expense);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateExpense([FromBody] CreateExpenseDto dto)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         try
         {
-            var expense = await _expenseService.CreateExpenseAsync(dto, user.Id!);
+            var expense = await _expenseService.CreateExpenseAsync(dto, userId);
             return CreatedAtAction(nameof(GetExpense), new { id = expense.Id }, expense);
         }
         catch (ArgumentException ex)
@@ -69,24 +67,24 @@ public class ExpensesController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> BatchImport([FromBody] BatchImportRequestDto request)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var result = await _expenseService.BatchImportAsync(request, user.Id!);
+        var result = await _expenseService.BatchImportAsync(request, userId);
         return Ok(result);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateExpense(string id, [FromBody] UpdateExpenseDto dto)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         try
         {
-            var expense = await _expenseService.UpdateExpenseAsync(id, dto, user.Id!);
+            var expense = await _expenseService.UpdateExpenseAsync(id, dto, userId);
             return expense == null ? NotFound() : Ok(expense);
         }
         catch (ArgumentException ex)
@@ -98,10 +96,10 @@ public class ExpensesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteExpense(string id)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var deleted = await _expenseService.DeleteExpenseAsync(id, user.Id!);
+        var deleted = await _expenseService.DeleteExpenseAsync(id, userId);
         return deleted ? NoContent() : NotFound();
     }
 
@@ -110,23 +108,23 @@ public class ExpensesController : ControllerBase
     [HttpGet("odometer")]
     public async Task<IActionResult> GetOdometerReadings([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var readings = await _expenseService.GetOdometerReadingsAsync(user.Id!, from, to);
+        var readings = await _expenseService.GetOdometerReadingsAsync(userId, from, to);
         return Ok(readings);
     }
 
     [HttpPost("odometer")]
     public async Task<IActionResult> CreateOdometerReading([FromBody] CreateOdometerReadingDto dto)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         try
         {
-            var reading = await _expenseService.CreateOdometerReadingAsync(dto, user.Id!);
+            var reading = await _expenseService.CreateOdometerReadingAsync(dto, userId);
             return Ok(reading);
         }
         catch (ArgumentException ex)
@@ -138,10 +136,10 @@ public class ExpensesController : ControllerBase
     [HttpDelete("odometer/{id}")]
     public async Task<IActionResult> DeleteOdometerReading(string id)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var deleted = await _expenseService.DeleteOdometerReadingAsync(id, user.Id!);
+        var deleted = await _expenseService.DeleteOdometerReadingAsync(id, userId);
         return deleted ? NoContent() : NotFound();
     }
 }

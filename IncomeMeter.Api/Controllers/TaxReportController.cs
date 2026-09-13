@@ -20,8 +20,6 @@ public class TaxReportController : ControllerBase
         _rules = rules.Value;
     }
 
-    private User? GetCurrentUser() => HttpContext.Items["User"] as User;
-
     /// <summary>The HMRC rates the report is using, so the UI can display them.</summary>
     [HttpGet("rules")]
     public IActionResult GetRules() => Ok(_rules);
@@ -36,14 +34,14 @@ public class TaxReportController : ControllerBase
     [HttpGet("{taxYear:int}")]
     public async Task<IActionResult> GetReport(int taxYear, [FromQuery] string? vehicleId, [FromQuery] double? businessUsePercent)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
         if (taxYear < 2000 || taxYear > 2100) return BadRequest(new { error = "taxYear must be the start year, e.g. 2025" });
         if (businessUsePercent is < 0 or > 100) return BadRequest(new { error = "businessUsePercent must be between 0 and 100" });
 
         try
         {
-            return Ok(await _reports.BuildReportAsync(user.Id!, taxYear, vehicleId, businessUsePercent));
+            return Ok(await _reports.BuildReportAsync(userId, taxYear, vehicleId, businessUsePercent));
         }
         catch (ArgumentException ex)
         {
@@ -54,12 +52,12 @@ public class TaxReportController : ControllerBase
     [HttpGet("{taxYear:int}/csv")]
     public async Task<IActionResult> GetReportCsv(int taxYear, [FromQuery] string? vehicleId, [FromQuery] double? businessUsePercent)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
         try
         {
-            var report = await _reports.BuildReportAsync(user.Id!, taxYear, vehicleId, businessUsePercent);
+            var report = await _reports.BuildReportAsync(userId, taxYear, vehicleId, businessUsePercent);
             var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(_reports.ToCsv(report))).ToArray();
             return File(bytes, "text/csv", $"tax-year-{taxYear}-{(taxYear + 1) % 100:00}-report.csv");
         }
@@ -73,12 +71,12 @@ public class TaxReportController : ControllerBase
     [HttpGet("{taxYear:int}/receipts.zip")]
     public async Task<IActionResult> GetReceiptsZip(int taxYear, [FromQuery] string? vehicleId, CancellationToken ct)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
         try
         {
-            var bytes = await _reports.BuildReceiptsZipAsync(user.Id!, taxYear, vehicleId, ct);
+            var bytes = await _reports.BuildReceiptsZipAsync(userId, taxYear, vehicleId, ct);
             return File(bytes, "application/zip", $"tax-year-{taxYear}-{(taxYear + 1) % 100:00}-receipts.zip");
         }
         catch (ArgumentException ex)

@@ -21,8 +21,6 @@ public class AttachmentsController : ControllerBase
         _storageSettings = storageSettings.Value;
     }
 
-    private User? GetCurrentUser() => HttpContext.Items["User"] as User;
-
     /// <summary>
     /// Upload many receipt / odometer photos at once. Returns one result per file (in the same order),
     /// including the capture date read from EXIF or the filename so the client can pre-fill the review screen.
@@ -32,8 +30,8 @@ public class AttachmentsController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = 512L * 1024 * 1024, ValueCountLimit = 1024)]
     public async Task<IActionResult> UploadBatch([FromForm] List<IFormFile> files, CancellationToken ct)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
         if (files == null || files.Count == 0)
             return BadRequest(new { error = "No files were uploaded" });
@@ -46,7 +44,7 @@ public class AttachmentsController : ControllerBase
         {
             try
             {
-                results.Add(await _attachmentService.UploadAsync(file, user.Id!, ct));
+                results.Add(await _attachmentService.UploadAsync(file, userId, ct));
             }
             catch (Exception ex)
             {
@@ -66,10 +64,10 @@ public class AttachmentsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var attachment = await _attachmentService.GetByIdAsync(id, user.Id!);
+        var attachment = await _attachmentService.GetByIdAsync(id, userId);
         if (attachment == null) return NotFound();
 
         return Ok(ToDto(attachment));
@@ -79,10 +77,10 @@ public class AttachmentsController : ControllerBase
     [HttpGet("{id}/content")]
     public async Task<IActionResult> GetContent(string id, CancellationToken ct)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var attachment = await _attachmentService.GetByIdAsync(id, user.Id!);
+        var attachment = await _attachmentService.GetByIdAsync(id, userId);
         if (attachment == null) return NotFound();
 
         var stream = await _attachmentService.OpenContentAsync(attachment, ct);
@@ -95,10 +93,10 @@ public class AttachmentsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
-        var user = GetCurrentUser();
-        if (user == null) return Unauthorized(new { error = "Unauthorized" });
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
 
-        var deleted = await _attachmentService.DeleteAsync(id, user.Id!, ct);
+        var deleted = await _attachmentService.DeleteAsync(id, userId, ct);
         return deleted ? NoContent() : NotFound();
     }
 
