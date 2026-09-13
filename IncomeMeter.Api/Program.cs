@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Program.cs - Updated with Google OAuth and MongoDB
 // ============================================================================
 
@@ -88,6 +88,21 @@ else
 // Phase 1: Register DefaultWorkTypeService and MigrationService (needed for both dev and prod)
 builder.Services.AddScoped<DefaultWorkTypeService>();
 builder.Services.AddScoped<MigrationService>();
+
+// Receipt / odometer photo storage and vehicle expenses
+builder.Services.Configure<StorageSettings>(builder.Configuration.GetSection("Storage"));
+var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
+if (string.Equals(storageProvider, "AzureBlob", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddSingleton<IFileStorageService, IncomeMeter.Api.Services.Storage.AzureBlobStorageService>();
+}
+else
+{
+    builder.Services.AddSingleton<IFileStorageService, IncomeMeter.Api.Services.Storage.LocalFileStorageService>();
+}
+Console.WriteLine($"Attachment storage provider: {storageProvider}");
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
 
 // JWT Configuration
 builder.Services.Configure<IncomeMeter.Api.Models.JwtSettings>(builder.Configuration.GetSection("Jwt"));

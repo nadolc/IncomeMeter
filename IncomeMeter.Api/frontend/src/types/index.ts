@@ -282,3 +282,103 @@ export interface FilterOption {
   count?: number;
 }
 
+
+// ---------- Vehicle expenses / receipts ----------
+
+export type ExpenseCategory =
+  | 'fuel' | 'insurance' | 'servicing' | 'repairs' | 'mot' | 'roadTax' | 'breakdown'
+  | 'parking' | 'tolls' | 'cleaning' | 'financeInterest' | 'vehiclePurchase' | 'other';
+
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  'fuel', 'insurance', 'servicing', 'repairs', 'mot', 'roadTax', 'breakdown',
+  'parking', 'tolls', 'cleaning', 'financeInterest', 'vehiclePurchase', 'other'
+];
+
+export type DateSource = 'exif' | 'filename' | 'manual';
+export type OdometerSource = 'fuelStop' | 'taxYearStart' | 'taxYearEnd' | 'manual';
+
+export interface AttachmentUploadResult {
+  attachmentId: string | null;
+  fileName: string;
+  contentType: string | null;
+  sizeBytes: number;
+  sha256: string | null;
+  takenAt: string | null;
+  dateSource: 'exif' | 'filename' | null;
+  isDuplicate: boolean;
+  error: string | null;
+}
+
+export interface FuelDetails {
+  litres?: number | null;
+  odometerMiles?: number | null;
+}
+
+export interface Expense {
+  id: string;
+  userId: string;
+  vehicleId?: string | null;
+  category: ExpenseCategory;
+  date: string;
+  amount: number;
+  currency: string;
+  merchant?: string | null;
+  notes?: string | null;
+  fuel?: FuelDetails | null;
+  attachmentIds: string[];
+  isFullyBusiness: boolean;
+  status: 'draft' | 'confirmed';
+  dateSource: DateSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateExpenseRequest {
+  vehicleId?: string | null;
+  category: ExpenseCategory;
+  date: string;
+  amount: number;
+  currency?: string;
+  merchant?: string | null;
+  notes?: string | null;
+  fuel?: FuelDetails | null;
+  attachmentIds: string[];
+  isFullyBusiness?: boolean;
+  dateSource: DateSource;
+}
+
+export interface OdometerReading {
+  id: string;
+  userId: string;
+  vehicleId?: string | null;
+  date: string;
+  miles: number;
+  source: OdometerSource;
+  photoAttachmentId?: string | null;
+  dateSource: DateSource;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOdometerReadingRequest {
+  vehicleId?: string | null;
+  date: string;
+  miles: number;
+  source: OdometerSource;
+  photoAttachmentId?: string | null;
+  dateSource: DateSource;
+  notes?: string | null;
+}
+
+export interface BatchImportItem {
+  kind: 'expense' | 'odometer';
+  expense?: CreateExpenseRequest;
+  odometer?: CreateOdometerReadingRequest;
+}
+
+export interface BatchImportResult {
+  created: number;
+  failed: number;
+  results: Array<{ index: number; kind: string; id: string | null; error: string | null }>;
+}

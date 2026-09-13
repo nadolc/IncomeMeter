@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -349,4 +349,64 @@ export const generateJwtToken = async (request: {
 export const revokeJwtToken = async (tokenId: string) => {
   const response = await api.post('/api/tokens/revoke', { tokenId });
   return response.data;
+};
+// ---------- Attachments (receipt / odometer photos) ----------
+
+/**
+ * Upload many photos in one multipart request. The server reads EXIF / filename dates
+ * and de-duplicates by content hash; results come back in the same order as `files`.
+ */
+export const uploadAttachmentsBatch = async (
+  files: File[],
+  onProgress?: (percent: number) => void
+): Promise<AttachmentUploadResult[]> => {
+  const form = new FormData();
+  files.forEach(f => form.append('files', f, f.name));
+  const response = await api.post<AttachmentUploadResult[]>('/api/attachments/batch', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: evt => {
+      if (onProgress && evt.total) onProgress(Math.round((evt.loaded * 100) / evt.total));
+    },
+  });
+  return response.data;
+};
+
+/** Fetch a private attachment with the bearer token and return an object URL usable in <img src>. */
+export const fetchAttachmentObjectUrl = async (attachmentId: string): Promise<string> => {
+  const response = await api.get(`/api/attachments/${attachmentId}/content`, { responseType: 'blob' });
+  return URL.createObjectURL(response.data as Blob);
+};
+
+export const deleteAttachment = async (attachmentId: string): Promise<void> => {
+  await api.delete(`/api/attachments/${attachmentId}`);
+};
+
+// ---------- Expenses ----------
+
+export const getExpenses = async (params?: { from?: string; to?: string; category?: string }): Promise<Expense[]> => {
+  const response = await api.get<Expense[]>('/api/expenses', { params });
+  return response.data;
+};
+
+export const createExpensesBatch = async (items: BatchImportItem[]): Promise<BatchImportResult> => {
+  const response = await api.post<BatchImportResult>('/api/expenses/batch', { items });
+  return response.data;
+};
+
+export const updateExpense = async (id: string, data: Partial<Expense>): Promise<Expense> => {
+  const response = await api.put<Expense>(`/api/expenses/${id}`, data);
+  return response.data;
+};
+
+export const deleteExpense = async (id: string): Promise<void> => {
+  await api.delete(`/api/expenses/${id}`);
+};
+
+export const getOdometerReadings = async (params?: { from?: string; to?: string }): Promise<OdometerReading[]> => {
+  const response = await api.get<OdometerReading[]>('/api/expenses/odometer', { params });
+  return response.data;
+};
+
+export const deleteOdometerReading = async (id: string): Promise<void> => {
+  await api.delete(`/api/expenses/odometer/${id}`);
 };

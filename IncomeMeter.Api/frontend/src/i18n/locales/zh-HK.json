@@ -8,7 +8,8 @@
     "profile": "個人檔案",
     "settings": "設定",
     "menu": "選單",
-    "routeManagement": "路線管理"
+    "routeManagement": "路線管理",
+    "expenses": "車輛費用"
   },
   "routes": {
     "title": "路線",
@@ -289,14 +290,14 @@
     "fiscalYear": {
       "title": "財政年度開始日期",
       "description": "設定您的財政年度開始日期（影響儀表板圖表）",
-      "startDate": "開始日期", 
+      "startDate": "開始日期",
       "ukDefault": "4月6日（英國稅務年度）",
       "hkDefault": "4月1日（香港稅務年度）"
     },
     "form": {
       "currency": "貨幣",
       "language": "語言",
-      "timeZone": "時區", 
+      "timeZone": "時區",
       "mileageUnit": "里程單位",
       "dateFormat": "日期格式"
     },
@@ -321,10 +322,8 @@
     },
     "notifications": {
       "title": "通知",
-      "emailTitle": "電郵通知",
-      "emailDescription": "接收關於您收入報告的電郵更新",
-      "pushTitle": "推送通知",
-      "pushDescription": "獲得路線完成和收入更新的通知"
+      "email": "電郵通知",
+      "push": "推播通知"
     },
     "dashboard": {
       "title": "儀表板設定",
@@ -348,11 +347,6 @@
     "mileageUnits": {
       "km": "公里 (KM)",
       "mi": "英里 (Mi)"
-    },
-    "notifications": {
-      "title": "通知",
-      "email": "電郵通知",
-      "push": "推播通知"
     },
     "languages": {
       "en-GB": "English (UK)",
@@ -394,7 +388,7 @@
         "description": "多平台送餐服務，包括外賣送餐平台"
       },
       "taxiDriver": {
-        "name": "計程車司機", 
+        "name": "計程車司機",
         "description": "傳統計程車服務，按錶收費"
       },
       "rideshareDriver": {
@@ -517,7 +511,6 @@
     "notice": "注意",
     "unknown": "未知",
     "no": "否",
-    "unknown": "未知",
     "noDate": "無日期",
     "noTime": "無時間",
     "success": "成功",
@@ -534,5 +527,102 @@
     "unauthorized": "您沒有權限執行此操作。",
     "notFound": "找不到所要求的資源。",
     "validation": "請檢查您的輸入並重試。"
+  },
+  "expenses": {
+    "title": "車輛費用",
+    "subtitle": "用於自我評稅（實際成本法）的收據及里程表讀數。",
+    "importReceipts": "匯入收據",
+    "taxYear": "稅務年度",
+    "allCategories": "全部類別",
+    "odometerReading": "里程表讀數",
+    "noReceipt": "無收據",
+    "confirmDelete": "確定刪除此費用？",
+    "confirmDeleteReading": "確定刪除此里程表讀數？",
+    "empty": "此稅務年度尚未有費用。請先匯入收據。",
+    "emptyOdometer": "尚未有里程表讀數。每次加油及每年 4 月 6 日請記錄一次。",
+    "tabs": {
+      "expenses": "費用",
+      "odometer": "里程表讀數"
+    },
+    "summary": {
+      "total": "費用總額",
+      "fuel": "燃油",
+      "receipts": "收據數",
+      "odometerSpan": "里程跨度",
+      "readingsCount": "{{count}} 個讀數"
+    },
+    "errors": {
+      "load": "載入費用失敗。",
+      "delete": "刪除失敗。"
+    },
+    "fields": {
+      "date": "日期",
+      "type": "類型",
+      "category": "類別",
+      "amount": "金額 (£)",
+      "merchant": "商家",
+      "litres": "公升",
+      "odometerAtFill": "加油時里程 (mi)",
+      "odometerMiles": "里程表 (英里)",
+      "fullyBusiness": "100% 業務用途（不分攤）",
+      "receipt": "收據",
+      "photo": "相片",
+      "details": "詳情",
+      "sinceLast": "距上次",
+      "source": "來源"
+    },
+    "categories": {
+      "fuel": "燃油",
+      "insurance": "保險",
+      "servicing": "保養",
+      "repairs": "維修",
+      "mot": "MOT 年檢",
+      "roadTax": "路稅 (VED)",
+      "breakdown": "道路救援",
+      "parking": "停車",
+      "tolls": "過路費",
+      "cleaning": "洗車",
+      "financeInterest": "貸款利息",
+      "vehiclePurchase": "購車",
+      "other": "其他"
+    },
+    "odometerSources": {
+      "fuelStop": "加油",
+      "taxYearStart": "稅年開始",
+      "taxYearEnd": "稅年結束",
+      "manual": "手動"
+    },
+    "bulkImport": {
+      "title": "匯入收據",
+      "summary": "已上傳 {{total}} 張，{{missing}} 張需要補日期",
+      "upload": {
+        "dragDrop": "將收據 / 里程表相片拖放到這裡，或",
+        "browse": "瀏覽選擇相片",
+        "hint": "日期會從相片 EXIF 資料或檔名讀取。沒有日期的相片會標記出來，請你補填。"
+      },
+      "uploading": "正在上傳及讀取相片日期… {{percent}}%",
+      "include": "包含",
+      "duplicate": "重複 – 已上傳過",
+      "fromFilename": "來自檔名",
+      "needsDate": "找不到日期 – 請輸入",
+      "stop": "第 {{n}} 站",
+      "selected": "已選 {{count}} 張",
+      "startOver": "重新開始",
+      "saveAll": "全部儲存 ({{count}})",
+      "saving": "儲存中…",
+      "done": "已儲存 {{created}} 筆，失敗 {{failed}} 筆",
+      "errors": {
+        "noImages": "請選擇圖片或 PDF 檔案。",
+        "uploadFailed": "上傳失敗，請再試一次。",
+        "saveFailed": "儲存失敗，請再試一次。",
+        "fixRows": "請先修正標示的項目再儲存。",
+        "nothingToSave": "沒有選擇任何項目。",
+        "dateRequired": "必須填寫日期",
+        "amountRequired": "必須填寫金額",
+        "litresInvalid": "公升必須是數字",
+        "milesInvalid": "里程必須是數字",
+        "milesRequired": "必須填寫里程表讀數"
+      }
+    }
   }
 }

@@ -79,6 +79,9 @@ const NavBar: React.FC = () => {
             <Link to="/routes/manage" className={getLinkClass('/routes/manage')}>
               {t('navigation.routeManagement')}
             </Link>
+            <Link to="/expenses" className={getLinkClass('/expenses')}>
+              {t('navigation.expenses')}
+            </Link>
             <Link to="/profile" className={getLinkClass('/profile')}>
               {t('navigation.profile')}
             </Link>
@@ -160,6 +163,19 @@ const NavBar: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
                       </svg>
                       <span className="text-sm sm:text-base">{t('navigation.routeManagement')}</span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    to="/expenses"
+                    onClick={closeMobileMenu}
+                    className={getLinkClass('/expenses', true)}
+                  >
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                      </svg>
+                      <span className="text-sm sm:text-base">{t('navigation.expenses')}</span>
                     </div>
                   </Link>
 

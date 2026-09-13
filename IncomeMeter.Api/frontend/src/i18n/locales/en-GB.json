@@ -8,7 +8,8 @@
     "profile": "Profile",
     "settings": "Settings",
     "menu": "Menu",
-    "routeManagement": "Route Management"
+    "routeManagement": "Route Management",
+    "expenses": "Expenses"
   },
   "routes": {
     "title": "Routes",
@@ -251,9 +252,8 @@
         "march": "Mar"
       },
       "noData": "No data available for the selected period",
-      "noDataPeriod": "No data available for {{period}}",
-      "weekLabel": "Week {{number}}",
-      "noDataPeriod": "No income data for this {{period}}"
+      "noDataPeriod": "No income data for this {{period}}",
+      "weekLabel": "Week {{number}}"
     },
     "todayRoutes": {
       "title": "Today's Routes",
@@ -296,7 +296,7 @@
     },
     "form": {
       "currency": "Currency",
-      "language": "Language", 
+      "language": "Language",
       "timeZone": "Time Zone",
       "mileageUnit": "Mileage Unit",
       "dateFormat": "Date Format"
@@ -313,7 +313,7 @@
     },
     "chartPeriods": {
       "7days": "Last 7 days",
-      "30days": "Last 30 days", 
+      "30days": "Last 30 days",
       "90days": "Last 90 days"
     },
     "quickButtons": {
@@ -322,10 +322,8 @@
     },
     "notifications": {
       "title": "Notifications",
-      "emailTitle": "Email Notifications",
-      "emailDescription": "Receive email updates about your income reports",
-      "pushTitle": "Push Notifications",
-      "pushDescription": "Get notified about route completions and income updates"
+      "email": "Email Notifications",
+      "push": "Push Notifications"
     },
     "dashboard": {
       "title": "Dashboard Settings",
@@ -349,11 +347,6 @@
     "mileageUnits": {
       "km": "Kilometres (KM)",
       "mi": "Miles (Mi)"
-    },
-    "notifications": {
-      "title": "Notifications",
-      "email": "Email Notifications",
-      "push": "Push Notifications"
     },
     "languages": {
       "en-GB": "English (UK)",
@@ -395,7 +388,7 @@
         "description": "Multi-app delivery service including food delivery platforms"
       },
       "taxiDriver": {
-        "name": "Taxi Driver", 
+        "name": "Taxi Driver",
         "description": "Traditional taxi service with meter-based fares"
       },
       "rideshareDriver": {
@@ -518,7 +511,6 @@
     "notice": "Notice",
     "unknown": "Unknown",
     "no": "No",
-    "unknown": "Unknown",
     "noDate": "No date",
     "noTime": "No time",
     "success": "Success",
@@ -535,5 +527,102 @@
     "unauthorized": "You are not authorized to perform this action.",
     "notFound": "The requested resource was not found.",
     "validation": "Please check your input and try again."
+  },
+  "expenses": {
+    "title": "Vehicle Expenses",
+    "subtitle": "Receipts and odometer readings for your Self Assessment (actual cost method).",
+    "importReceipts": "Import receipts",
+    "taxYear": "Tax year",
+    "allCategories": "All categories",
+    "odometerReading": "Odometer reading",
+    "noReceipt": "No receipt",
+    "confirmDelete": "Delete this expense?",
+    "confirmDeleteReading": "Delete this odometer reading?",
+    "empty": "No expenses in this tax year yet. Import your receipts to get started.",
+    "emptyOdometer": "No odometer readings yet. Log one at each fuel stop and on 6 April each year.",
+    "tabs": {
+      "expenses": "Expenses",
+      "odometer": "Odometer readings"
+    },
+    "summary": {
+      "total": "Total expenses",
+      "fuel": "Fuel",
+      "receipts": "Receipts",
+      "odometerSpan": "Odometer span",
+      "readingsCount": "{{count}} readings"
+    },
+    "errors": {
+      "load": "Failed to load expenses.",
+      "delete": "Failed to delete."
+    },
+    "fields": {
+      "date": "Date",
+      "type": "Type",
+      "category": "Category",
+      "amount": "Amount (£)",
+      "merchant": "Merchant",
+      "litres": "Litres",
+      "odometerAtFill": "Odometer at fill (mi)",
+      "odometerMiles": "Odometer (miles)",
+      "fullyBusiness": "100% business (do not apportion)",
+      "receipt": "Receipt",
+      "photo": "Photo",
+      "details": "Details",
+      "sinceLast": "Since last",
+      "source": "Source"
+    },
+    "categories": {
+      "fuel": "Fuel",
+      "insurance": "Insurance",
+      "servicing": "Servicing",
+      "repairs": "Repairs",
+      "mot": "MOT",
+      "roadTax": "Road tax (VED)",
+      "breakdown": "Breakdown cover",
+      "parking": "Parking",
+      "tolls": "Tolls",
+      "cleaning": "Cleaning",
+      "financeInterest": "Finance interest",
+      "vehiclePurchase": "Vehicle purchase",
+      "other": "Other"
+    },
+    "odometerSources": {
+      "fuelStop": "Fuel stop",
+      "taxYearStart": "Tax year start",
+      "taxYearEnd": "Tax year end",
+      "manual": "Manual"
+    },
+    "bulkImport": {
+      "title": "Import Receipts",
+      "summary": "{{total}} photos uploaded, {{missing}} need a date",
+      "upload": {
+        "dragDrop": "Drag and drop receipt / odometer photos here, or",
+        "browse": "browse to select photos",
+        "hint": "Dates are read from the photo EXIF data or filename. Anything without a date will be flagged for you to fill in."
+      },
+      "uploading": "Uploading and reading photo dates… {{percent}}%",
+      "include": "Include",
+      "duplicate": "Duplicate – already uploaded",
+      "fromFilename": "from filename",
+      "needsDate": "No date found – please enter",
+      "stop": "Stop #{{n}}",
+      "selected": "{{count}} selected",
+      "startOver": "Start over",
+      "saveAll": "Save all ({{count}})",
+      "saving": "Saving…",
+      "done": "{{created}} saved, {{failed}} failed",
+      "errors": {
+        "noImages": "Please choose image or PDF files.",
+        "uploadFailed": "Upload failed. Please try again.",
+        "saveFailed": "Saving failed. Please try again.",
+        "fixRows": "Please fix the highlighted rows before saving.",
+        "nothingToSave": "Nothing selected to save.",
+        "dateRequired": "Date is required",
+        "amountRequired": "Amount is required",
+        "litresInvalid": "Litres must be a number",
+        "milesInvalid": "Odometer must be a number",
+        "milesRequired": "Odometer reading is required"
+      }
+    }
   }
 }

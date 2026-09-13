@@ -17,6 +17,9 @@ public class MongoDbContext
     public virtual IMongoCollection<Location> Locations { get; }
     public virtual IMongoCollection<Transaction> Transactions { get; }
     public virtual IMongoCollection<WorkTypeConfig> WorkTypeConfigs { get; }
+    public virtual IMongoCollection<Attachment> Attachments { get; }
+    public virtual IMongoCollection<Expense> Expenses { get; }
+    public virtual IMongoCollection<OdometerReading> OdometerReadings { get; }
 
     public MongoDbContext(IOptions<DatabaseSettings> dbSettings)
     {
@@ -30,5 +33,8 @@ public class MongoDbContext
         Locations = database.GetCollection<Location>(settings.LocationsCollectionName);
         Transactions = database.GetCollection<Transaction>(settings.TransactionsCollectionName);
         WorkTypeConfigs = database.GetCollection<WorkTypeConfig>("workTypeConfigs");
+        Attachments = database.GetCollection<Attachment>("attachments");
+        Expenses = database.GetCollection<Expense>("expenses");
+        OdometerReadings = database.GetCollection<OdometerReading>("odometerReadings");
     }
 }

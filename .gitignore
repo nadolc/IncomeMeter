@@ -412,3 +412,6 @@ logs/
 /IncomeMeter.Api/appsettings.Secret.json
 /IncomeMeter.Api/appsettings.Development.json
 /IncomeMeter.Api/appsettings.Secret.json
+
+# Locally stored receipt uploads
+IncomeMeter.Api/App_Data/
