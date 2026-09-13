@@ -28,7 +28,20 @@ export interface AttachmentUploadResult {
   dateSource: 'exif' | 'filename' | null;
   isDuplicate: boolean;
   error: string | null;
-  ocr?: { merchant: string | null; date: string | null; total: number | null; currency: string | null; confidence: number } | null;
+  ocr?: {
+    kind: 'receipt' | 'dashboard' | null;
+    merchant: string | null;
+    date: string | null;
+    total: number | null;
+    currency: string | null;
+    litres: number | null;
+    pricePerLitre: number | null;
+    fuelType: string | null;
+    odometerMiles: number | null;
+    tripMiles: number | null;
+    mpg: number | null;
+    confidence: number;
+  } | null;
 }
 
 export interface Vehicle {

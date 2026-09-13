@@ -23,10 +23,18 @@ public class AttachmentUploadResultDto
 
 public class AttachmentOcrDto
 {
+    /// <summary>"receipt" | "dashboard"</summary>
+    public string? Kind { get; set; }
     public string? Merchant { get; set; }
     public DateTime? Date { get; set; }
     public decimal? Total { get; set; }
     public string? Currency { get; set; }
+    public double? Litres { get; set; }
+    public decimal? PricePerLitre { get; set; }
+    public string? FuelType { get; set; }
+    public double? OdometerMiles { get; set; }
+    public double? TripMiles { get; set; }
+    public double? Mpg { get; set; }
     public float Confidence { get; set; }
 }
 

@@ -133,10 +133,17 @@ public class AttachmentService : IAttachmentService
 
     private static AttachmentOcrDto? ToOcrDto(AttachmentOcr? ocr) => ocr == null ? null : new AttachmentOcrDto
     {
+        Kind = ocr.Kind,
         Merchant = ocr.Merchant,
         Date = ocr.Date,
         Total = ocr.Total,
         Currency = ocr.Currency,
+        Litres = ocr.Litres,
+        PricePerLitre = ocr.PricePerLitre,
+        FuelType = ocr.FuelType,
+        OdometerMiles = ocr.OdometerMiles,
+        TripMiles = ocr.TripMiles,
+        Mpg = ocr.Mpg,
         Confidence = ocr.Confidence
     };
 

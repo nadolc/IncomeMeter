@@ -64,18 +64,24 @@ public class AzureReceiptOcrService : IReceiptOcrService
             if (content.CanSeek) content.Position = 0;
             var options = new AnalyzeDocumentOptions(_settings.ModelId, await BinaryData.FromStreamAsync(content, ct));
             var operation = await _client.AnalyzeDocumentAsync(WaitUntil.Completed, options, ct);
-            var doc = operation.Value.Documents.FirstOrDefault();
-            if (doc == null) return null;
+            var analysis = operation.Value;
 
-            var result = new AttachmentOcr();
-            float best = 0;
+            // Regex pass over the raw text first: it understands UK dd/MM dates, litres, £/litre and the
+            // dashboard trip screen, none of which the receipt model returns as fields.
+            var result = ReceiptTextParser.Parse(analysis.Content) ?? new AttachmentOcr();
+            float best = result.Confidence;
+
+            var doc = analysis.Documents.FirstOrDefault();
+            if (doc == null || result.Kind == ReceiptTextParser.KindDashboard)
+                return result.Kind == null ? null : result;
 
             if (doc.Fields.TryGetValue("MerchantName", out var merchant) && merchant.Confidence >= _settings.MinConfidence && merchant.FieldType == DocumentFieldType.String)
             {
                 result.Merchant = merchant.ValueString;
                 best = Math.Max(best, merchant.Confidence ?? 0);
             }
-            if (doc.Fields.TryGetValue("TransactionDate", out var date) && date.Confidence >= _settings.MinConfidence && date.FieldType == DocumentFieldType.Date && date.ValueDate.HasValue)
+            // Only fall back to the model's date when the receipt text had no dd/MM/yyyy HH:mm line.
+            if (result.Date == null && doc.Fields.TryGetValue("TransactionDate", out var date) && date.Confidence >= _settings.MinConfidence && date.FieldType == DocumentFieldType.Date && date.ValueDate.HasValue)
             {
                 var d = date.ValueDate.Value;
                 if (doc.Fields.TryGetValue("TransactionTime", out var time) && time.FieldType == DocumentFieldType.Time && time.ValueTime.HasValue)
@@ -83,15 +89,16 @@ public class AzureReceiptOcrService : IReceiptOcrService
                 result.Date = DateTime.SpecifyKind(d.DateTime, DateTimeKind.Unspecified);
                 best = Math.Max(best, date.Confidence ?? 0);
             }
-            if (doc.Fields.TryGetValue("Total", out var total) && total.Confidence >= _settings.MinConfidence && total.FieldType == DocumentFieldType.Currency && total.ValueCurrency != null)
+            if (result.Total == null && doc.Fields.TryGetValue("Total", out var total) && total.Confidence >= _settings.MinConfidence && total.FieldType == DocumentFieldType.Currency && total.ValueCurrency != null)
             {
                 result.Total = (decimal)total.ValueCurrency.Amount;
                 result.Currency = total.ValueCurrency.CurrencyCode;
                 best = Math.Max(best, total.Confidence ?? 0);
             }
             result.Confidence = best;
+            result.Kind ??= ReceiptTextParser.KindReceipt;
 
-            return result.Merchant == null && result.Date == null && result.Total == null ? null : result;
+            return result.Merchant == null && result.Date == null && result.Total == null && result.Litres == null ? null : result;
         }
         catch (Exception ex)
         {

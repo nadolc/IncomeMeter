@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../../utils/api';
-import type { Vehicle, VehicleInput } from '../../types';
+import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle } from '../../utils/api';
+import type { Vehicle, VehicleInput, VehicleLookupResult } from '../../types';
 import ExpensesSubNav from '../Expenses/ExpensesSubNav';
 
 const emptyForm: VehicleInput = {
@@ -30,6 +30,40 @@ const Vehicles: React.FC = () => {
   const [editing, setEditing] = useState<Vehicle | 'new' | null>(null);
   const [form, setForm] = useState<VehicleInput>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookup, setLookup] = useState<VehicleLookupResult | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const handleLookup = async () => {
+    if (!form.registration.trim()) return;
+    setLookingUp(true);
+    setLookupError(null);
+    setLookup(null);
+    try {
+      const r = await lookupVehicle(form.registration);
+      setLookup(r);
+      setForm(prev => ({
+        ...prev,
+        registration: r.registration || prev.registration,
+        make: r.make || prev.make,
+        model: r.model || prev.model,
+        fuelType: r.fuelType || prev.fuelType,
+        co2GPerKm: r.co2GPerKm ?? prev.co2GPerKm,
+        vehicleType: r.vehicleType || prev.vehicleType
+      }));
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number; data?: { error?: string } } })?.response?.status;
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setLookupError(
+        status === 503 ? t('vehicles.lookup.notConfigured', 'Lookup is not configured on the server (Dvla / Dvsa settings).')
+          : status === 404 ? t('vehicles.lookup.notFound', 'No DVLA / DVSA record for that registration.')
+            : status === 429 ? t('vehicles.lookup.throttled', 'Rate limit hit – wait a few seconds and try again.')
+              : msg ?? t('vehicles.lookup.failed', 'Lookup failed.')
+      );
+    } finally {
+      setLookingUp(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +84,8 @@ const Vehicles: React.FC = () => {
 
   const openNew = () => {
     setForm(emptyForm);
+    setLookup(null);
+    setLookupError(null);
     setEditing('new');
   };
 
@@ -189,7 +225,18 @@ const Vehicles: React.FC = () => {
             <div className="p-6 grid grid-cols-2 gap-3">
               <label className="block">
                 <span className={label}>{t('vehicles.fields.registration', 'Registration')} *</span>
-                <input className={`${input} font-mono uppercase`} value={form.registration} onChange={e => set('registration', e.target.value)} required maxLength={16} />
+                <div className="flex gap-2">
+                  <input className={`${input} font-mono uppercase`} value={form.registration} onChange={e => set('registration', e.target.value)} required maxLength={16} />
+                  <button
+                    type="button"
+                    onClick={handleLookup}
+                    disabled={lookingUp || !form.registration.trim()}
+                    className="whitespace-nowrap px-3 py-1.5 text-sm rounded-md border border-blue-600 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                    title={t('vehicles.lookup.hint', 'Fetch make, fuel and CO2 from the DVLA')}
+                  >
+                    {lookingUp ? '…' : t('vehicles.lookup.button', 'Look up')}
+                  </button>
+                </div>
               </label>
               <label className="block">
                 <span className={label}>{t('vehicles.fields.type', 'Type')}</span>
@@ -239,6 +286,27 @@ const Vehicles: React.FC = () => {
                   ))}
                 </select>
               </label>
+
+              {lookupError && <p className="col-span-2 text-xs text-red-700">{lookupError}</p>}
+              {lookup && (
+                <div className="col-span-2 text-xs text-green-800 bg-green-50 border border-green-200 rounded p-2 space-y-1">
+                  <div>
+                    ✅ {t('vehicles.lookup.filled', 'Filled from')} {lookup.sources.join(' + ')}: {[lookup.make, lookup.model, lookup.colour, lookup.fuelTypeRaw, lookup.engineCapacityCc ? `${lookup.engineCapacityCc} cc` : null, lookup.yearOfManufacture, lookup.co2GPerKm != null ? `${lookup.co2GPerKm} g/km` : null, lookup.euroStatus].filter(Boolean).join(' · ')}
+                    {lookup.motExpiryDate && ` · MOT ${t('vehicles.lookup.until', 'until')} ${new Date(lookup.motExpiryDate).toLocaleDateString('en-GB')}`}
+                    {lookup.taxDueDate && ` · ${t('vehicles.lookup.taxDue', 'tax due')} ${new Date(lookup.taxDueDate).toLocaleDateString('en-GB')}`}
+                  </div>
+                  {lookup.co2GPerKm == null && (
+                    <div className="text-amber-700">⚠️ {t('vehicles.lookup.noCo2', 'No CO2 figure returned – enter it from the V5C to get the capital allowance rate.')}</div>
+                  )}
+                  {lookup.motTests.length > 0 && (
+                    <div>
+                      {t('vehicles.lookup.motHistory', 'MOT odometer history')}:{' '}
+                      {lookup.motTests.slice(0, 4).map(m => `${m.completedDate ? new Date(m.completedDate).toLocaleDateString('en-GB') : '?'} ${m.odometerValue != null ? `${m.odometerValue.toLocaleString()} ${m.odometerUnit ?? ''}` : ''} (${m.result ?? '?'})`).join(' · ')}
+                    </div>
+                  )}
+                  {lookup.warnings.map((w, i) => <div key={i} className="text-amber-700">⚠️ {w}</div>)}
+                </div>
+              )}
 
               <div className="col-span-2 border-t border-gray-100 pt-3 mt-1 text-xs font-medium text-gray-500 uppercase">
                 {t('vehicles.sections.hmrc', 'HMRC method & capital allowance pool')}

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -430,6 +430,12 @@ export const updateVehicle = async (id: string, data: Partial<VehicleInput>): Pr
 
 export const deleteVehicle = async (id: string): Promise<void> => {
   await api.delete(`/api/vehicles/${id}`);
+};
+
+/** DVLA number-plate lookup (make, fuel, CO2, MOT/tax). Requires Dvla:ApiKey on the server. */
+export const lookupVehicle = async (registration: string): Promise<VehicleLookupResult> => {
+  const response = await api.get<VehicleLookupResult>(`/api/vehicles/lookup/${encodeURIComponent(registration.replace(/\s+/g, ''))}`);
+  return response.data;
 };
 
 // ---------- Tax year report ----------

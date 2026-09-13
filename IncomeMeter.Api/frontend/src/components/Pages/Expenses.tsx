@@ -315,7 +315,10 @@ const Expenses: React.FC = () => {
                   <td className="px-3 py-2 text-right text-gray-500">
                     {i === 0 ? '—' : `+${(r.miles - sortedReadings[i - 1].miles).toLocaleString()}`}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500">{t(`expenses.odometerSources.${r.source}`, r.source)}</td>
+                  <td className="px-3 py-2 text-xs text-gray-500">
+                    {t(`expenses.odometerSources.${r.source}`, r.source)}
+                    {r.notes && <div className="text-gray-400">{r.notes}</div>}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <button onClick={() => handleDeleteReading(r.id)} className="text-xs text-red-600 hover:text-red-800">
                       {t('common.delete', 'Delete')}

@@ -307,13 +307,55 @@ export interface AttachmentUploadResult {
   dateSource: 'exif' | 'filename' | null;
   isDuplicate: boolean;
   error: string | null;
-  ocr?: {
-    merchant: string | null;
-    date: string | null;
-    total: number | null;
-    currency: string | null;
-    confidence: number;
-  } | null;
+  ocr?: AttachmentOcr | null;
+}
+
+export interface AttachmentOcr {
+  /** "receipt" | "dashboard" – what the photo looks like */
+  kind: 'receipt' | 'dashboard' | null;
+  merchant: string | null;
+  date: string | null;
+  total: number | null;
+  currency: string | null;
+  litres: number | null;
+  pricePerLitre: number | null;
+  fuelType: string | null;
+  odometerMiles: number | null;
+  tripMiles: number | null;
+  mpg: number | null;
+  confidence: number;
+}
+
+export interface MotTestSummary {
+  completedDate: string | null;
+  result: string | null;
+  expiryDate: string | null;
+  odometerValue: number | null;
+  odometerUnit: string | null;
+}
+
+export interface VehicleLookupResult {
+  registration: string;
+  make?: string | null;
+  model?: string | null;
+  colour?: string | null;
+  fuelType?: 'petrol' | 'diesel' | 'hybrid' | 'electric' | 'other' | null;
+  fuelTypeRaw?: string | null;
+  co2GPerKm?: number | null;
+  engineCapacityCc?: number | null;
+  yearOfManufacture?: number | null;
+  monthOfFirstRegistration?: string | null;
+  vehicleType?: 'car' | 'van' | 'motorcycle' | null;
+  typeApproval?: string | null;
+  taxStatus?: string | null;
+  taxDueDate?: string | null;
+  motStatus?: string | null;
+  motExpiryDate?: string | null;
+  firstUsedDate?: string | null;
+  euroStatus?: string | null;
+  motTests: MotTestSummary[];
+  sources: string[];
+  warnings: string[];
 }
 
 export interface FuelDetails {

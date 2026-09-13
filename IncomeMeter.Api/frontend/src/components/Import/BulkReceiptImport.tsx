@@ -133,6 +133,22 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
     });
   };
 
+  /**
+   * Within one "stop" (photos taken minutes apart) copy the dashboard's odometer figure onto the fuel
+   * receipt so the expense carries the mileage without retyping it.
+   */
+  const pairOdometerWithReceipts = (list: ReviewRow[]): ReviewRow[] => {
+    const byGroup = new Map<number, ReviewRow[]>();
+    for (const r of list) if (r.groupIndex !== null) byGroup.set(r.groupIndex, [...(byGroup.get(r.groupIndex) ?? []), r]);
+    const milesForKey = new Map<string, string>();
+    for (const members of byGroup.values()) {
+      const dash = members.find(m => m.kind === 'odometer' && m.miles);
+      if (!dash) continue;
+      for (const m of members) if (m.kind === 'expense' && m.category === 'fuel' && !m.miles) milesForKey.set(m.key, dash.miles);
+    }
+    return milesForKey.size === 0 ? list : list.map(r => (milesForKey.has(r.key) ? { ...r, miles: milesForKey.get(r.key)! } : r));
+  };
+
   const handleFiles = useCallback(async (fileList: FileList | File[]) => {
     const files = Array.from(fileList).filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
     if (files.length === 0) {
@@ -150,36 +166,47 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
       const newRows: ReviewRow[] = files.map((file, i) => {
         const upload = results[i];
         const ocr = upload?.ocr ?? null;
-        // Date priority: EXIF → filename → OCR date printed on the receipt → manual.
-        let date = toInputDateTime(upload?.takenAt ?? null);
-        let dateSource: ReviewRow['dateSource'] = upload?.dateSource ?? 'manual';
-        if (!date && ocr?.date) {
-          date = toInputDateTime(ocr.date);
-          dateSource = date ? 'ocr' : 'manual';
+        const isDashboard = ocr?.kind === 'dashboard';
+
+        // Date priority. Receipt: the date printed on it → EXIF → filename.
+        // Dashboard photo (nothing printed): EXIF → filename.
+        let date = '';
+        let dateSource: ReviewRow['dateSource'] = 'manual';
+        const exifDate = toInputDateTime(upload?.takenAt ?? null);
+        const ocrDate = !isDashboard ? toInputDateTime(ocr?.date ?? null) : '';
+        if (ocrDate) {
+          date = ocrDate;
+          dateSource = 'ocr';
+        } else if (exifDate) {
+          date = exifDate;
+          dateSource = upload?.dateSource ?? 'manual';
         }
+
         return {
           key: `${file.name}-${file.size}-${i}`,
           file,
           previewUrl: URL.createObjectURL(file),
           upload,
           include: !!upload?.attachmentId && !upload.isDuplicate && !upload.error,
-          kind: 'expense',
+          kind: isDashboard ? 'odometer' : 'expense',
           date,
           dateSource,
           category: 'fuel',
           ocrConfidence: ocr ? ocr.confidence : null,
-          amount: ocr?.total != null ? String(ocr.total) : '',
+          amount: !isDashboard && ocr?.total != null ? String(ocr.total) : '',
           merchant: ocr?.merchant ?? '',
-          litres: '',
-          miles: '',
-          notes: '',
+          litres: ocr?.litres != null ? String(ocr.litres) : '',
+          miles: isDashboard && ocr?.odometerMiles != null ? String(Math.round(ocr.odometerMiles)) : '',
+          notes: isDashboard
+            ? [ocr?.tripMiles != null ? `Trip ${ocr.tripMiles} mi` : null, ocr?.mpg != null ? `${ocr.mpg} MPG` : null].filter(Boolean).join(', ')
+            : ocr?.fuelType ? `${ocr.fuelType}${ocr.pricePerLitre != null ? ` @ £${ocr.pricePerLitre}/L` : ''}` : '',
           isFullyBusiness: false,
           groupIndex: null,
           errors: []
         };
       });
 
-      setRows(assignGroups(newRows));
+      setRows(pairOdometerWithReceipts(assignGroups(newRows)));
       setStep('review');
     } catch (err) {
       console.error('Bulk receipt upload failed', err);
@@ -496,6 +523,11 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
                             {t('expenses.bulkImport.fromOcr', 'date from receipt (OCR)')}
                           </span>
                         )}
+                        {row.upload.ocr?.kind === 'dashboard' && (
+                          <span className="px-2 py-0.5 rounded bg-teal-100 text-teal-800">
+                            {t('expenses.bulkImport.dashboardDetected', 'Dashboard photo → odometer')}
+                          </span>
+                        )}
                         {row.ocrConfidence !== null && (
                           <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-600" title={t('expenses.bulkImport.ocrHint', 'Merchant / amount pre-filled by OCR – please check')}>
                             OCR {Math.round(row.ocrConfidence * 100)}%
@@ -610,19 +642,31 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
                             </label>
                           </>
                         ) : (
-                          <label className="block md:col-span-2">
-                            <span className="block text-xs text-gray-500 mb-0.5">{t('expenses.fields.odometerMiles', 'Odometer (miles)')}</span>
-                            <input
-                              type="number"
-                              step="1"
-                              min="0"
-                              inputMode="numeric"
-                              value={row.miles}
-                              disabled={disabled}
-                              onChange={e => updateRow(row.key, { miles: e.target.value })}
-                              className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-                            />
-                          </label>
+                          <>
+                            <label className="block">
+                              <span className="block text-xs text-gray-500 mb-0.5">{t('expenses.fields.odometerMiles', 'Odometer (miles)')}</span>
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                inputMode="numeric"
+                                value={row.miles}
+                                disabled={disabled}
+                                onChange={e => updateRow(row.key, { miles: e.target.value })}
+                                className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="block text-xs text-gray-500 mb-0.5">{t('expenses.fields.notes', 'Notes')}</span>
+                              <input
+                                type="text"
+                                value={row.notes}
+                                disabled={disabled}
+                                onChange={e => updateRow(row.key, { notes: e.target.value })}
+                                className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                              />
+                            </label>
+                          </>
                         )}
                       </div>
 

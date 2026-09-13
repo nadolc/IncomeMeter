@@ -104,6 +104,11 @@ Console.WriteLine($"Attachment storage provider: {storageProvider}");
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.Configure<DvlaSettings>(builder.Configuration.GetSection("Dvla"));
+builder.Services.Configure<DvsaSettings>(builder.Configuration.GetSection("Dvsa"));
+builder.Services.AddHttpClient("dvla", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient("dvsa", c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<IVehicleLookupService, DvlaVehicleLookupService>();
 builder.Services.AddScoped<ITaxYearReportService, TaxYearReportService>();
 builder.Services.Configure<TaxRulesSettings>(builder.Configuration.GetSection("TaxRules"));
 

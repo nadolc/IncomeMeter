@@ -43,11 +43,27 @@ public class Attachment
 
 public class AttachmentOcr
 {
+    /// <summary>"receipt" | "dashboard" – what the photo appears to be.</summary>
+    public string? Kind { get; set; }
+
     public string? Merchant { get; set; }
     /// <summary>Transaction date printed on the receipt (local wall-clock, no zone).</summary>
     [BsonDateTimeOptions(Kind = DateTimeKind.Unspecified)]
     public DateTime? Date { get; set; }
     public decimal? Total { get; set; }
     public string? Currency { get; set; }
+
+    // Fuel receipt details
+    public double? Litres { get; set; }
+    public decimal? PricePerLitre { get; set; }
+    /// <summary>"unleaded" | "premiumUnleaded" | "diesel" | "lpg"</summary>
+    public string? FuelType { get; set; }
+
+    // Dashboard / trip-computer screen
+    public double? OdometerMiles { get; set; }
+    /// <summary>Trip distance shown on the screen (e.g. miles since last refuel).</summary>
+    public double? TripMiles { get; set; }
+    public double? Mpg { get; set; }
+
     public float Confidence { get; set; }
 }

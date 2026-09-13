@@ -570,7 +570,8 @@
       "photo": "相片",
       "details": "詳情",
       "sinceLast": "距上次",
-      "source": "來源"
+      "source": "來源",
+      "notes": "備註"
     },
     "categories": {
       "fuel": "燃油",
@@ -627,7 +628,8 @@
       "vehicle": "呢批收據屬於邊部車",
       "noVehicle": "未指定",
       "fromOcr": "日期來自收據 (OCR)",
-      "ocrHint": "商家 / 金額由 OCR 預填 – 請核對"
+      "ocrHint": "商家 / 金額由 OCR 預填 – 請核對",
+      "dashboardDetected": "儀表板相片 → 里程表"
     }
   },
   "vehicles": {
@@ -690,6 +692,19 @@
       "poolYear": "結轉至稅年",
       "notes": "備註",
       "active": "使用中"
+    },
+    "lookup": {
+      "button": "查詢",
+      "hint": "從 DVLA 取得廠牌、燃料及 CO2",
+      "filled": "已填入，來源",
+      "until": "至",
+      "taxDue": "路稅到期",
+      "notConfigured": "伺服器未設定查詢功能 (Dvla / Dvsa 設定)。",
+      "notFound": "DVLA / DVSA 沒有此車牌的紀錄。",
+      "failed": "查詢失敗。",
+      "throttled": "查詢太頻密 – 請等幾秒再試。",
+      "noCo2": "未有 CO2 數字 – 請從 V5C 填入以計算資本免稅額比率。",
+      "motHistory": "MOT 里程紀錄"
     }
   },
   "taxReport": {

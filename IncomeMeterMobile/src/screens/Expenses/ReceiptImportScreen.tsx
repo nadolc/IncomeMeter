@@ -46,6 +46,7 @@ interface ReviewRow {
   merchant: string;
   litres: string;
   miles: string;
+  notes: string;
   ocrConfidence: number | null;
   groupIndex: number | null;
   error: string | null;
@@ -90,6 +91,19 @@ const assignGroups = (rows: ReviewRow[]): ReviewRow[] => {
     const g = groupByKey.get(r.key);
     return { ...r, groupIndex: g !== undefined && (size.get(g) ?? 0) > 1 ? g : null };
   });
+};
+
+/** Copy the dashboard odometer figure onto the fuel receipt from the same stop. */
+const pairOdometerWithReceipts = (list: ReviewRow[]): ReviewRow[] => {
+  const byGroup = new Map<number, ReviewRow[]>();
+  for (const r of list) if (r.groupIndex !== null) byGroup.set(r.groupIndex, [...(byGroup.get(r.groupIndex) ?? []), r]);
+  const milesForKey = new Map<string, string>();
+  for (const members of byGroup.values()) {
+    const dash = members.find(m => m.kind === 'odometer' && m.miles);
+    if (!dash) continue;
+    for (const m of members) if (m.kind === 'expense' && m.category === 'fuel' && !m.miles) milesForKey.set(m.key, dash.miles);
+  }
+  return milesForKey.size === 0 ? list : list.map(r => (milesForKey.has(r.key) ? { ...r, miles: milesForKey.get(r.key)! } : r));
 };
 
 const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) => {
@@ -138,31 +152,43 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
       const newRows: ReviewRow[] = assets.map((asset, i) => {
         const upload = results[i];
         const ocr = upload?.ocr ?? null;
-        let date = toDisplayDate(upload?.takenAt ?? null);
-        let dateSource: DateSource = upload?.dateSource ?? 'manual';
-        if (!date && ocr?.date) {
-          date = toDisplayDate(ocr.date);
-          dateSource = date ? 'ocr' : 'manual';
+        const isDashboard = ocr?.kind === 'dashboard';
+
+        // Receipt: printed date → EXIF → filename. Dashboard photo: EXIF → filename.
+        let date = '';
+        let dateSource: DateSource = 'manual';
+        const exifDate = toDisplayDate(upload?.takenAt ?? null);
+        const ocrDate = !isDashboard ? toDisplayDate(ocr?.date ?? null) : '';
+        if (ocrDate) {
+          date = ocrDate;
+          dateSource = 'ocr';
+        } else if (exifDate) {
+          date = exifDate;
+          dateSource = upload?.dateSource ?? 'manual';
         }
+
         return {
           key: `${asset.uri}-${i}`,
           asset,
           upload,
           include: !!upload?.attachmentId && !upload.isDuplicate && !upload.error,
-          kind: 'expense',
+          kind: isDashboard ? 'odometer' : 'expense',
           date,
           dateSource,
           category: 'fuel',
-          amount: ocr?.total != null ? String(ocr.total) : '',
+          amount: !isDashboard && ocr?.total != null ? String(ocr.total) : '',
           merchant: ocr?.merchant ?? '',
-          litres: '',
-          miles: '',
+          litres: ocr?.litres != null ? String(ocr.litres) : '',
+          miles: isDashboard && ocr?.odometerMiles != null ? String(Math.round(ocr.odometerMiles)) : '',
+          notes: isDashboard
+            ? [ocr?.tripMiles != null ? `Trip ${ocr.tripMiles} mi` : null, ocr?.mpg != null ? `${ocr.mpg} MPG` : null].filter(Boolean).join(', ')
+            : ocr?.fuelType ? `${ocr.fuelType}${ocr.pricePerLitre != null ? ` @ £${ocr.pricePerLitre}/L` : ''}` : '',
           ocrConfidence: ocr ? ocr.confidence : null,
           groupIndex: null,
           error: null,
         };
       });
-      setRows(assignGroups(newRows));
+      setRows(pairOdometerWithReceipts(assignGroups(newRows)));
       setStep('review');
     } catch (err) {
       console.error('Receipt upload failed', err);
@@ -254,6 +280,7 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
             source: 'fuelStop',
             photoAttachmentId: r.upload.attachmentId,
             dateSource: r.dateSource,
+            notes: r.notes || null,
           },
         };
       }
@@ -269,6 +296,7 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
           amount: Number(r.amount),
           currency: 'GBP',
           merchant: r.merchant || null,
+          notes: r.notes || null,
           fuel,
           attachmentIds: r.upload.attachmentId ? [r.upload.attachmentId] : [],
           isFullyBusiness: false,
@@ -308,6 +336,7 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
               {row.dateSource === 'exif' && row.date ? <Text style={[styles.badge, styles.badgeGreen]}>EXIF</Text> : null}
               {row.dateSource === 'filename' && row.date ? <Text style={[styles.badge, styles.badgeBlue]}>filename</Text> : null}
               {row.dateSource === 'ocr' && row.date ? <Text style={[styles.badge, styles.badgeIndigo]}>OCR date</Text> : null}
+              {row.upload.ocr?.kind === 'dashboard' && <Text style={[styles.badge, styles.badgeTeal]}>Dashboard → odometer</Text>}
               {row.ocrConfidence !== null && <Text style={[styles.badge, styles.badgeIndigo]}>OCR {Math.round(row.ocrConfidence * 100)}%</Text>}
               {needsDate && <Text style={[styles.badge, styles.badgeAmber]}>No date – enter</Text>}
               {row.groupIndex !== null && <Text style={[styles.badge, styles.badgePurple]}>Stop #{row.groupIndex}</Text>}
@@ -374,6 +403,11 @@ const ReceiptImportScreen: React.FC<Props> = ({ visible, onClose, onImported }) 
               <Text style={styles.label}>Odometer (miles)</Text>
               <TextInput style={styles.input} keyboardType="number-pad" value={row.miles} editable={!disabled}
                 onChangeText={v => updateRow(row.key, { miles: v })} />
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>Notes</Text>
+              <TextInput style={styles.input} value={row.notes} editable={!disabled}
+                onChangeText={v => updateRow(row.key, { notes: v })} />
             </View>
           </View>
         )}
@@ -535,6 +569,7 @@ const styles = StyleSheet.create({
   badgeAmber: { backgroundColor: '#FDE68A', color: '#78350F' },
   badgePurple: { backgroundColor: '#EDE9FE', color: '#5B21B6' },
   badgeGrey: { backgroundColor: '#E5E7EB', color: '#374151' },
+  badgeTeal: { backgroundColor: '#CCFBF1', color: '#115E59' },
   badgeError: { backgroundColor: '#FEE2E2', color: '#991B1B' },
   fieldRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
   field: { flex: 1 },

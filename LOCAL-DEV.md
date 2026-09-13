@@ -38,6 +38,8 @@ then fill in:
 | `Storage:AzureBlobContainer` | `attachments` | Created automatically (private). |
 | `Ocr:Enabled` | `false` | Optional receipt OCR (merchant / date / total pre-fill). |
 | `Ocr:Endpoint` / `Ocr:ApiKey` | empty | Azure AI Document Intelligence resource → Keys and Endpoint. Only needed when `Ocr:Enabled` is `true`. |
+| `Dvla:ApiKey` | empty | Optional. Free key from the [DVLA Vehicle Enquiry Service](https://developer-portal.driver-vehicle-licensing.api.gov.uk/) – the "Look up" button on the Vehicles page fills make, fuel, **CO2**, engine size, year, tax/MOT status. One key per customer; 429 when throttled. |
+| `Dvsa:ClientId` / `ClientSecret` / `Scope` / `TokenUrl` / `ApiKey` | empty | Optional second source: [DVSA MOT History API](https://documentation.history.mot.api.gov.uk/) (free; approval takes up to 5 working days, credentials arrive by email). Adds **model**, first-used date and the odometer reading from every MOT. No CO2. Either source alone works; both are merged. |
 | `TaxRules:*` | see `appsettings.json` | HMRC rates used by the tax-year report (45p/25p mileage, 18% / 6% WDA, CO2 threshold 50, 100% FYA). Override here if HMRC changes them. |
 
 Nothing in the new sections is required to run locally – with the defaults, receipts are stored on disk and OCR is off.
@@ -57,4 +59,10 @@ Storage__AzureBlobContainer=attachments
 Ocr__Enabled=false            # or true + the two below
 Ocr__Endpoint=
 Ocr__ApiKey=
+Dvla__ApiKey=                 # optional, DVLA number-plate lookup (CO2, tax, MOT status)
+Dvsa__ClientId=               # optional, DVSA MOT history (model, MOT odometer readings)
+Dvsa__ClientSecret=
+Dvsa__Scope=
+Dvsa__TokenUrl=
+Dvsa__ApiKey=
 ```

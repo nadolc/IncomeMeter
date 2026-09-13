@@ -1,4 +1,4 @@
-using IncomeMeter.Api.DTOs;
+﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +12,41 @@ namespace IncomeMeter.Api.Controllers;
 public class VehiclesController : ControllerBase
 {
     private readonly IVehicleService _vehicleService;
+    private readonly IVehicleLookupService _lookup;
 
-    public VehiclesController(IVehicleService vehicleService)
+    public VehiclesController(IVehicleService vehicleService, IVehicleLookupService lookup)
     {
         _vehicleService = vehicleService;
+        _lookup = lookup;
+    }
+
+    /// <summary>Look up make / fuel / CO2 / MOT / tax from the DVLA by registration. Requires Dvla:ApiKey.</summary>
+    [HttpGet("lookup/{registration}")]
+    public async Task<IActionResult> Lookup(string registration, CancellationToken ct)
+    {
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
+        if (!_lookup.IsConfigured)
+            return StatusCode(503, new { error = "Vehicle lookup is not configured (set Dvla:ApiKey and/or the Dvsa:* settings)" });
+
+        try
+        {
+            var result = await _lookup.LookupAsync(registration, ct);
+            return result == null ? NotFound(new { error = "No DVLA record for that registration" }) : Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (VehicleLookupThrottledException ex)
+        {
+            Response.Headers.RetryAfter = "5";
+            return StatusCode(429, new { error = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(502, new { error = ex.Message });
+        }
     }
 
     [HttpGet]

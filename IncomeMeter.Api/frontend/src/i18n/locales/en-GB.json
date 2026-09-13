@@ -570,7 +570,8 @@
       "photo": "Photo",
       "details": "Details",
       "sinceLast": "Since last",
-      "source": "Source"
+      "source": "Source",
+      "notes": "Notes"
     },
     "categories": {
       "fuel": "Fuel",
@@ -627,7 +628,8 @@
       "vehicle": "Vehicle for these receipts",
       "noVehicle": "Not assigned",
       "fromOcr": "date from receipt (OCR)",
-      "ocrHint": "Merchant / amount pre-filled by OCR – please check"
+      "ocrHint": "Merchant / amount pre-filled by OCR – please check",
+      "dashboardDetected": "Dashboard photo → odometer"
     }
   },
   "vehicles": {
@@ -690,6 +692,19 @@
       "poolYear": "Pool b/f for tax year",
       "notes": "Notes",
       "active": "Active (currently in use)"
+    },
+    "lookup": {
+      "button": "Look up",
+      "hint": "Fetch make, fuel and CO2 from the DVLA",
+      "filled": "Filled from",
+      "until": "until",
+      "taxDue": "tax due",
+      "notConfigured": "Lookup is not configured on the server (Dvla / Dvsa settings).",
+      "notFound": "No DVLA / DVSA record for that registration.",
+      "failed": "Lookup failed.",
+      "throttled": "Rate limit hit – wait a few seconds and try again.",
+      "noCo2": "No CO2 figure returned – enter it from the V5C to get the capital allowance rate.",
+      "motHistory": "MOT odometer history"
     }
   },
   "taxReport": {
