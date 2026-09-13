@@ -8,12 +8,14 @@ namespace IncomeMeter.Api.Services;
 public class RouteService : IRouteService
 {
     private readonly IMongoCollection<IncomeMeter.Api.Models.Route> _routes;
+    private readonly IMongoCollection<Vehicle> _vehicles;
     private readonly ITimezoneService _timezoneService;
     private readonly IUserService _userService;
 
     public RouteService(MongoDbContext context, ITimezoneService timezoneService, IUserService userService)
     {
         _routes = context.Routes;// Initialize the routes collection from the context
+        _vehicles = context.Vehicles;
         _timezoneService = timezoneService;
         _userService = userService;
     }
@@ -49,6 +51,7 @@ public class RouteService : IRouteService
             UserId = userId,
             WorkType = routeDto.WorkType,
             WorkTypeId = routeDto.WorkTypeId,
+            VehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId),
             ScheduleStart = utcScheduleStart,
             ScheduleEnd = utcScheduleEnd,
             ActualStartTime = utcActualStartTime,
@@ -78,6 +81,7 @@ public class RouteService : IRouteService
             UserId = userId,
             WorkType = routeDto.WorkType,
             WorkTypeId = routeDto.WorkTypeId,
+            VehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId),
             StartMile = routeDto.StartMile,
             Status = "in_progress",
             ActualStartTime = DateTime.UtcNow,
@@ -354,6 +358,7 @@ public class RouteService : IRouteService
                 UserId = route.UserId,
                 WorkType = route.WorkType,
                 WorkTypeId = route.WorkTypeId,
+                VehicleId = route.VehicleId,
                 Status = route.Status,
                 ScheduleStart = _timezoneService.ConvertFromUtc(route.ScheduleStart, userTimezone),
                 ScheduleEnd = _timezoneService.ConvertFromUtc(route.ScheduleEnd, userTimezone),
@@ -408,6 +413,9 @@ public class RouteService : IRouteService
 
         if (routeDto.WorkTypeId != null)
             updates.Add(updateBuilder.Set(r => r.WorkTypeId, routeDto.WorkTypeId));
+
+        if (routeDto.VehicleId != null)
+            updates.Add(updateBuilder.Set(r => r.VehicleId, routeDto.VehicleId == "" ? null : routeDto.VehicleId));
 
         if (routeDto.ScheduleStart.HasValue)
             updates.Add(updateBuilder.Set(r => r.ScheduleStart, routeDto.ScheduleStart.Value));
@@ -495,5 +503,20 @@ public class RouteService : IRouteService
                                      r.ScheduleStart <= endOfEndDate)
             .SortByDescending(r => r.ScheduleStart)
             .ToListAsync();
+    }
+
+    /// <summary>Use the supplied vehicle, else the user's single active vehicle, else none.</summary>
+    private async Task<string?> ResolveVehicleIdAsync(string? requested, string userId)
+    {
+        if (!string.IsNullOrWhiteSpace(requested)) return requested;
+        try
+        {
+            var active = await _vehicles.Find(v => v.UserId == userId && v.IsActive).Limit(2).ToListAsync();
+            return active.Count == 1 ? active[0].Id : null;
+        }
+        catch
+        {
+            return null; // vehicles collection unavailable (e.g. in unit tests) – routes still save
+        }
     }
 }

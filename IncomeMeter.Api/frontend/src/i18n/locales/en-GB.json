@@ -705,6 +705,17 @@
       "throttled": "Rate limit hit – wait a few seconds and try again.",
       "noCo2": "No CO2 figure returned – enter it from the V5C to get the capital allowance rate.",
       "motHistory": "MOT odometer history"
+    },
+    "backfill": {
+      "button": "Backfill history",
+      "buttonAll": "Reassign all",
+      "allTime": "all time",
+      "hint": "Link past routes, expenses and odometer readings that have no vehicle to this one",
+      "hintAll": "Reassign everything in the date range, including records already linked to another vehicle",
+      "confirm": "Assign {{reg}} to every route, expense and odometer reading since {{from}} that has no vehicle yet?",
+      "confirmAll": "Assign {{reg}} to ALL routes, expenses and odometer readings since {{from}}, even ones already linked to another vehicle?",
+      "done": "{{reg}}: {{routes}} routes, {{expenses}} expenses, {{readings}} odometer readings updated.",
+      "failed": "Backfill failed."
     }
   },
   "taxReport": {

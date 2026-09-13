@@ -104,6 +104,17 @@ public class VehiclesController : ControllerBase
         }
     }
 
+    /// <summary>Attach this vehicle to existing routes / expenses / odometer readings (by default only those without a vehicle, from the purchase date onward).</summary>
+    [HttpPost("{id}/backfill")]
+    public async Task<IActionResult> Backfill(string id, [FromBody] BackfillVehicleDto? options)
+    {
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
+
+        var result = await _vehicleService.BackfillAsync(id, options ?? new BackfillVehicleDto(), userId);
+        return result == null ? NotFound() : Ok(result);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicle(string id)
     {

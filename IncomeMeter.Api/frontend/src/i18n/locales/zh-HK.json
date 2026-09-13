@@ -705,6 +705,17 @@
       "throttled": "查詢太頻密 – 請等幾秒再試。",
       "noCo2": "未有 CO2 數字 – 請從 V5C 填入以計算資本免稅額比率。",
       "motHistory": "MOT 里程紀錄"
+    },
+    "backfill": {
+      "button": "回填歷史紀錄",
+      "buttonAll": "全部重新指派",
+      "allTime": "所有時間",
+      "hint": "將未指定車輛嘅過往路線、費用及里程讀數連結到呢部車",
+      "hintAll": "重新指派日期範圍內所有紀錄，包括已連結其他車輛嘅",
+      "confirm": "將 {{from}} 起所有未指定車輛嘅路線、費用及里程讀數指派給 {{reg}}？",
+      "confirmAll": "將 {{from}} 起「全部」路線、費用及里程讀數指派給 {{reg}}，包括已連結其他車輛嘅？",
+      "done": "{{reg}}：已更新 {{routes}} 條路線、{{expenses}} 筆費用、{{readings}} 個里程讀數。",
+      "failed": "回填失敗。"
     }
   },
   "taxReport": {

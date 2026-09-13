@@ -51,3 +51,26 @@ public class UpdateVehicleDto
     public bool? IsActive { get; set; }
     public string? Notes { get; set; }
 }
+
+/// <summary>Assign a vehicle to existing routes / expenses / odometer readings in bulk.</summary>
+public class BackfillVehicleDto
+{
+    public bool Routes { get; set; } = true;
+    public bool Expenses { get; set; } = true;
+    public bool OdometerReadings { get; set; } = true;
+    /// <summary>Only touch records that have no vehicle yet (default). False = reassign everything in range.</summary>
+    public bool OnlyUnassigned { get; set; } = true;
+    /// <summary>Optional date range (inclusive). Defaults to the vehicle's purchase date → now.</summary>
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+}
+
+public class BackfillVehicleResultDto
+{
+    public string VehicleId { get; set; } = null!;
+    public DateTime? From { get; set; }
+    public DateTime? To { get; set; }
+    public long RoutesUpdated { get; set; }
+    public long ExpensesUpdated { get; set; }
+    public long OdometerReadingsUpdated { get; set; }
+}

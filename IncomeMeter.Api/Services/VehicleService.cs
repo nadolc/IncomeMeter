@@ -1,6 +1,7 @@
-using IncomeMeter.Api.DTOs;
+﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using MongoDB.Driver;
+using Route = IncomeMeter.Api.Models.Route;
 
 namespace IncomeMeter.Api.Services;
 
@@ -11,6 +12,7 @@ public interface IVehicleService
     Task<Vehicle> CreateVehicleAsync(CreateVehicleDto dto, string userId);
     Task<Vehicle?> UpdateVehicleAsync(string id, UpdateVehicleDto dto, string userId);
     Task<bool> DeleteVehicleAsync(string id, string userId);
+    Task<BackfillVehicleResultDto?> BackfillAsync(string id, BackfillVehicleDto options, string userId);
 }
 
 public class VehicleService : IVehicleService
@@ -18,10 +20,59 @@ public class VehicleService : IVehicleService
     private static readonly string[] FinanceTypes = { "cash", "hp", "lease", "none" };
 
     private readonly IMongoCollection<Vehicle> _vehicles;
+    private readonly IMongoCollection<Route> _routes;
+    private readonly IMongoCollection<Expense> _expenses;
+    private readonly IMongoCollection<OdometerReading> _odometer;
 
     public VehicleService(MongoDbContext context)
     {
         _vehicles = context.Vehicles;
+        _routes = context.Routes;
+        _expenses = context.Expenses;
+        _odometer = context.OdometerReadings;
+    }
+
+    public async Task<BackfillVehicleResultDto?> BackfillAsync(string id, BackfillVehicleDto options, string userId)
+    {
+        var vehicle = await GetVehicleByIdAsync(id, userId);
+        if (vehicle == null) return null;
+
+        var from = options.From ?? vehicle.PurchaseDate;
+        var to = options.To;
+        var result = new BackfillVehicleResultDto { VehicleId = id, From = from, To = to };
+
+        if (options.Routes)
+        {
+            var fb = Builders<Route>.Filter;
+            var f = fb.Eq(r => r.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(r => r.VehicleId, null);
+            if (from.HasValue) f &= fb.Gte(r => r.ScheduleStart, from.Value);
+            if (to.HasValue) f &= fb.Lte(r => r.ScheduleStart, to.Value);
+            var u = await _routes.UpdateManyAsync(f, Builders<Route>.Update.Set(r => r.VehicleId, id).Set(r => r.UpdatedAt, DateTime.UtcNow));
+            result.RoutesUpdated = u.ModifiedCount;
+        }
+        if (options.Expenses)
+        {
+            var fb = Builders<Expense>.Filter;
+            var f = fb.Eq(e => e.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(e => e.VehicleId, null);
+            if (from.HasValue) f &= fb.Gte(e => e.Date, from.Value);
+            if (to.HasValue) f &= fb.Lte(e => e.Date, to.Value);
+            var u = await _expenses.UpdateManyAsync(f, Builders<Expense>.Update.Set(e => e.VehicleId, id).Set(e => e.UpdatedAt, DateTime.UtcNow));
+            result.ExpensesUpdated = u.ModifiedCount;
+        }
+        if (options.OdometerReadings)
+        {
+            var fb = Builders<OdometerReading>.Filter;
+            var f = fb.Eq(o => o.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(o => o.VehicleId, null);
+            if (from.HasValue) f &= fb.Gte(o => o.Date, from.Value);
+            if (to.HasValue) f &= fb.Lte(o => o.Date, to.Value);
+            var u = await _odometer.UpdateManyAsync(f, Builders<OdometerReading>.Update.Set(o => o.VehicleId, id).Set(o => o.UpdatedAt, DateTime.UtcNow));
+            result.OdometerReadingsUpdated = u.ModifiedCount;
+        }
+
+        return result;
     }
 
     public async Task<List<Vehicle>> GetVehiclesAsync(string userId, bool includeInactive = false)

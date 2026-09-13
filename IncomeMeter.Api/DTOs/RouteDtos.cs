@@ -7,6 +7,8 @@ public class CreateRouteDto
 {
     [Required]
     public string WorkType { get; set; } = null!;
+    /// <summary>Optional – defaults to the user's only active vehicle when omitted.</summary>
+    public string? VehicleId { get; set; }
     public string? WorkTypeId { get; set; }
     [Required]
     public DateTime ScheduleStart { get; set; }
@@ -26,6 +28,7 @@ public class CreateRouteDto
 public class UpdateRouteDto
 {
     public string? WorkType { get; set; }
+    public string? VehicleId { get; set; }
     public string? WorkTypeId { get; set; }
     public DateTime? ScheduleStart { get; set; }
     public DateTime? ScheduleEnd { get; set; }
@@ -43,6 +46,8 @@ public class StartRouteDto
 {
     [Required]
     public string WorkType { get; set; } = null!;
+    /// <summary>Optional – defaults to the user's only active vehicle when omitted.</summary>
+    public string? VehicleId { get; set; }
     public string? WorkTypeId { get; set; }
     [Required]
     public double StartMile { get; set; }

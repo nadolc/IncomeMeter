@@ -21,6 +21,10 @@ public class Route
     
     [BsonElement("status")]
     public string Status { get; set; } = "scheduled";
+
+    /// <summary>Vehicle used for this route (optional). Lets the tax report split miles per vehicle.</summary>
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? VehicleId { get; set; }
     
     [BsonElement("scheduleStart")]
     public DateTime ScheduleStart { get; set; }

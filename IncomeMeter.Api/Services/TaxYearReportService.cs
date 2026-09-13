@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using IncomeMeter.Api.DTOs;
@@ -115,6 +115,8 @@ public class TaxYearReportService : ITaxYearReportService
 
         // --- Business miles from routes ---
         var routes = await _routes.GetRoutesByDateRangeAsync(userId, from, to);
+        if (vehicle != null)
+            routes = routes.Where(r => r.VehicleId == null || r.VehicleId == vehicle.Id).ToList();
         var completed = routes.Where(r => r.Status == "completed").ToList();
         double businessMiles = 0;
         int withoutMileage = 0;

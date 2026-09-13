@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -430,6 +430,12 @@ export const updateVehicle = async (id: string, data: Partial<VehicleInput>): Pr
 
 export const deleteVehicle = async (id: string): Promise<void> => {
   await api.delete(`/api/vehicles/${id}`);
+};
+
+/** Attach a vehicle to existing routes / expenses / odometer readings (default: only unassigned ones, from the purchase date). */
+export const backfillVehicle = async (id: string, options: BackfillVehicleOptions = {}): Promise<BackfillVehicleResult> => {
+  const response = await api.post<BackfillVehicleResult>(`/api/vehicles/${id}/backfill`, options);
+  return response.data;
 };
 
 /** DVLA number-plate lookup (make, fuel, CO2, MOT/tax). Requires Dvla:ApiKey on the server. */

@@ -36,6 +36,7 @@ export interface Route {
   userId: string;
   workType?: string;
   workTypeId?: string;
+  vehicleId?: string | null;
   status: 'completed' | 'in_progress' | 'scheduled' | 'cancelled';
   scheduleStart: Date;
   scheduleEnd: Date;
@@ -324,6 +325,24 @@ export interface AttachmentOcr {
   tripMiles: number | null;
   mpg: number | null;
   confidence: number;
+}
+
+export interface BackfillVehicleOptions {
+  routes?: boolean;
+  expenses?: boolean;
+  odometerReadings?: boolean;
+  onlyUnassigned?: boolean;
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface BackfillVehicleResult {
+  vehicleId: string;
+  from: string | null;
+  to: string | null;
+  routesUpdated: number;
+  expensesUpdated: number;
+  odometerReadingsUpdated: number;
 }
 
 export interface MotTestSummary {

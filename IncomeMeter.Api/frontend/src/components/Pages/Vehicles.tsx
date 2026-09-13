@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle } from '../../utils/api';
+import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle, backfillVehicle } from '../../utils/api';
 import type { Vehicle, VehicleInput, VehicleLookupResult } from '../../types';
 import ExpensesSubNav from '../Expenses/ExpensesSubNav';
 
@@ -138,6 +138,32 @@ const Vehicles: React.FC = () => {
     }
   };
 
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
+  const [backfilling, setBackfilling] = useState<string | null>(null);
+
+  const handleBackfill = async (v: Vehicle, reassignAll: boolean) => {
+    const fromLabel = v.purchaseDate ? new Date(v.purchaseDate).toLocaleDateString('en-GB') : t('vehicles.backfill.allTime', 'all time');
+    const question = reassignAll
+      ? t('vehicles.backfill.confirmAll', { defaultValue: 'Assign {{reg}} to ALL routes, expenses and odometer readings since {{from}}, even ones already linked to another vehicle?', reg: v.registration, from: fromLabel })
+      : t('vehicles.backfill.confirm', { defaultValue: 'Assign {{reg}} to every route, expense and odometer reading since {{from}} that has no vehicle yet?', reg: v.registration, from: fromLabel });
+    if (!window.confirm(question)) return;
+    setBackfilling(v.id);
+    setBackfillMsg(null);
+    setError(null);
+    try {
+      const r = await backfillVehicle(v.id, { onlyUnassigned: !reassignAll });
+      setBackfillMsg(t('vehicles.backfill.done', {
+        defaultValue: '{{reg}}: {{routes}} routes, {{expenses}} expenses, {{readings}} odometer readings updated.',
+        reg: v.registration, routes: r.routesUpdated, expenses: r.expensesUpdated, readings: r.odometerReadingsUpdated
+      }));
+    } catch (err) {
+      console.error('Backfill failed', err);
+      setError(t('vehicles.backfill.failed', 'Backfill failed.'));
+    } finally {
+      setBackfilling(null);
+    }
+  };
+
   const handleDelete = async (v: Vehicle) => {
     if (!window.confirm(t('vehicles.confirmDelete', { defaultValue: 'Delete {{reg}}? Expenses linked to it are kept.', reg: v.registration }))) return;
     try {
@@ -170,6 +196,7 @@ const Vehicles: React.FC = () => {
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {backfillMsg && <div className="mb-4 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">{backfillMsg}</div>}
 
       {loading ? (
         <div className="py-16 text-center text-gray-500">{t('common.loading', 'Loading...')}</div>
@@ -205,8 +232,24 @@ const Vehicles: React.FC = () => {
                   </>
                 )}
               </dl>
-              <div className="mt-3 flex gap-3 text-xs">
+              <div className="mt-3 flex flex-wrap gap-3 text-xs">
                 <button onClick={() => openEdit(v)} className="text-blue-600 hover:text-blue-800">{t('common.edit', 'Edit')}</button>
+                <button
+                  onClick={() => handleBackfill(v, false)}
+                  disabled={backfilling === v.id}
+                  className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                  title={t('vehicles.backfill.hint', 'Link past routes, expenses and odometer readings that have no vehicle to this one')}
+                >
+                  {backfilling === v.id ? '...' : t('vehicles.backfill.button', 'Backfill history')}
+                </button>
+                <button
+                  onClick={() => handleBackfill(v, true)}
+                  disabled={backfilling === v.id}
+                  className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                  title={t('vehicles.backfill.hintAll', 'Reassign everything in the date range, including records already linked to another vehicle')}
+                >
+                  {t('vehicles.backfill.buttonAll', 'Reassign all')}
+                </button>
                 <button onClick={() => handleDelete(v)} className="text-red-600 hover:text-red-800">{t('common.delete', 'Delete')}</button>
               </div>
             </div>
