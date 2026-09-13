@@ -374,9 +374,13 @@ public class TaxYearReportService : ITaxYearReportService
         }
         else
         {
-            ca.Reason = "CO2 g/km is not recorded for this car, so the writing-down rate cannot be determined.";
-            warnings.Add(Warn("warning", "NO_CO2", "Enter the car's official CO2 figure (from the V5C) to determine the capital allowance rate."));
-            return ca;
+            // CAA 2001 s104AA: a car registered on/after 1 March 2001 with no CO2 figure is not a "main rate car",
+            // so it falls into the special rate pool. (Pre-March-2001 cars are main rate – rare enough to leave to the user.)
+            (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("specialRateWda", $"{_rules.SpecialRateWda:P0} special rate writing-down allowance (no CO2 figure recorded)", _rules.SpecialRateWda, "51");
+            warnings.Add(Warn("warning", "NO_CO2",
+                $"No CO2 figure is recorded for this car, so HMRC's default of the {_rules.SpecialRateWda:P0} special rate has been applied. " +
+                $"If the V5C (field V.7) or the DVLA lookup shows {_rules.MainRateCo2Threshold} g/km or less, enter it to get the {_rules.MainRateWda:P0} main rate; " +
+                "cars first registered before 1 March 2001 qualify for the main rate regardless."));
         }
 
         ca.Applicable = true;

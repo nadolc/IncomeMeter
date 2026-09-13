@@ -280,13 +280,16 @@ public class TaxYearReportServiceTests
     }
 
     [Fact]
-    public async Task Car_without_co2_cannot_get_a_rate()
+    public async Task Car_without_co2_defaults_to_special_rate_with_a_warning()
     {
         AddCar(co2: null, purchaseDate: D(6, 1), price: 9000m);
 
         var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 100);
 
-        report.CapitalAllowance.Applicable.Should().BeFalse();
+        report.CapitalAllowance.Applicable.Should().BeTrue();
+        report.CapitalAllowance.AllowanceType.Should().Be("specialRateWda");
+        report.CapitalAllowance.Allowance.Should().Be(540m);   // 9,000 × 6%
+        report.CapitalAllowance.Sa103Box.Should().Be("51");
         report.Warnings.Should().Contain(w => w.Code == "NO_CO2");
     }
 
