@@ -1,4 +1,4 @@
-using IncomeMeter.Api.DTOs;
+﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using MongoDB.Driver;
 
@@ -7,7 +7,7 @@ namespace IncomeMeter.Api.Services;
 public class ExpenseService : IExpenseService
 {
     private static readonly string[] OdometerSources = { "fuelStop", "taxYearStart", "taxYearEnd", "manual" };
-    private static readonly string[] DateSources = { "exif", "filename", "manual" };
+    private static readonly string[] DateSources = { "exif", "filename", "ocr", "manual" };
 
     private readonly IMongoCollection<Expense> _expenses;
     private readonly IMongoCollection<OdometerReading> _odometer;

@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using Microsoft.Extensions.Options;
@@ -16,17 +16,20 @@ public class AttachmentService : IAttachmentService
 
     private readonly IMongoCollection<Attachment> _attachments;
     private readonly IFileStorageService _storage;
+    private readonly IReceiptOcrService _ocr;
     private readonly StorageSettings _settings;
     private readonly ILogger<AttachmentService> _logger;
 
     public AttachmentService(
         MongoDbContext context,
         IFileStorageService storage,
+        IReceiptOcrService ocr,
         IOptions<StorageSettings> settings,
         ILogger<AttachmentService> logger)
     {
         _attachments = context.Attachments;
         _storage = storage;
+        _ocr = ocr;
         _settings = settings.Value;
         _logger = logger;
     }
@@ -80,6 +83,7 @@ public class AttachmentService : IAttachmentService
             result.AttachmentId = existing.Id;
             result.TakenAt = existing.TakenAt;
             result.DateSource = existing.DateSource;
+            result.Ocr = ToOcrDto(existing.Ocr);
             return result;
         }
 
@@ -91,6 +95,15 @@ public class AttachmentService : IAttachmentService
         var storageKey = $"{userId}/{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
 
         await _storage.SaveAsync(storageKey, buffer, contentType, ct);
+        buffer.Position = 0;
+
+        // Optional OCR pre-fill (merchant / date / total). Never blocks the upload.
+        AttachmentOcr? ocr = null;
+        if (_ocr.IsEnabled)
+        {
+            ocr = await _ocr.AnalyseAsync(buffer, contentType, ct);
+            buffer.Position = 0;
+        }
 
         var attachment = new Attachment
         {
@@ -102,7 +115,8 @@ public class AttachmentService : IAttachmentService
             StorageKey = storageKey,
             TakenAt = takenAt,
             DateSource = dateSource,
-            UploadedAt = DateTime.UtcNow
+            UploadedAt = DateTime.UtcNow,
+            Ocr = ocr
         };
 
         await _attachments.InsertOneAsync(attachment, cancellationToken: ct);
@@ -113,8 +127,18 @@ public class AttachmentService : IAttachmentService
         result.AttachmentId = attachment.Id;
         result.TakenAt = takenAt;
         result.DateSource = dateSource;
+        result.Ocr = ToOcrDto(ocr);
         return result;
     }
+
+    private static AttachmentOcrDto? ToOcrDto(AttachmentOcr? ocr) => ocr == null ? null : new AttachmentOcrDto
+    {
+        Merchant = ocr.Merchant,
+        Date = ocr.Date,
+        Total = ocr.Total,
+        Currency = ocr.Currency,
+        Confidence = ocr.Confidence
+    };
 
     public async Task<Attachment?> GetByIdAsync(string id, string userId) =>
         await _attachments.Find(a => a.Id == id && a.UserId == userId).FirstOrDefaultAsync();

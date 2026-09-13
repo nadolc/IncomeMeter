@@ -5,6 +5,7 @@ import type { Expense, OdometerReading, ExpenseCategory } from '../../types';
 import { EXPENSE_CATEGORIES } from '../../types';
 import BulkReceiptImport from '../Import/BulkReceiptImport';
 import AttachmentImage from '../Common/AttachmentImage';
+import ExpensesSubNav from '../Expenses/ExpensesSubNav';
 
 /** UK tax year runs 6 April – 5 April. Returns the start year for the tax year containing `date`. */
 const taxYearStartFor = (date: Date): number => {
@@ -104,6 +105,8 @@ const Expenses: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <ExpensesSubNav />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>

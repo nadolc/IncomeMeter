@@ -12,6 +12,8 @@ import RouteList from './components/Pages/RouteList';
 import RouteDetails from './components/Pages/RouteDetails';
 import EnhancedRouteList from './components/Pages/EnhancedRouteList';
 import Expenses from './components/Pages/Expenses';
+import Vehicles from './components/Pages/Vehicles';
+import TaxReport from './components/Pages/TaxReport';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import AuthCallback from './components/Auth/AuthCallback';
 import './i18n';
@@ -35,6 +37,8 @@ function App() {
                   <Route path="routes/manage" element={<EnhancedRouteList />} />
                   <Route path="routes/:id" element={<RouteDetails />} />
                   <Route path="expenses" element={<Expenses />} />
+                  <Route path="expenses/vehicles" element={<Vehicles />} />
+                  <Route path="expenses/tax-report" element={<TaxReport />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />
                 </Route>

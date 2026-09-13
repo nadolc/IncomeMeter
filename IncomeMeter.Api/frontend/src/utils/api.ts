@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, Vehicle, VehicleInput, TaxYearReport } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -410,3 +410,58 @@ export const getOdometerReadings = async (params?: { from?: string; to?: string 
 export const deleteOdometerReading = async (id: string): Promise<void> => {
   await api.delete(`/api/expenses/odometer/${id}`);
 };
+
+// ---------- Vehicles ----------
+
+export const getVehicles = async (includeInactive = false): Promise<Vehicle[]> => {
+  const response = await api.get<Vehicle[]>('/api/vehicles', { params: { includeInactive } });
+  return response.data;
+};
+
+export const createVehicle = async (data: VehicleInput): Promise<Vehicle> => {
+  const response = await api.post<Vehicle>('/api/vehicles', data);
+  return response.data;
+};
+
+export const updateVehicle = async (id: string, data: Partial<VehicleInput>): Promise<Vehicle> => {
+  const response = await api.put<Vehicle>(`/api/vehicles/${id}`, data);
+  return response.data;
+};
+
+export const deleteVehicle = async (id: string): Promise<void> => {
+  await api.delete(`/api/vehicles/${id}`);
+};
+
+// ---------- Tax year report ----------
+
+export interface TaxReportParams {
+  vehicleId?: string;
+  businessUsePercent?: number;
+}
+
+export const getTaxYearReport = async (taxYear: number, params?: TaxReportParams): Promise<TaxYearReport> => {
+  const response = await api.get<TaxYearReport>(`/api/tax-report/${taxYear}`, { params });
+  return response.data;
+};
+
+/** Download a file that needs the bearer token, then hand it to the browser as a normal download. */
+const downloadWithAuth = async (url: string, params: object | undefined, fallbackName: string) => {
+  const response = await api.get(url, { params, responseType: 'blob' });
+  const disposition = response.headers['content-disposition'] as string | undefined;
+  const match = disposition?.match(/filename="?([^";]+)"?/);
+  const name = match?.[1] ?? fallbackName;
+  const objectUrl = URL.createObjectURL(response.data as Blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+};
+
+export const downloadTaxYearReportCsv = (taxYear: number, params?: TaxReportParams) =>
+  downloadWithAuth(`/api/tax-report/${taxYear}/csv`, params, `tax-year-${taxYear}-report.csv`);
+
+export const downloadTaxYearReceiptsZip = (taxYear: number, params?: { vehicleId?: string }) =>
+  downloadWithAuth(`/api/tax-report/${taxYear}/receipts.zip`, params, `tax-year-${taxYear}-receipts.zip`);

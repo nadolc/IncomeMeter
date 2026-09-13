@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace IncomeMeter.Api.Models;
@@ -71,7 +71,7 @@ public class Expense
     /// <summary>"draft" | "confirmed"</summary>
     public string Status { get; set; } = ExpenseStatus.Confirmed;
 
-    /// <summary>"exif" | "filename" | "manual"</summary>
+    /// <summary>"exif" | "filename" | "ocr" | "manual"</summary>
     public string DateSource { get; set; } = "manual";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace IncomeMeter.Api.Models;
@@ -27,7 +27,7 @@ public class OdometerReading
     [BsonRepresentation(BsonType.ObjectId)]
     public string? PhotoAttachmentId { get; set; }
 
-    /// <summary>"exif" | "filename" | "manual"</summary>
+    /// <summary>"exif" | "filename" | "ocr" | "manual"</summary>
     public string DateSource { get; set; } = "manual";
 
     public string? Notes { get; set; }

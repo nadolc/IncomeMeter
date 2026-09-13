@@ -519,7 +519,8 @@
     "selectAll": "選擇全部",
     "clearAll": "清除全部",
     "noOptions": "沒有可用選項",
-    "info": "資訊"
+    "info": "資訊",
+    "saving": "儲存中…"
   },
   "errors": {
     "generic": "發生了一些問題，請重試。",
@@ -622,7 +623,124 @@
         "litresInvalid": "公升必須是數字",
         "milesInvalid": "里程必須是數字",
         "milesRequired": "必須填寫里程表讀數"
-      }
+      },
+      "vehicle": "呢批收據屬於邊部車",
+      "noVehicle": "未指定",
+      "fromOcr": "日期來自收據 (OCR)",
+      "ocrHint": "商家 / 金額由 OCR 預填 – 請核對"
     }
+  },
+  "vehicles": {
+    "title": "車輛",
+    "subtitle": "CO2、購買資料同申報方法決定資本免稅額同 HMRC 方法鎖定。",
+    "add": "新增車輛",
+    "edit": "編輯車輛",
+    "new": "新車",
+    "empty": "尚未有車輛。請新增你工作用嘅車。",
+    "confirmDelete": "確定刪除 {{reg}}？已連結嘅費用會保留。",
+    "lockHint": "HMRC 規定：某部車一旦用過每英里固定費率申報，之後必須繼續用同一方法。只有從未用過固定費率嘅車先可以選實際成本法。",
+    "errors": {
+      "load": "載入車輛失敗。",
+      "save": "儲存車輛失敗。",
+      "delete": "刪除車輛失敗。"
+    },
+    "sections": {
+      "hmrc": "HMRC 方法及資本免稅額結轉"
+    },
+    "types": {
+      "car": "私家車",
+      "van": "貨車",
+      "motorcycle": "電單車"
+    },
+    "fuels": {
+      "petrol": "汽油",
+      "diesel": "柴油",
+      "hybrid": "混能",
+      "electric": "電動",
+      "other": "其他"
+    },
+    "finance": {
+      "cash": "一次過購買",
+      "hp": "分期 / 貸款",
+      "lease": "租賃",
+      "none": "非自有"
+    },
+    "claimMethods": {
+      "actualCost": "實際成本",
+      "mileage": "每英里固定費率 (45p/25p)"
+    },
+    "fields": {
+      "registration": "車牌",
+      "type": "類型",
+      "make": "廠牌",
+      "model": "型號",
+      "fuel": "燃料",
+      "co2": "CO2 g/km",
+      "co2Hint": "V5C 上有 – 決定 18% / 6% 比率",
+      "purchase": "購買",
+      "purchaseDate": "購買日期",
+      "purchasePrice": "購買價格 (£)",
+      "isNew": "全新購入（未用過）",
+      "finance": "財務",
+      "claimMethod": "申報方法",
+      "lockedFrom": "首次使用此方法嘅稅年",
+      "lockedFromHint": "例如 2023 = 2023/24；未報過稅就留空",
+      "poolBf": "結轉帳面值",
+      "poolBfHint": "上次報稅後嘅遞減帳面值",
+      "poolYear": "結轉至稅年",
+      "notes": "備註",
+      "active": "使用中"
+    }
+  },
+  "taxReport": {
+    "title": "稅務年度報表",
+    "subtitle": "自我評稅用嘅實際成本法數字，並附固定費率法作比較。",
+    "vehicle": "車輛",
+    "defaultVehicle": "預設（第一部使用中）",
+    "overridePct": "業務 % 覆寫",
+    "downloadCsv": "CSV",
+    "downloadZip": "收據 ZIP",
+    "errors": {
+      "load": "產生報表失敗。",
+      "download": "下載失敗。"
+    },
+    "actualCostMethod": "實際成本法",
+    "simplifiedMethod": "簡化費用法（固定費率）",
+    "runningCosts": "營運費用",
+    "capitalAllowance": "資本免稅額",
+    "difference": "差額",
+    "equal": "兩種方法扣除額相同",
+    "better": "{{method}}扣除額較大",
+    "locked": "已鎖定現行方法",
+    "mileage": "里程及業務使用",
+    "businessMiles": "業務里程（路線）",
+    "routes": "條路線",
+    "odometerOpen": "期初里程表",
+    "odometerClose": "期末里程表",
+    "totalMiles": "總里程",
+    "businessPct": "業務使用",
+    "source": {
+      "odometer": "來自里程表",
+      "override": "覆寫",
+      "unavailable": "未知"
+    },
+    "qualifying": "合資格支出",
+    "poolBf": "結轉帳面值",
+    "rate": "比率",
+    "grossAllowance": "免稅額總額",
+    "allowance": "可申報免稅額",
+    "poolCf": "結轉下年",
+    "runningCostsTitle": "按類別營運費用",
+    "total": "總計",
+    "fullyBusiness": "100% 業務",
+    "allowable": "可扣除",
+    "disallowable": "不可扣除",
+    "noReceipt": "無收據",
+    "viaCapitalAllowance": "經資本免稅額",
+    "sa103": "SA103 欄位 – 直接抄入報稅表",
+    "form": "表格",
+    "box": "欄",
+    "label": "項目",
+    "amount": "金額"
   }
 }

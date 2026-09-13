@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import StatsCard from '../../components/dashboard/StatsCard';
 import PeriodNavigation from '../../components/dashboard/PeriodNavigation';
+import ReceiptImportScreen from '../Expenses/ReceiptImportScreen';
 import { DashboardApiService } from '../../services/dashboardApi';
 import { DashboardStats, Route, PeriodType, PeriodIncomeData } from '../../types/dashboard';
 
@@ -133,6 +134,23 @@ const DashboardScreen: React.FC = () => {
       default: return status;
     }
   };
+
+  const [showReceiptImport, setShowReceiptImport] = useState(false);
+
+  const renderQuickActions = () => (
+    <View style={styles.quickActions}>
+      <TouchableOpacity style={styles.quickAction} onPress={() => setShowReceiptImport(true)}>
+        <View style={[styles.iconBackground, { backgroundColor: '#EDE9FE' }]}>
+          <Icon name="receipt-long" size={24} color="#6366F1" />
+        </View>
+        <View style={styles.quickActionText}>
+          <Text style={styles.quickActionTitle}>Import receipts</Text>
+          <Text style={styles.quickActionSubtitle}>Fuel, odometer & expense photos for your tax return</Text>
+        </View>
+        <Icon name="chevron-right" size={22} color="#9CA3AF" />
+      </TouchableOpacity>
+    </View>
+  );
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -296,8 +314,14 @@ const DashboardScreen: React.FC = () => {
         )}
 
         {renderStatsCards()}
+        {renderQuickActions()}
         {renderTodaysRoutes()}
       </ScrollView>
+
+      <ReceiptImportScreen
+        visible={showReceiptImport}
+        onClose={() => setShowReceiptImport(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -348,6 +372,33 @@ const styles = StyleSheet.create({
   statsContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  quickActions: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickActionText: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   iconBackground: {
     width: 48,

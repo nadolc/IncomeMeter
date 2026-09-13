@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { uploadAttachmentsBatch, createExpensesBatch } from '../../utils/api';
+import { uploadAttachmentsBatch, createExpensesBatch, getVehicles } from '../../utils/api';
 import type {
   AttachmentUploadResult,
   BatchImportItem,
   BatchImportResult,
-  ExpenseCategory
+  ExpenseCategory,
+  Vehicle
 } from '../../types';
 import { EXPENSE_CATEGORIES } from '../../types';
 
@@ -23,8 +24,9 @@ interface ReviewRow {
   kind: RowKind;
   /** Local wall-clock value for <input type="datetime-local"> – "YYYY-MM-DDTHH:mm" or "". */
   date: string;
-  dateSource: 'exif' | 'filename' | 'manual';
+  dateSource: 'exif' | 'filename' | 'ocr' | 'manual';
   category: ExpenseCategory;
+  ocrConfidence: number | null;
   amount: string;
   merchant: string;
   litres: string;
@@ -67,6 +69,19 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [saveResult, setSaveResult] = useState<BatchImportResult | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicleId, setVehicleId] = useState<string>('');
+
+  // Load vehicles once the modal opens so expenses can be tagged to one.
+  useEffect(() => {
+    if (!isOpen) return;
+    getVehicles()
+      .then(list => {
+        setVehicles(list);
+        if (list.length === 1) setVehicleId(list[0].id);
+      })
+      .catch(() => setVehicles([]));
+  }, [isOpen]);
 
   // Revoke preview object URLs when the modal unmounts / resets.
   useEffect(() => {
@@ -134,7 +149,14 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
 
       const newRows: ReviewRow[] = files.map((file, i) => {
         const upload = results[i];
-        const date = toInputDateTime(upload?.takenAt ?? null);
+        const ocr = upload?.ocr ?? null;
+        // Date priority: EXIF → filename → OCR date printed on the receipt → manual.
+        let date = toInputDateTime(upload?.takenAt ?? null);
+        let dateSource: ReviewRow['dateSource'] = upload?.dateSource ?? 'manual';
+        if (!date && ocr?.date) {
+          date = toInputDateTime(ocr.date);
+          dateSource = date ? 'ocr' : 'manual';
+        }
         return {
           key: `${file.name}-${file.size}-${i}`,
           file,
@@ -143,10 +165,11 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
           include: !!upload?.attachmentId && !upload.isDuplicate && !upload.error,
           kind: 'expense',
           date,
-          dateSource: upload?.dateSource ?? 'manual',
+          dateSource,
           category: 'fuel',
-          amount: '',
-          merchant: '',
+          ocrConfidence: ocr ? ocr.confidence : null,
+          amount: ocr?.total != null ? String(ocr.total) : '',
+          merchant: ocr?.merchant ?? '',
           litres: '',
           miles: '',
           notes: '',
@@ -255,6 +278,7 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
         return {
           kind: 'odometer',
           odometer: {
+            vehicleId: vehicleId || null,
             date: isoDate,
             miles: Number(r.miles),
             source: 'fuelStop',
@@ -273,6 +297,7 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
       return {
         kind: 'expense',
         expense: {
+          vehicleId: vehicleId || null,
           category: r.category,
           date: isoDate,
           amount: Number(r.amount),
@@ -300,7 +325,7 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
       setStep('review');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, onImported, t]);
+  }, [rows, vehicleId, onImported, t]);
 
   if (!isOpen) return null;
 
@@ -390,6 +415,23 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
             </div>
           )}
 
+          {(step === 'review' || step === 'saving') && vehicles.length > 0 && (
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              <label className="text-gray-600">{t('expenses.bulkImport.vehicle', 'Vehicle for these receipts')}</label>
+              <select
+                value={vehicleId}
+                disabled={step === 'saving'}
+                onChange={e => setVehicleId(e.target.value)}
+                className="rounded border border-gray-300 px-2 py-1 text-sm"
+              >
+                <option value="">{t('expenses.bulkImport.noVehicle', 'Not assigned')}</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>{v.registration}{v.make ? ` · ${v.make} ${v.model ?? ''}` : ''}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {(step === 'review' || step === 'saving') && (
             <div className="space-y-3">
               {orderedRows.map(row => {
@@ -447,6 +489,16 @@ const BulkReceiptImport: React.FC<BulkReceiptImportProps> = ({ isOpen, onClose, 
                         {row.dateSource === 'filename' && row.date && (
                           <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700">
                             {t('expenses.bulkImport.fromFilename', 'from filename')}
+                          </span>
+                        )}
+                        {row.dateSource === 'ocr' && row.date && (
+                          <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+                            {t('expenses.bulkImport.fromOcr', 'date from receipt (OCR)')}
+                          </span>
+                        )}
+                        {row.ocrConfidence !== null && (
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-600" title={t('expenses.bulkImport.ocrHint', 'Merchant / amount pre-filled by OCR – please check')}>
+                            OCR {Math.round(row.ocrConfidence * 100)}%
                           </span>
                         )}
                         {needsDate && (

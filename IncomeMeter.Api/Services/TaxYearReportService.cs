@@ -1,0 +1,645 @@
+using System.Globalization;
+using System.IO.Compression;
+using System.Text;
+using IncomeMeter.Api.DTOs;
+using IncomeMeter.Api.Models;
+using Microsoft.Extensions.Options;
+
+namespace IncomeMeter.Api.Services;
+
+public interface ITaxYearReportService
+{
+    /// <summary>Start year of the UK tax year (6 Apr – 5 Apr) containing <paramref name="date"/>.</summary>
+    int TaxYearFor(DateTime date);
+    (DateTime from, DateTime to) TaxYearRange(int taxYear);
+
+    Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null);
+    string ToCsv(TaxYearReportDto report);
+    Task<byte[]> BuildReceiptsZipAsync(string userId, int taxYear, string? vehicleId = null, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Turns routes (business miles), odometer readings (total miles), expenses and the vehicle record
+/// into the figures needed for the Self Assessment "actual cost" method, plus the simplified-expenses
+/// equivalent for comparison.
+/// </summary>
+public class TaxYearReportService : ITaxYearReportService
+{
+    private readonly IRouteService _routes;
+    private readonly IExpenseService _expenses;
+    private readonly IVehicleService _vehicles;
+    private readonly IAttachmentService _attachments;
+    private readonly TaxRulesSettings _rules;
+
+    public TaxYearReportService(
+        IRouteService routes,
+        IExpenseService expenses,
+        IVehicleService vehicles,
+        IAttachmentService attachments,
+        IOptions<TaxRulesSettings> rules)
+    {
+        _routes = routes;
+        _expenses = expenses;
+        _vehicles = vehicles;
+        _attachments = attachments;
+        _rules = rules.Value;
+    }
+
+    // ---------- Tax year helpers ----------
+
+    public int TaxYearFor(DateTime date)
+    {
+        var startThisYear = new DateTime(date.Year, 4, 6, 0, 0, 0, DateTimeKind.Utc);
+        return date >= startThisYear ? date.Year : date.Year - 1;
+    }
+
+    public (DateTime from, DateTime to) TaxYearRange(int taxYear) =>
+        (new DateTime(taxYear, 4, 6, 0, 0, 0, DateTimeKind.Utc),
+         new DateTime(taxYear + 1, 4, 5, 23, 59, 59, 999, DateTimeKind.Utc));
+
+    private static string Label(int taxYear) => $"{taxYear}/{(taxYear + 1) % 100:00}";
+
+    // ---------- Report ----------
+
+    public async Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null)
+    {
+        var (from, to) = TaxYearRange(taxYear);
+        var report = new TaxYearReportDto
+        {
+            TaxYear = taxYear,
+            TaxYearLabel = Label(taxYear),
+            PeriodFrom = from,
+            PeriodTo = to
+        };
+        var warnings = report.Warnings;
+
+        // --- Vehicle ---
+        Vehicle? vehicle = null;
+        if (!string.IsNullOrWhiteSpace(vehicleId))
+        {
+            vehicle = await _vehicles.GetVehicleByIdAsync(vehicleId, userId);
+            if (vehicle == null) throw new ArgumentException("Vehicle not found");
+        }
+        else
+        {
+            var active = await _vehicles.GetVehiclesAsync(userId);
+            vehicle = active.FirstOrDefault();
+            if (active.Count > 1)
+                warnings.Add(Warn("info", "MULTIPLE_VEHICLES", $"You have {active.Count} active vehicles; this report uses {vehicle!.Registration}. Pass vehicleId to choose another."));
+        }
+
+        if (vehicle != null)
+        {
+            report.Vehicle = new TaxReportVehicleDto
+            {
+                Id = vehicle.Id!,
+                Registration = vehicle.Registration,
+                Description = string.Join(" ", new[] { vehicle.Make, vehicle.Model }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                VehicleType = vehicle.VehicleType,
+                ClaimMethod = vehicle.ClaimMethod,
+                ClaimMethodLockedFromTaxYear = vehicle.ClaimMethodLockedFromTaxYear,
+                Co2GPerKm = vehicle.Co2GPerKm,
+                IsNew = vehicle.IsNew,
+                PurchaseDate = vehicle.PurchaseDate,
+                PurchasePrice = vehicle.PurchasePrice
+            };
+
+            if (vehicle.ClaimMethod == ClaimMethods.Mileage && vehicle.ClaimMethodLockedFromTaxYear.HasValue)
+                warnings.Add(Warn("error", "METHOD_LOCKED_MILEAGE",
+                    $"{vehicle.Registration} has been claimed with the flat-rate mileage method since {Label(vehicle.ClaimMethodLockedFromTaxYear.Value)}. HMRC does not allow switching this vehicle to actual costs – use the simplified-expenses figure below."));
+        }
+        else
+        {
+            warnings.Add(Warn("warning", "NO_VEHICLE", "No vehicle is set up. Add your vehicle (CO2, purchase price/date) to calculate capital allowances."));
+        }
+
+        // --- Business miles from routes ---
+        var routes = await _routes.GetRoutesByDateRangeAsync(userId, from, to);
+        var completed = routes.Where(r => r.Status == "completed").ToList();
+        double businessMiles = 0;
+        int withoutMileage = 0;
+        foreach (var r in completed)
+        {
+            if (r.StartMile.HasValue && r.EndMile.HasValue && r.EndMile > r.StartMile)
+                businessMiles += r.EndMile.Value - r.StartMile.Value;
+            else if (r.Distance > 0)
+                businessMiles += r.Distance;
+            else
+                withoutMileage++;
+        }
+        report.Mileage.BusinessMiles = Math.Round(businessMiles, 1);
+        report.Mileage.RoutesCounted = completed.Count;
+        report.Mileage.RoutesWithoutMileage = withoutMileage;
+        if (withoutMileage > 0)
+            warnings.Add(Warn("warning", "ROUTES_WITHOUT_MILEAGE", $"{withoutMileage} completed route(s) have no start/end mileage and were not counted."));
+        if (completed.Count == 0)
+            warnings.Add(Warn("warning", "NO_ROUTES", "No completed routes in this tax year – business miles are zero."));
+
+        // --- Total miles from odometer readings (+ odometer noted on fuel receipts) ---
+        var tolerance = TimeSpan.FromDays(_rules.OdometerBoundaryToleranceDays);
+        var readings = await _expenses.GetOdometerReadingsAsync(userId, from - tolerance, to + tolerance);
+        var expenses = await _expenses.GetExpensesAsync(userId, from, to);
+        if (vehicle != null)
+        {
+            readings = readings.Where(r => r.VehicleId == null || r.VehicleId == vehicle.Id).ToList();
+            expenses = expenses.Where(e => e.VehicleId == null || e.VehicleId == vehicle.Id).ToList();
+        }
+
+        var points = readings
+            .Select(r => new TaxReportOdometerPointDto { Date = r.Date, Miles = r.Miles, Source = "reading" })
+            .Concat(expenses
+                .Where(e => e.Fuel?.OdometerMiles is > 0)
+                .Select(e => new TaxReportOdometerPointDto { Date = e.Date, Miles = e.Fuel!.OdometerMiles!.Value, Source = "fuelReceipt" }))
+            .OrderBy(p => p.Date)
+            .ToList();
+
+        report.Mileage.OdometerReadingsInPeriod = points.Count(p => p.Date >= from && p.Date <= to);
+
+        // Opening reading: latest point at/before the start (within tolerance), else the first inside the year.
+        var opening = points.LastOrDefault(p => p.Date <= from) ?? points.FirstOrDefault(p => p.Date >= from);
+        // Closing reading: earliest point at/after the end (within tolerance), else the last inside the year.
+        var closing = points.FirstOrDefault(p => p.Date >= to) ?? points.LastOrDefault(p => p.Date <= to);
+
+        if (opening != null && closing != null && closing.Date > opening.Date && closing.Miles > opening.Miles)
+        {
+            report.Mileage.OdometerStart = opening;
+            report.Mileage.OdometerEnd = closing;
+            report.Mileage.TotalMiles = Math.Round(closing.Miles - opening.Miles, 1);
+
+            if (opening.Date > from.AddDays(7))
+                warnings.Add(Warn("warning", "NO_OPENING_READING", $"No odometer reading near 6 April {taxYear}; the earliest reading ({opening.Date:d MMM yyyy}) is used as the opening figure. Miles before it are not counted."));
+            if (closing.Date < to.AddDays(-7))
+                warnings.Add(Warn("warning", "NO_CLOSING_READING", $"No odometer reading near 5 April {taxYear + 1}; the latest reading ({closing.Date:d MMM yyyy}) is used as the closing figure. Miles after it are not counted."));
+
+            // Gaps between consecutive readings.
+            var inRange = points.Where(p => p.Date >= opening.Date && p.Date <= closing.Date).ToList();
+            for (var i = 1; i < inRange.Count; i++)
+            {
+                var gap = inRange[i].Date - inRange[i - 1].Date;
+                if (gap.TotalDays > _rules.OdometerGapWarningDays)
+                {
+                    warnings.Add(Warn("info", "ODOMETER_GAP", $"{Math.Round(gap.TotalDays)} days between odometer readings on {inRange[i - 1].Date:d MMM} and {inRange[i].Date:d MMM}."));
+                    break;
+                }
+                if (inRange[i].Miles < inRange[i - 1].Miles)
+                    warnings.Add(Warn("error", "ODOMETER_DECREASING", $"Odometer reading on {inRange[i].Date:d MMM yyyy} ({inRange[i].Miles:N0}) is lower than the previous one ({inRange[i - 1].Miles:N0}). Check for a typo."));
+            }
+        }
+        else
+        {
+            warnings.Add(Warn("warning", "NO_TOTAL_MILES", "At least two odometer readings (ideally on 6 April and 5 April) are needed to work out total miles and the business-use percentage."));
+        }
+
+        // --- Business-use percentage ---
+        if (businessUsePercentOverride.HasValue)
+        {
+            report.Mileage.BusinessUsePercent = Math.Clamp(Math.Round(businessUsePercentOverride.Value, 2), 0, 100);
+            report.Mileage.BusinessUseSource = "override";
+        }
+        else if (report.Mileage.TotalMiles is > 0)
+        {
+            var pct = businessMiles / report.Mileage.TotalMiles.Value * 100.0;
+            if (pct > 100)
+            {
+                warnings.Add(Warn("error", "BUSINESS_EXCEEDS_TOTAL", $"Business miles ({businessMiles:N0}) exceed total odometer miles ({report.Mileage.TotalMiles:N0}). One of the two records is wrong; capped at 100%."));
+                pct = 100;
+            }
+            report.Mileage.BusinessUsePercent = Math.Round(pct, 2);
+            report.Mileage.BusinessUseSource = "odometer";
+        }
+        var businessFraction = report.Mileage.BusinessUsePercent.HasValue ? (decimal)(report.Mileage.BusinessUsePercent.Value / 100.0) : (decimal?)null;
+
+        // --- Expense categories ---
+        var attachmentIds = expenses.SelectMany(e => e.AttachmentIds).Distinct().ToList();
+        var owned = (await _attachments.GetByIdsAsync(attachmentIds, userId)).Select(a => a.Id!).ToHashSet();
+
+        foreach (var group in expenses.GroupBy(e => e.Category).OrderBy(g => Array.IndexOf(ExpenseCategories.All, g.Key)))
+        {
+            var cat = new TaxReportCategoryDto
+            {
+                Category = group.Key,
+                Count = group.Count(),
+                Total = group.Sum(e => e.Amount),
+                FullyBusinessTotal = group.Where(e => e.IsFullyBusiness).Sum(e => e.Amount),
+                ReceiptsMissing = group.Count(e => !e.AttachmentIds.Any(owned.Contains)),
+                ExcludedFromRunningCosts = group.Key == ExpenseCategories.VehiclePurchase
+            };
+
+            if (cat.ExcludedFromRunningCosts)
+            {
+                // The vehicle itself is capital expenditure – handled through capital allowances below.
+                cat.Allowable = 0;
+                cat.Disallowable = 0;
+            }
+            else if (businessFraction.HasValue)
+            {
+                var apportionable = cat.Total - cat.FullyBusinessTotal;
+                cat.Allowable = Round2(cat.FullyBusinessTotal + apportionable * businessFraction.Value);
+                cat.Disallowable = Round2(cat.Total - cat.Allowable);
+            }
+            else
+            {
+                // Unknown business % – only the 100%-business items can be counted with confidence.
+                cat.Allowable = cat.FullyBusinessTotal;
+                cat.Disallowable = Round2(cat.Total - cat.FullyBusinessTotal);
+            }
+
+            report.Categories.Add(cat);
+        }
+
+        report.Totals.TotalExpenses = report.Categories.Where(c => !c.ExcludedFromRunningCosts).Sum(c => c.Total);
+        report.Totals.Allowable = report.Categories.Sum(c => c.Allowable);
+        report.Totals.Disallowable = report.Categories.Where(c => !c.ExcludedFromRunningCosts).Sum(c => c.Disallowable);
+        report.Totals.ReceiptsMissing = report.Categories.Sum(c => c.ReceiptsMissing);
+
+        if (!businessFraction.HasValue && report.Totals.TotalExpenses > 0)
+            warnings.Add(Warn("warning", "NO_BUSINESS_PERCENT", "Business-use % is unknown, so only items marked 100% business are counted as allowable. Add odometer readings or supply a percentage override."));
+        if (report.Totals.ReceiptsMissing > 0)
+            warnings.Add(Warn("warning", "RECEIPTS_MISSING", $"{report.Totals.ReceiptsMissing} expense(s) have no receipt attached. HMRC can ask for evidence for 5 years after the filing deadline."));
+        if (expenses.Count == 0)
+            warnings.Add(Warn("info", "NO_EXPENSES", "No expenses recorded in this tax year."));
+
+        // --- Capital allowance ---
+        report.CapitalAllowance = CalculateCapitalAllowance(vehicle, taxYear, from, to, businessFraction, expenses, warnings);
+
+        // --- Simplified expenses for comparison ---
+        report.SimplifiedExpenses = CalculateSimplified(businessMiles, vehicle?.VehicleType ?? VehicleTypes.Car);
+
+        // --- Comparison ---
+        var actualTotal = Round2(report.Totals.Allowable + report.CapitalAllowance.Allowance);
+        var simplifiedTotal = report.SimplifiedExpenses.Amount;
+        report.Comparison = new TaxReportComparisonDto
+        {
+            ActualCostTotal = actualTotal,
+            SimplifiedTotal = simplifiedTotal,
+            Difference = Round2(actualTotal - simplifiedTotal),
+            BetterMethod = actualTotal > simplifiedTotal ? ClaimMethods.ActualCost : actualTotal < simplifiedTotal ? ClaimMethods.Mileage : "equal",
+            LockedToOtherMethod = vehicle != null && vehicle.ClaimMethodLockedFromTaxYear.HasValue
+                                  && ((vehicle.ClaimMethod == ClaimMethods.Mileage && actualTotal > simplifiedTotal)
+                                      || (vehicle.ClaimMethod == ClaimMethods.ActualCost && simplifiedTotal > actualTotal))
+        };
+        if (report.Comparison.LockedToOtherMethod)
+            warnings.Add(Warn("info", "BETTER_METHOD_LOCKED", "The other method would give a larger deduction this year, but this vehicle is locked to its current method."));
+
+        // --- SA103 box mapping ---
+        report.Sa103Boxes = BuildBoxes(report);
+
+        return report;
+    }
+
+    // ---------- Capital allowances ----------
+
+    private TaxReportCapitalAllowanceDto CalculateCapitalAllowance(
+        Vehicle? vehicle, int taxYear, DateTime from, DateTime to, decimal? businessFraction,
+        List<Expense> expenses, List<TaxReportWarningDto> warnings)
+    {
+        var ca = new TaxReportCapitalAllowanceDto { BusinessUsePercent = businessFraction.HasValue ? (double)(businessFraction.Value * 100) : null };
+
+        if (vehicle == null)
+        {
+            ca.Reason = "No vehicle configured.";
+            return ca;
+        }
+        if (vehicle.ClaimMethod == ClaimMethods.Mileage)
+        {
+            ca.Reason = "Capital allowances cannot be claimed alongside the flat-rate mileage method.";
+            return ca;
+        }
+        if (vehicle.FinanceType == "lease")
+        {
+            ca.Reason = "Leased vehicles are not owned, so no capital allowance – the lease payments are a running cost instead.";
+            return ca;
+        }
+
+        // Purchase in this tax year → qualifying expenditure; otherwise use the pool brought forward.
+        var boughtThisYear = vehicle.PurchaseDate.HasValue && vehicle.PurchaseDate.Value >= from && vehicle.PurchaseDate.Value <= to;
+        var purchasePrice = vehicle.PurchasePrice
+                            ?? expenses.Where(e => e.Category == ExpenseCategories.VehiclePurchase).Sum(e => (decimal?)e.Amount);
+
+        decimal baseAmount;
+        if (boughtThisYear)
+        {
+            if (purchasePrice is null or <= 0)
+            {
+                ca.Reason = "Vehicle was bought this tax year but no purchase price is recorded.";
+                warnings.Add(Warn("warning", "NO_PURCHASE_PRICE", "Enter the vehicle purchase price to calculate the capital allowance."));
+                return ca;
+            }
+            ca.QualifyingExpenditure = purchasePrice.Value;
+            baseAmount = purchasePrice.Value;
+        }
+        else
+        {
+            if (vehicle.PoolBroughtForwardTaxYear.HasValue && vehicle.PoolBroughtForwardTaxYear.Value != taxYear)
+            {
+                ca.Reason = $"The pool value on record is for {Label(vehicle.PoolBroughtForwardTaxYear.Value)}, not {Label(taxYear)}. Update the vehicle with the written-down value carried forward into this year.";
+                warnings.Add(Warn("warning", "POOL_YEAR_MISMATCH", ca.Reason));
+                return ca;
+            }
+            if (vehicle.CapitalAllowancePoolBroughtForward is null or <= 0)
+            {
+                ca.Reason = vehicle.PurchaseDate.HasValue && vehicle.PurchaseDate.Value < from
+                    ? "No written-down value brought forward is recorded for this vehicle (it was bought in an earlier year)."
+                    : "No purchase date recorded for this vehicle.";
+                return ca;
+            }
+            ca.PoolBroughtForward = vehicle.CapitalAllowancePoolBroughtForward.Value;
+            baseAmount = ca.PoolBroughtForward;
+        }
+
+        // Rate selection.
+        var isZeroEmission = vehicle.Co2GPerKm == 0 || string.Equals(vehicle.FuelType, "electric", StringComparison.OrdinalIgnoreCase);
+        if (vehicle.VehicleType is VehicleTypes.Van or VehicleTypes.Motorcycle)
+        {
+            if (boughtThisYear)
+            {
+                (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("aia", "Annual Investment Allowance (van / motorcycle)", _rules.AiaRate, "49");
+            }
+            else
+            {
+                (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("mainRateWda", $"{_rules.MainRateWda:P0} main rate writing-down allowance", _rules.MainRateWda, "50");
+            }
+        }
+        else if (boughtThisYear && vehicle.IsNew && isZeroEmission)
+        {
+            (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("fyaZeroEmission", "100% first-year allowance (new zero-emission car)", _rules.ZeroEmissionCarFya, "52");
+        }
+        else if (vehicle.Co2GPerKm.HasValue && vehicle.Co2GPerKm.Value <= _rules.MainRateCo2Threshold)
+        {
+            (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("mainRateWda", $"{_rules.MainRateWda:P0} main rate writing-down allowance (CO2 ≤ {_rules.MainRateCo2Threshold} g/km)", _rules.MainRateWda, "50");
+        }
+        else if (vehicle.Co2GPerKm.HasValue)
+        {
+            (ca.AllowanceType, ca.AllowanceLabel, ca.Rate, ca.Sa103Box) = ("specialRateWda", $"{_rules.SpecialRateWda:P0} special rate writing-down allowance (CO2 > {_rules.MainRateCo2Threshold} g/km)", _rules.SpecialRateWda, "51");
+        }
+        else
+        {
+            ca.Reason = "CO2 g/km is not recorded for this car, so the writing-down rate cannot be determined.";
+            warnings.Add(Warn("warning", "NO_CO2", "Enter the car's official CO2 figure (from the V5C) to determine the capital allowance rate."));
+            return ca;
+        }
+
+        ca.Applicable = true;
+        ca.GrossAllowance = Round2(baseAmount * ca.Rate);
+        ca.Allowance = businessFraction.HasValue ? Round2(ca.GrossAllowance * businessFraction.Value) : 0;
+        ca.PoolCarriedForward = Round2(baseAmount - ca.GrossAllowance);
+
+        if (!businessFraction.HasValue)
+            warnings.Add(Warn("warning", "CA_NO_BUSINESS_PERCENT", "The capital allowance is shown as £0 because the business-use % is unknown."));
+
+        return ca;
+    }
+
+    // ---------- Simplified expenses ----------
+
+    private TaxReportSimplifiedDto CalculateSimplified(double businessMiles, string vehicleType)
+    {
+        if (vehicleType == VehicleTypes.Motorcycle)
+        {
+            return new TaxReportSimplifiedDto
+            {
+                BusinessMiles = businessMiles,
+                FirstBandMiles = businessMiles,
+                FirstBandRate = _rules.MotorcycleMileageRate,
+                SecondBandMiles = 0,
+                SecondBandRate = _rules.MotorcycleMileageRate,
+                Amount = Round2((decimal)businessMiles * _rules.MotorcycleMileageRate)
+            };
+        }
+
+        var first = Math.Min(businessMiles, _rules.MileageFirstBandMiles);
+        var second = Math.Max(0, businessMiles - _rules.MileageFirstBandMiles);
+        return new TaxReportSimplifiedDto
+        {
+            BusinessMiles = businessMiles,
+            FirstBandMiles = first,
+            FirstBandRate = _rules.MileageRateFirstBand,
+            SecondBandMiles = second,
+            SecondBandRate = _rules.MileageRateSecondBand,
+            Amount = Round2((decimal)first * _rules.MileageRateFirstBand + (decimal)second * _rules.MileageRateSecondBand)
+        };
+    }
+
+    // ---------- SA103 ----------
+
+    private static List<TaxReportBoxDto> BuildBoxes(TaxYearReportDto r)
+    {
+        var boxes = new List<TaxReportBoxDto>
+        {
+            new() { Box = "20", Label = "Car, van and travel expenses (total)", Amount = r.Totals.TotalExpenses,
+                    Note = "Full amount of running costs before the private-use adjustment." },
+            new() { Box = "35", Label = "Disallowable car, van and travel expenses", Amount = r.Totals.Disallowable,
+                    Note = "Private-use share (100% − business %)." }
+        };
+
+        if (r.CapitalAllowance.Applicable && r.CapitalAllowance.Sa103Box != null)
+        {
+            boxes.Add(new TaxReportBoxDto
+            {
+                Box = r.CapitalAllowance.Sa103Box,
+                Label = r.CapitalAllowance.Sa103Box switch
+                {
+                    "49" => "Annual Investment Allowance",
+                    "50" => "Capital allowances at 18% on equipment, including cars with lower CO2 emissions",
+                    "51" => "Capital allowances at 6% on equipment, including cars with higher CO2 emissions",
+                    "52" => "Zero-emission car allowance",
+                    _ => "Capital allowance"
+                },
+                Amount = r.CapitalAllowance.Allowance,
+                Note = "Already reduced for private use."
+            });
+        }
+
+        boxes.Add(new TaxReportBoxDto
+        {
+            Form = "SA103S",
+            Box = "11",
+            Label = "Car, van and travel expenses (short form – enter the allowable amount)",
+            Amount = r.Totals.Allowable,
+            Note = "The short form takes the net allowable figure directly."
+        });
+
+        return boxes;
+    }
+
+    // ---------- Exports ----------
+
+    public string ToCsv(TaxYearReportDto r)
+    {
+        var sb = new StringBuilder();
+        var inv = CultureInfo.InvariantCulture;
+        void Row(params object?[] cells) => sb.AppendLine(string.Join(",", cells.Select(Csv)));
+
+        Row("IncomeMeter tax year report", r.TaxYearLabel);
+        Row("Period", r.PeriodFrom.ToString("yyyy-MM-dd", inv), r.PeriodTo.ToString("yyyy-MM-dd", inv));
+        Row("Generated", r.GeneratedAt.ToString("yyyy-MM-dd HH:mm", inv) + " UTC");
+        if (r.Vehicle != null) Row("Vehicle", r.Vehicle.Registration, r.Vehicle.Description, r.Vehicle.VehicleType, "claim method: " + r.Vehicle.ClaimMethod);
+        sb.AppendLine();
+
+        Row("MILEAGE");
+        Row("Business miles (routes)", r.Mileage.BusinessMiles);
+        Row("Routes counted", r.Mileage.RoutesCounted);
+        Row("Odometer opening", r.Mileage.OdometerStart?.Date.ToString("yyyy-MM-dd", inv), r.Mileage.OdometerStart?.Miles);
+        Row("Odometer closing", r.Mileage.OdometerEnd?.Date.ToString("yyyy-MM-dd", inv), r.Mileage.OdometerEnd?.Miles);
+        Row("Total miles", r.Mileage.TotalMiles);
+        Row("Business use %", r.Mileage.BusinessUsePercent, r.Mileage.BusinessUseSource);
+        sb.AppendLine();
+
+        Row("EXPENSES", "Count", "Total", "100% business", "Allowable", "Disallowable", "Receipts missing");
+        foreach (var c in r.Categories)
+            Row(c.Category, c.Count, c.Total, c.FullyBusinessTotal, c.Allowable, c.Disallowable, c.ReceiptsMissing);
+        Row("TOTAL", r.Categories.Sum(c => c.Count), r.Totals.TotalExpenses, r.Categories.Sum(c => c.FullyBusinessTotal), r.Totals.Allowable, r.Totals.Disallowable, r.Totals.ReceiptsMissing);
+        sb.AppendLine();
+
+        Row("CAPITAL ALLOWANCE");
+        Row("Applicable", r.CapitalAllowance.Applicable, r.CapitalAllowance.Reason ?? r.CapitalAllowance.AllowanceLabel);
+        Row("Qualifying expenditure", r.CapitalAllowance.QualifyingExpenditure);
+        Row("Pool brought forward", r.CapitalAllowance.PoolBroughtForward);
+        Row("Rate", r.CapitalAllowance.Rate);
+        Row("Gross allowance", r.CapitalAllowance.GrossAllowance);
+        Row("Allowance (business share)", r.CapitalAllowance.Allowance);
+        Row("Pool carried forward", r.CapitalAllowance.PoolCarriedForward);
+        sb.AppendLine();
+
+        Row("SIMPLIFIED EXPENSES (for comparison)");
+        Row("First band miles", r.SimplifiedExpenses.FirstBandMiles, r.SimplifiedExpenses.FirstBandRate);
+        Row("Second band miles", r.SimplifiedExpenses.SecondBandMiles, r.SimplifiedExpenses.SecondBandRate);
+        Row("Amount", r.SimplifiedExpenses.Amount);
+        sb.AppendLine();
+
+        Row("COMPARISON");
+        Row("Actual cost method (allowable + capital allowance)", r.Comparison.ActualCostTotal);
+        Row("Simplified expenses", r.Comparison.SimplifiedTotal);
+        Row("Better method", r.Comparison.BetterMethod, r.Comparison.LockedToOtherMethod ? "locked to current method" : "");
+        sb.AppendLine();
+
+        Row("SA103 BOXES", "Form", "Box", "Amount", "Note");
+        foreach (var b in r.Sa103Boxes) Row(b.Label, b.Form, b.Box, b.Amount, b.Note);
+        sb.AppendLine();
+
+        Row("WARNINGS");
+        foreach (var w in r.Warnings) Row(w.Severity, w.Code, w.Message);
+        sb.AppendLine();
+        Row("Disclaimer", r.Disclaimer);
+
+        return sb.ToString();
+    }
+
+    public async Task<byte[]> BuildReceiptsZipAsync(string userId, int taxYear, string? vehicleId = null, CancellationToken ct = default)
+    {
+        var (from, to) = TaxYearRange(taxYear);
+        var expenses = await _expenses.GetExpensesAsync(userId, from, to);
+        var readings = await _expenses.GetOdometerReadingsAsync(userId, from, to);
+        if (!string.IsNullOrWhiteSpace(vehicleId))
+        {
+            expenses = expenses.Where(e => e.VehicleId == null || e.VehicleId == vehicleId).ToList();
+            readings = readings.Where(r => r.VehicleId == null || r.VehicleId == vehicleId).ToList();
+        }
+
+        var report = await BuildReportAsync(userId, taxYear, vehicleId);
+
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var summary = zip.CreateEntry($"tax-year-{report.TaxYearLabel.Replace('/', '-')}-summary.csv");
+            await using (var w = new StreamWriter(summary.Open(), new UTF8Encoding(true)))
+                await w.WriteAsync(ToCsv(report));
+
+            // Expense index + receipts
+            var index = new StringBuilder();
+            index.AppendLine("date,category,merchant,amount,currency,fullyBusiness,litres,odometerMiles,notes,receiptFiles");
+            var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var e in expenses.OrderBy(e => e.Date))
+            {
+                var files = new List<string>();
+                var atts = await _attachments.GetByIdsAsync(e.AttachmentIds, userId);
+                foreach (var a in atts)
+                {
+                    var name = UniqueName(usedNames, $"receipts/{e.Date:yyyy-MM-dd}_{e.Category}_{Sanitise(e.Merchant)}{Path.GetExtension(a.FileName)}");
+                    if (await AddToZip(zip, a, name, ct)) files.Add(name);
+                }
+                index.AppendLine(string.Join(",", new object?[]
+                {
+                    e.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), e.Category, e.Merchant, e.Amount, e.Currency,
+                    e.IsFullyBusiness, e.Fuel?.Litres, e.Fuel?.OdometerMiles, e.Notes, string.Join("|", files)
+                }.Select(Csv)));
+            }
+            var idx = zip.CreateEntry("expenses.csv");
+            await using (var w = new StreamWriter(idx.Open(), new UTF8Encoding(true)))
+                await w.WriteAsync(index.ToString());
+
+            // Odometer index + photos
+            var odo = new StringBuilder();
+            odo.AppendLine("date,miles,source,notes,photoFile");
+            foreach (var r in readings.OrderBy(r => r.Date))
+            {
+                string? file = null;
+                if (r.PhotoAttachmentId != null)
+                {
+                    var a = await _attachments.GetByIdAsync(r.PhotoAttachmentId, userId);
+                    if (a != null)
+                    {
+                        var name = UniqueName(usedNames, $"odometer/{r.Date:yyyy-MM-dd}_{r.Miles:0}{Path.GetExtension(a.FileName)}");
+                        if (await AddToZip(zip, a, name, ct)) file = name;
+                    }
+                }
+                odo.AppendLine(string.Join(",", new object?[] { r.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), r.Miles, r.Source, r.Notes, file }.Select(Csv)));
+            }
+            var odoEntry = zip.CreateEntry("odometer-readings.csv");
+            await using (var w = new StreamWriter(odoEntry.Open(), new UTF8Encoding(true)))
+                await w.WriteAsync(odo.ToString());
+        }
+
+        return ms.ToArray();
+    }
+
+    private async Task<bool> AddToZip(ZipArchive zip, Attachment a, string entryName, CancellationToken ct)
+    {
+        await using var src = await _attachments.OpenContentAsync(a, ct);
+        if (src == null) return false;
+        var entry = zip.CreateEntry(entryName, CompressionLevel.Fastest);
+        await using var dst = entry.Open();
+        await src.CopyToAsync(dst, ct);
+        return true;
+    }
+
+    // ---------- helpers ----------
+
+    private static TaxReportWarningDto Warn(string severity, string code, string message) =>
+        new() { Severity = severity, Code = code, Message = message };
+
+    private static decimal Round2(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
+
+    private static string Csv(object? v)
+    {
+        if (v == null) return "";
+        var s = v switch
+        {
+            decimal d => d.ToString("0.00", CultureInfo.InvariantCulture),
+            double d => d.ToString("0.##", CultureInfo.InvariantCulture),
+            bool b => b ? "yes" : "no",
+            _ => v.ToString() ?? ""
+        };
+        return s.IndexOfAny(new[] { ',', '"', '\n', '\r' }) >= 0 ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
+    }
+
+    private static string Sanitise(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "receipt";
+        var cleaned = new string(s.Trim().Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+        return cleaned.Length > 30 ? cleaned[..30] : cleaned;
+    }
+
+    private static string UniqueName(HashSet<string> used, string name)
+    {
+        if (used.Add(name)) return name;
+        var ext = Path.GetExtension(name);
+        var stem = name[..^ext.Length];
+        for (var i = 2; ; i++)
+        {
+            var candidate = $"{stem}_{i}{ext}";
+            if (used.Add(candidate)) return candidate;
+        }
+    }
+}

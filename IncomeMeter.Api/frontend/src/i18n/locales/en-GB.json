@@ -519,7 +519,8 @@
     "selectAll": "Select All",
     "clearAll": "Clear All",
     "noOptions": "No options available",
-    "info": "Information"
+    "info": "Information",
+    "saving": "Saving…"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -622,7 +623,124 @@
         "litresInvalid": "Litres must be a number",
         "milesInvalid": "Odometer must be a number",
         "milesRequired": "Odometer reading is required"
-      }
+      },
+      "vehicle": "Vehicle for these receipts",
+      "noVehicle": "Not assigned",
+      "fromOcr": "date from receipt (OCR)",
+      "ocrHint": "Merchant / amount pre-filled by OCR – please check"
     }
+  },
+  "vehicles": {
+    "title": "Vehicles",
+    "subtitle": "CO2, purchase details and the claim method drive the capital allowance and the HMRC method lock.",
+    "add": "Add vehicle",
+    "edit": "Edit vehicle",
+    "new": "new",
+    "empty": "No vehicles yet. Add the vehicle you use for work.",
+    "confirmDelete": "Delete {{reg}}? Expenses linked to it are kept.",
+    "lockHint": "HMRC: once you have claimed the flat-rate mileage method for a vehicle you must keep using it for that vehicle. Actual costs can only be chosen for a vehicle that has never been claimed at the flat rate.",
+    "errors": {
+      "load": "Failed to load vehicles.",
+      "save": "Failed to save vehicle.",
+      "delete": "Failed to delete vehicle."
+    },
+    "sections": {
+      "hmrc": "HMRC method & capital allowance pool"
+    },
+    "types": {
+      "car": "Car",
+      "van": "Van",
+      "motorcycle": "Motorcycle"
+    },
+    "fuels": {
+      "petrol": "Petrol",
+      "diesel": "Diesel",
+      "hybrid": "Hybrid",
+      "electric": "Electric",
+      "other": "Other"
+    },
+    "finance": {
+      "cash": "Bought outright",
+      "hp": "Hire purchase / loan",
+      "lease": "Leased",
+      "none": "Not owned"
+    },
+    "claimMethods": {
+      "actualCost": "Actual costs",
+      "mileage": "Flat-rate mileage (45p/25p)"
+    },
+    "fields": {
+      "registration": "Registration",
+      "type": "Type",
+      "make": "Make",
+      "model": "Model",
+      "fuel": "Fuel",
+      "co2": "CO2 g/km",
+      "co2Hint": "from V5C – decides 18% / 6% rate",
+      "purchase": "Purchase",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Purchase price (£)",
+      "isNew": "Bought new (unused)",
+      "finance": "Finance",
+      "claimMethod": "Claim method",
+      "lockedFrom": "Method first used in tax year",
+      "lockedFromHint": "e.g. 2023 = 2023/24; leave blank if not yet filed",
+      "poolBf": "Pool b/f",
+      "poolBfHint": "written-down value from last return",
+      "poolYear": "Pool b/f for tax year",
+      "notes": "Notes",
+      "active": "Active (currently in use)"
+    }
+  },
+  "taxReport": {
+    "title": "Tax year report",
+    "subtitle": "Actual-cost method figures for your Self Assessment, with the flat-rate equivalent for comparison.",
+    "vehicle": "Vehicle",
+    "defaultVehicle": "Default (first active)",
+    "overridePct": "Business % override",
+    "downloadCsv": "CSV",
+    "downloadZip": "Receipts ZIP",
+    "errors": {
+      "load": "Failed to build the report.",
+      "download": "Download failed."
+    },
+    "actualCostMethod": "Actual cost method",
+    "simplifiedMethod": "Simplified expenses (flat rate)",
+    "runningCosts": "running costs",
+    "capitalAllowance": "Capital allowance",
+    "difference": "Difference",
+    "equal": "Both methods give the same deduction",
+    "better": "{{method}} gives the larger deduction",
+    "locked": "locked to current method",
+    "mileage": "Mileage & business use",
+    "businessMiles": "Business miles (routes)",
+    "routes": "routes",
+    "odometerOpen": "Odometer opening",
+    "odometerClose": "Odometer closing",
+    "totalMiles": "Total miles",
+    "businessPct": "Business use",
+    "source": {
+      "odometer": "from odometer",
+      "override": "override",
+      "unavailable": "unknown"
+    },
+    "qualifying": "Qualifying expenditure",
+    "poolBf": "Pool brought forward",
+    "rate": "Rate",
+    "grossAllowance": "Gross allowance",
+    "allowance": "Allowance to claim",
+    "poolCf": "Pool carried forward",
+    "runningCostsTitle": "Running costs by category",
+    "total": "Total",
+    "fullyBusiness": "100% business",
+    "allowable": "Allowable",
+    "disallowable": "Disallowable",
+    "noReceipt": "No receipt",
+    "viaCapitalAllowance": "via capital allowance",
+    "sa103": "SA103 boxes – copy these into your return",
+    "form": "Form",
+    "box": "Box",
+    "label": "Label",
+    "amount": "Amount"
   }
 }

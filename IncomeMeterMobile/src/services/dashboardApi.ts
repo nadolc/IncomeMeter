@@ -82,6 +82,8 @@ apiClient.interceptors.response.use(
   }
 );
 
+export { apiClient };
+
 export class DashboardApiService {
   static async getDashboardStats(): Promise<DashboardStats> {
     try {

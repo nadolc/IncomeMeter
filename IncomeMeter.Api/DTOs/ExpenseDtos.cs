@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace IncomeMeter.Api.DTOs;
 
@@ -17,6 +17,17 @@ public class AttachmentUploadResultDto
     /// <summary>True if a file with the same hash was already uploaded by this user. AttachmentId then points at the existing one.</summary>
     public bool IsDuplicate { get; set; }
     public string? Error { get; set; }
+    /// <summary>Merchant / date / total read from the receipt when OCR is enabled.</summary>
+    public AttachmentOcrDto? Ocr { get; set; }
+}
+
+public class AttachmentOcrDto
+{
+    public string? Merchant { get; set; }
+    public DateTime? Date { get; set; }
+    public decimal? Total { get; set; }
+    public string? Currency { get; set; }
+    public float Confidence { get; set; }
 }
 
 public class AttachmentDto

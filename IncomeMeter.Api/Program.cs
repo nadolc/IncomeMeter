@@ -103,6 +103,22 @@ else
 Console.WriteLine($"Attachment storage provider: {storageProvider}");
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<ITaxYearReportService, TaxYearReportService>();
+builder.Services.Configure<TaxRulesSettings>(builder.Configuration.GetSection("TaxRules"));
+
+// Receipt OCR (Azure AI Document Intelligence) – optional
+builder.Services.Configure<OcrSettings>(builder.Configuration.GetSection("Ocr"));
+var ocrEnabled = builder.Configuration.GetValue<bool>("Ocr:Enabled");
+if (ocrEnabled)
+{
+    builder.Services.AddSingleton<IReceiptOcrService, AzureReceiptOcrService>();
+}
+else
+{
+    builder.Services.AddSingleton<IReceiptOcrService, NoOpReceiptOcrService>();
+}
+Console.WriteLine($"Receipt OCR: {(ocrEnabled ? "enabled" : "disabled")}");
 
 // JWT Configuration
 builder.Services.Configure<IncomeMeter.Api.Models.JwtSettings>(builder.Configuration.GetSection("Jwt"));

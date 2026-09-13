@@ -294,7 +294,7 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'parking', 'tolls', 'cleaning', 'financeInterest', 'vehiclePurchase', 'other'
 ];
 
-export type DateSource = 'exif' | 'filename' | 'manual';
+export type DateSource = 'exif' | 'filename' | 'ocr' | 'manual';
 export type OdometerSource = 'fuelStop' | 'taxYearStart' | 'taxYearEnd' | 'manual';
 
 export interface AttachmentUploadResult {
@@ -307,6 +307,13 @@ export interface AttachmentUploadResult {
   dateSource: 'exif' | 'filename' | null;
   isDuplicate: boolean;
   error: string | null;
+  ocr?: {
+    merchant: string | null;
+    date: string | null;
+    total: number | null;
+    currency: string | null;
+    confidence: number;
+  } | null;
 }
 
 export interface FuelDetails {
@@ -381,4 +388,125 @@ export interface BatchImportResult {
   created: number;
   failed: number;
   results: Array<{ index: number; kind: string; id: string | null; error: string | null }>;
+}
+
+// ---------- Vehicles ----------
+
+export type VehicleType = 'car' | 'van' | 'motorcycle';
+export type ClaimMethod = 'actualCost' | 'mileage';
+export type FinanceType = 'cash' | 'hp' | 'lease' | 'none';
+
+export interface Vehicle {
+  id: string;
+  userId: string;
+  registration: string;
+  make?: string | null;
+  model?: string | null;
+  vehicleType: VehicleType;
+  fuelType?: string | null;
+  co2GPerKm?: number | null;
+  purchaseDate?: string | null;
+  purchasePrice?: number | null;
+  isNew: boolean;
+  financeType: FinanceType;
+  claimMethod: ClaimMethod;
+  claimMethodLockedFromTaxYear?: number | null;
+  capitalAllowancePoolBroughtForward?: number | null;
+  poolBroughtForwardTaxYear?: number | null;
+  isActive: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type VehicleInput = Omit<Vehicle, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isActive'> & { isActive?: boolean };
+
+// ---------- Tax year report ----------
+
+export interface TaxReportWarning {
+  severity: 'info' | 'warning' | 'error';
+  code: string;
+  message: string;
+}
+
+export interface TaxReportOdometerPoint {
+  date: string;
+  miles: number;
+  source: 'reading' | 'fuelReceipt';
+}
+
+export interface TaxReportCategory {
+  category: string;
+  count: number;
+  total: number;
+  fullyBusinessTotal: number;
+  allowable: number;
+  disallowable: number;
+  receiptsMissing: number;
+  excludedFromRunningCosts: boolean;
+}
+
+export interface TaxYearReport {
+  taxYear: number;
+  taxYearLabel: string;
+  periodFrom: string;
+  periodTo: string;
+  generatedAt: string;
+  vehicle: {
+    id: string;
+    registration: string;
+    description?: string | null;
+    vehicleType: VehicleType;
+    claimMethod: ClaimMethod;
+    claimMethodLockedFromTaxYear?: number | null;
+    co2GPerKm?: number | null;
+    isNew: boolean;
+    purchaseDate?: string | null;
+    purchasePrice?: number | null;
+  } | null;
+  mileage: {
+    businessMiles: number;
+    routesCounted: number;
+    routesWithoutMileage: number;
+    odometerStart: TaxReportOdometerPoint | null;
+    odometerEnd: TaxReportOdometerPoint | null;
+    odometerReadingsInPeriod: number;
+    totalMiles: number | null;
+    businessUsePercent: number | null;
+    businessUseSource: 'odometer' | 'override' | 'unavailable';
+  };
+  categories: TaxReportCategory[];
+  totals: { totalExpenses: number; allowable: number; disallowable: number; receiptsMissing: number };
+  capitalAllowance: {
+    applicable: boolean;
+    reason?: string | null;
+    allowanceType?: string | null;
+    allowanceLabel?: string | null;
+    rate: number;
+    qualifyingExpenditure: number;
+    poolBroughtForward: number;
+    grossAllowance: number;
+    businessUsePercent: number | null;
+    allowance: number;
+    poolCarriedForward: number;
+    sa103Box?: string | null;
+  };
+  simplifiedExpenses: {
+    businessMiles: number;
+    firstBandMiles: number;
+    firstBandRate: number;
+    secondBandMiles: number;
+    secondBandRate: number;
+    amount: number;
+  };
+  comparison: {
+    actualCostTotal: number;
+    simplifiedTotal: number;
+    difference: number;
+    betterMethod: 'actualCost' | 'mileage' | 'equal';
+    lockedToOtherMethod: boolean;
+  };
+  sa103Boxes: Array<{ form: string; box: string; label: string; amount: number; note?: string | null }>;
+  warnings: TaxReportWarning[];
+  disclaimer: string;
 }

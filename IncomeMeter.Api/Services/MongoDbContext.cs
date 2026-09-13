@@ -20,6 +20,7 @@ public class MongoDbContext
     public virtual IMongoCollection<Attachment> Attachments { get; }
     public virtual IMongoCollection<Expense> Expenses { get; }
     public virtual IMongoCollection<OdometerReading> OdometerReadings { get; }
+    public virtual IMongoCollection<Vehicle> Vehicles { get; }
 
     public MongoDbContext(IOptions<DatabaseSettings> dbSettings)
     {
@@ -36,5 +37,6 @@ public class MongoDbContext
         Attachments = database.GetCollection<Attachment>("attachments");
         Expenses = database.GetCollection<Expense>("expenses");
         OdometerReadings = database.GetCollection<OdometerReading>("odometerReadings");
+        Vehicles = database.GetCollection<Vehicle>("vehicles");
     }
 }

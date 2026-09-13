@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace IncomeMeter.Api.Models;
@@ -32,4 +32,17 @@ public class Attachment
     public string? DateSource { get; set; }
 
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Fields read from the receipt by OCR, if enabled. Best-effort only.</summary>
+    public AttachmentOcr? Ocr { get; set; }
+}
+
+public class AttachmentOcr
+{
+    public string? Merchant { get; set; }
+    /// <summary>Transaction date printed on the receipt (local wall-clock, no zone).</summary>
+    public DateTime? Date { get; set; }
+    public decimal? Total { get; set; }
+    public string? Currency { get; set; }
+    public float Confidence { get; set; }
 }
