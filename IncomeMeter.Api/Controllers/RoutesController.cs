@@ -96,29 +96,38 @@ public class RoutesController : ControllerBase
             .GroupBy(w => w.Name.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var created = new List<Models.Route>();
         var failures = new List<object>();
+        var valid = new List<CreateRouteDto>();
 
         for (var i = 0; i < routes.Count; i++)
         {
             var dto = routes[i];
-            try
+            if (string.IsNullOrWhiteSpace(dto.WorkType))
             {
-                if (string.IsNullOrWhiteSpace(dto.WorkType)) throw new ArgumentException("workType is required");
-                if (dto.ScheduleEnd <= dto.ScheduleStart) throw new ArgumentException("scheduleEnd must be after scheduleStart");
-
-                if (dto.WorkTypeId == null && byName.TryGetValue(dto.WorkType.Trim(), out var wt))
-                    dto.WorkTypeId = wt.Id;
-                if (dto.Status == null)
-                    dto.Status = dto.ActualEndTime.HasValue || dto.EndMile.HasValue ? "completed" : "scheduled";
-
-                created.Add(await _routeService.CreateRouteAsync(dto, userId));
+                failures.Add(new { index = i, workType = dto.WorkType, error = "workType is required" });
+                continue;
             }
-            catch (Exception ex)
+            if (dto.ScheduleEnd <= dto.ScheduleStart)
             {
-                _logger.LogWarning(ex, "Bulk route import item {Index} failed", i);
-                failures.Add(new { index = i, workType = dto.WorkType, error = ex.Message });
+                failures.Add(new { index = i, workType = dto.WorkType, error = "scheduleEnd must be after scheduleStart" });
+                continue;
             }
+            if (dto.WorkTypeId == null && byName.TryGetValue(dto.WorkType.Trim(), out var wt))
+                dto.WorkTypeId = wt.Id;
+            if (dto.Status == null)
+                dto.Status = dto.ActualEndTime.HasValue || dto.EndMile.HasValue ? "completed" : "scheduled";
+            valid.Add(dto);
+        }
+
+        List<Models.Route> created;
+        try
+        {
+            created = await _routeService.CreateRoutesAsync(valid, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk route import failed for {Count} rows", valid.Count);
+            return StatusCode(500, new { error = "Bulk import failed: " + ex.Message, failures });
         }
 
         Log.Logger

@@ -30,48 +30,68 @@ public class RouteService : IRouteService
 
     public async Task<IncomeMeter.Api.Models.Route> CreateRouteAsync(CreateRouteDto routeDto, string userId)
     {
-        // Get user's timezone for proper conversion
         var user = await _userService.GetUserByIdAsync(userId);
         var userTimezone = user?.Settings?.TimeZone ?? "UTC";
+        var vehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId);
 
-        // Convert schedule times from user timezone to UTC
+        var route = BuildRoute(routeDto, userId, userTimezone, vehicleId);
+        await _routes.InsertOneAsync(route);
+        return route;
+    }
+
+    public async Task<List<IncomeMeter.Api.Models.Route>> CreateRoutesAsync(IEnumerable<CreateRouteDto> routeDtos, string userId)
+    {
+        var dtos = routeDtos.ToList();
+        if (dtos.Count == 0) return new List<IncomeMeter.Api.Models.Route>();
+
+        // One lookup for the whole batch instead of per row.
+        var user = await _userService.GetUserByIdAsync(userId);
+        var userTimezone = user?.Settings?.TimeZone ?? "UTC";
+        var defaultVehicleId = await ResolveVehicleIdAsync(null, userId);
+
+        var routes = dtos
+            .Select(dto => BuildRoute(dto, userId, userTimezone, string.IsNullOrWhiteSpace(dto.VehicleId) ? defaultVehicleId : dto.VehicleId))
+            .ToList();
+        await _routes.InsertManyAsync(routes, new InsertManyOptions { IsOrdered = false });
+        return routes;
+    }
+
+    /// <summary>Map a create DTO to a Route, converting the user's local times to UTC.</summary>
+    private IncomeMeter.Api.Models.Route BuildRoute(CreateRouteDto routeDto, string userId, string userTimezone, string? vehicleId)
+    {
         var utcScheduleStart = _timezoneService.ConvertToUtc(routeDto.ScheduleStart, userTimezone);
         var utcScheduleEnd = _timezoneService.ConvertToUtc(routeDto.ScheduleEnd, userTimezone);
-        
-        // Convert actual times if provided
-        var utcActualStartTime = routeDto.ActualStartTime.HasValue 
-            ? _timezoneService.ConvertToUtc(routeDto.ActualStartTime.Value, userTimezone) 
+        var utcActualStartTime = routeDto.ActualStartTime.HasValue
+            ? _timezoneService.ConvertToUtc(routeDto.ActualStartTime.Value, userTimezone)
             : (DateTime?)null;
-        var utcActualEndTime = routeDto.ActualEndTime.HasValue 
-            ? _timezoneService.ConvertToUtc(routeDto.ActualEndTime.Value, userTimezone) 
+        var utcActualEndTime = routeDto.ActualEndTime.HasValue
+            ? _timezoneService.ConvertToUtc(routeDto.ActualEndTime.Value, userTimezone)
             : (DateTime?)null;
 
-        var route = new IncomeMeter.Api.Models.Route
+        return new IncomeMeter.Api.Models.Route
         {
             UserId = userId,
             WorkType = routeDto.WorkType,
             WorkTypeId = routeDto.WorkTypeId,
-            VehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId),
+            VehicleId = vehicleId,
             ScheduleStart = utcScheduleStart,
             ScheduleEnd = utcScheduleEnd,
             ActualStartTime = utcActualStartTime,
             ActualEndTime = utcActualEndTime,
             StartMile = routeDto.StartMile,
             EndMile = routeDto.EndMile,
-            Status = (routeDto.Status == null ? "scheduled" : routeDto.Status),
-            Incomes = routeDto.Incomes.Select(dto => new IncomeItem 
-            { 
-                Source = dto.Source, 
-                Amount = dto.Amount 
+            Status = routeDto.Status ?? "scheduled",
+            Incomes = routeDto.Incomes.Select(dto => new IncomeItem
+            {
+                Source = dto.Source,
+                Amount = dto.Amount
             }).ToList(),
             TotalIncome = routeDto.Incomes.Sum(i => i.Amount),
-            Distance = ((routeDto.StartMile.HasValue && routeDto.EndMile.HasValue) ? Math.Abs(routeDto.EndMile.Value - routeDto.StartMile.Value): 0),
+            Distance = ((routeDto.StartMile.HasValue && routeDto.EndMile.HasValue) ? Math.Abs(routeDto.EndMile.Value - routeDto.StartMile.Value) : 0),
             EstimatedIncome = routeDto.EstimatedIncome ?? 0,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        await _routes.InsertOneAsync(route);
-        return route;
     }
 
     public async Task<IncomeMeter.Api.Models.Route?> StartRouteAsync(StartRouteDto routeDto, string userId)

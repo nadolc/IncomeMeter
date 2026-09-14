@@ -472,8 +472,27 @@ app.UseMiddleware<ScopeAuthorizationMiddleware>();
 // Built-in authorization (runs after all authentication attempts)
 app.UseAuthorization();
 
-// Enable static file serving for React frontend
-app.UseStaticFiles();
+// Enable static file serving for React frontend.
+// index.html must never be cached: it references hashed asset names, so a stale copy keeps loading the old bundle
+// after a deploy. Hashed assets under /assets are immutable and can be cached for a long time.
+var noCacheHtml = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var headers = ctx.Context.Response.Headers;
+        if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        {
+            headers.CacheControl = "no-cache, no-store, must-revalidate";
+            headers.Pragma = "no-cache";
+            headers.Expires = "0";
+        }
+        else if (ctx.Context.Request.Path.StartsWithSegments("/assets"))
+        {
+            headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+    }
+};
+app.UseStaticFiles(noCacheHtml);
 
 // Expose configuration to frontend
 app.MapGet("/api/config", (IConfiguration config) => new
@@ -535,7 +554,7 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 // SPA fallback for React routing - this must be LAST
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", noCacheHtml);
 
 Console.WriteLine("=== IncomeMeter API Started Successfully ===");
 Console.WriteLine($"Listening on: {string.Join(", ", builder.Configuration.GetValue<string>("ASPNETCORE_URLS")?.Split(';') ?? new[] { "http://localhost:5000" })}");

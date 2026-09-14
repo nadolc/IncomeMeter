@@ -8,6 +8,8 @@ public interface IRouteService
     Task<List<IncomeMeter.Api.Models.Route>> GetRoutesByUserIdAsync(string userId);
     Task<IncomeMeter.Api.Models.Route?> GetRouteByIdAsync(string id, string userId);
     Task<IncomeMeter.Api.Models.Route> CreateRouteAsync(CreateRouteDto routeDto, string userId);
+    /// <summary>Create many routes with one user/vehicle lookup and a single batch insert.</summary>
+    Task<List<IncomeMeter.Api.Models.Route>> CreateRoutesAsync(IEnumerable<CreateRouteDto> routeDtos, string userId);
     Task<IncomeMeter.Api.Models.Route?> UpdateRouteAsync(string id, UpdateRouteDto routeDto, string userId);
     Task<IncomeMeter.Api.Models.Route?> StartRouteAsync(StartRouteDto routeDto, string userId);
     Task<IncomeMeter.Api.Models.Route?> EndRouteAsync(EndRouteDto routeDto, string userId);
