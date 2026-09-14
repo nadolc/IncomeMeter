@@ -81,6 +81,7 @@ public class RoutesController : ControllerBase
     /// business mileage. Work type ids are resolved from the work type name when not supplied.
     /// </summary>
     [HttpPost("bulk")]
+    [Authorize(AuthenticationSchemes = "Bearer")]
     public async Task<IActionResult> CreateRoutesBulk(
         [FromBody] List<CreateRouteDto> routes,
         [FromServices] IWorkTypeConfigService workTypeConfigService)
