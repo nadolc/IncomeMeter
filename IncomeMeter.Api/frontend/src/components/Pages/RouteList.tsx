@@ -126,7 +126,24 @@ const RouteList: React.FC = () => {
       setShowBulkImport(false);
     } catch (error) {
       console.error('Failed to import routes:', error);
-      throw error; // Re-throw to let the import component handle the error display
+      // Surface the server's explanation rather than just the status code.
+      const resp = (error as { response?: { status?: number; data?: unknown } })?.response;
+      const data = resp?.data as
+        | { error?: string; failures?: Array<{ index: number; workType?: string; error: string }>; title?: string; errors?: Record<string, string[]> }
+        | string
+        | undefined;
+      let message = error instanceof Error ? error.message : 'Unknown error';
+      if (data && typeof data === 'object') {
+        const parts: string[] = [];
+        if (data.error) parts.push(data.error);
+        if (data.title && !data.error) parts.push(data.title);
+        if (data.errors) parts.push(...Object.entries(data.errors).map(([k, v]) => `${k}: ${v.join('; ')}`));
+        if (data.failures?.length) parts.push(...data.failures.map(f => `row ${f.index + 1}${f.workType ? ` (${f.workType})` : ''}: ${f.error}`));
+        if (parts.length) message = `${resp?.status ?? ''} ${parts.join(' | ')}`.trim();
+      } else if (typeof data === 'string' && data.trim()) {
+        message = `${resp?.status ?? ''} ${data.slice(0, 300)}`.trim();
+      }
+      throw new Error(message);
     }
   }, [loadRoutes]);
 
