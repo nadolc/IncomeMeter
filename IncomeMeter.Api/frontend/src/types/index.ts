@@ -468,6 +468,7 @@ export interface Vehicle {
   fuelType?: string | null;
   co2GPerKm?: number | null;
   purchaseDate?: string | null;
+  disposalDate?: string | null;
   purchasePrice?: number | null;
   isNew: boolean;
   financeType: FinanceType;
@@ -481,7 +482,15 @@ export interface Vehicle {
   updatedAt: string;
 }
 
-export type VehicleInput = Omit<Vehicle, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isActive'> & { isActive?: boolean };
+export type VehicleInput = Omit<Vehicle, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isActive'> & { isActive?: boolean; clearDisposalDate?: boolean };
+
+export interface AssignByDateResult {
+  routesUpdated: number;
+  expensesUpdated: number;
+  odometerReadingsUpdated: number;
+  unmatched: number;
+  byVehicle: Record<string, number>;
+}
 
 // ---------- Tax year report ----------
 

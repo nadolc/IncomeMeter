@@ -15,6 +15,7 @@ public class CreateVehicleDto
     [Range(0, 1000)]
     public int? Co2GPerKm { get; set; }
     public DateTime? PurchaseDate { get; set; }
+    public DateTime? DisposalDate { get; set; }
     [Range(0, 10_000_000)]
     public decimal? PurchasePrice { get; set; }
     public bool IsNew { get; set; }
@@ -39,6 +40,9 @@ public class UpdateVehicleDto
     [Range(0, 1000)]
     public int? Co2GPerKm { get; set; }
     public DateTime? PurchaseDate { get; set; }
+    public DateTime? DisposalDate { get; set; }
+    /// <summary>Set true to clear the disposal date.</summary>
+    public bool? ClearDisposalDate { get; set; }
     [Range(0, 10_000_000)]
     public decimal? PurchasePrice { get; set; }
     public bool? IsNew { get; set; }
@@ -73,4 +77,23 @@ public class BackfillVehicleResultDto
     public long RoutesUpdated { get; set; }
     public long ExpensesUpdated { get; set; }
     public long OdometerReadingsUpdated { get; set; }
+}
+
+/// <summary>Assign every route / expense / odometer reading to the vehicle in use on its date.</summary>
+public class AssignByDateDto
+{
+    public bool Routes { get; set; } = true;
+    public bool Expenses { get; set; } = true;
+    public bool OdometerReadings { get; set; } = true;
+    /// <summary>Only touch records without a vehicle (default false: re-evaluate everything).</summary>
+    public bool OnlyUnassigned { get; set; } = false;
+}
+
+public class AssignByDateResultDto
+{
+    public long RoutesUpdated { get; set; }
+    public long ExpensesUpdated { get; set; }
+    public long OdometerReadingsUpdated { get; set; }
+    public long Unmatched { get; set; }
+    public Dictionary<string, long> ByVehicle { get; set; } = new();
 }

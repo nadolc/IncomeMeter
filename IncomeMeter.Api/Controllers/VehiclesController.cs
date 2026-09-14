@@ -115,6 +115,16 @@ public class VehiclesController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
+    /// <summary>Assign every route / expense / odometer reading to the vehicle in use on its date (purchase → disposal date).</summary>
+    [HttpPost("assign-by-date")]
+    public async Task<IActionResult> AssignByDate([FromBody] AssignByDateDto? options)
+    {
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
+
+        return Ok(await _vehicleService.AssignByDateAsync(options ?? new AssignByDateDto(), userId));
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicle(string id)
     {

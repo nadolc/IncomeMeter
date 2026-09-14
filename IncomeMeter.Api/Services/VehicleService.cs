@@ -13,6 +13,7 @@ public interface IVehicleService
     Task<Vehicle?> UpdateVehicleAsync(string id, UpdateVehicleDto dto, string userId);
     Task<bool> DeleteVehicleAsync(string id, string userId);
     Task<BackfillVehicleResultDto?> BackfillAsync(string id, BackfillVehicleDto options, string userId);
+    Task<AssignByDateResultDto> AssignByDateAsync(AssignByDateDto options, string userId);
 }
 
 public class VehicleService : IVehicleService
@@ -75,6 +76,57 @@ public class VehicleService : IVehicleService
         return result;
     }
 
+    public async Task<AssignByDateResultDto> AssignByDateAsync(AssignByDateDto options, string userId)
+    {
+        var vehicles = await _vehicles.Find(v => v.UserId == userId).ToListAsync();
+        var result = new AssignByDateResultDto();
+        var labels = vehicles.ToDictionary(v => v.Id!, v => v.Registration);
+
+        async Task<long> Apply<T>(IMongoCollection<T> col, FilterDefinition<T> baseFilter,
+            Func<T, string?> id, Func<T, DateTime> date, Func<T, string?> current,
+            Func<string, string?, UpdateDefinition<T>> makeUpdate)
+        {
+            var items = await col.Find(baseFilter).ToListAsync();
+            long updated = 0;
+            foreach (var item in items)
+            {
+                var target = VehicleAssignment.PickForDate(vehicles, date(item));
+                if (target == null) { result.Unmatched++; continue; }
+                if (target == current(item)) continue;
+                await col.UpdateOneAsync(Builders<T>.Filter.Eq("_id", MongoDB.Bson.ObjectId.Parse(id(item)!)), makeUpdate(target, current(item)));
+                updated++;
+                result.ByVehicle[labels[target]] = result.ByVehicle.GetValueOrDefault(labels[target]) + 1;
+            }
+            return updated;
+        }
+
+        if (options.Routes)
+        {
+            var fb = Builders<Route>.Filter;
+            var f = fb.Eq(r => r.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(r => r.VehicleId, null);
+            result.RoutesUpdated = await Apply(_routes, f, r => r.Id, r => r.ActualStartTime ?? r.ScheduleStart, r => r.VehicleId,
+                (t, _) => Builders<Route>.Update.Set(r => r.VehicleId, t).Set(r => r.UpdatedAt, DateTime.UtcNow));
+        }
+        if (options.Expenses)
+        {
+            var fb = Builders<Expense>.Filter;
+            var f = fb.Eq(e => e.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(e => e.VehicleId, null);
+            result.ExpensesUpdated = await Apply(_expenses, f, e => e.Id, e => e.Date, e => e.VehicleId,
+                (t, _) => Builders<Expense>.Update.Set(e => e.VehicleId, t).Set(e => e.UpdatedAt, DateTime.UtcNow));
+        }
+        if (options.OdometerReadings)
+        {
+            var fb = Builders<OdometerReading>.Filter;
+            var f = fb.Eq(o => o.UserId, userId);
+            if (options.OnlyUnassigned) f &= fb.Eq(o => o.VehicleId, null);
+            result.OdometerReadingsUpdated = await Apply(_odometer, f, o => o.Id, o => o.Date, o => o.VehicleId,
+                (t, _) => Builders<OdometerReading>.Update.Set(o => o.VehicleId, t).Set(o => o.UpdatedAt, DateTime.UtcNow));
+        }
+        return result;
+    }
+
     public async Task<List<Vehicle>> GetVehiclesAsync(string userId, bool includeInactive = false)
     {
         var fb = Builders<Vehicle>.Filter;
@@ -100,6 +152,7 @@ public class VehicleService : IVehicleService
             FuelType = dto.FuelType,
             Co2GPerKm = dto.Co2GPerKm,
             PurchaseDate = dto.PurchaseDate,
+            DisposalDate = dto.DisposalDate,
             PurchasePrice = dto.PurchasePrice,
             IsNew = dto.IsNew,
             FinanceType = dto.FinanceType,
@@ -138,6 +191,8 @@ public class VehicleService : IVehicleService
         if (dto.FuelType != null) existing.FuelType = dto.FuelType;
         if (dto.Co2GPerKm.HasValue) existing.Co2GPerKm = dto.Co2GPerKm;
         if (dto.PurchaseDate.HasValue) existing.PurchaseDate = dto.PurchaseDate;
+        if (dto.DisposalDate.HasValue) existing.DisposalDate = dto.DisposalDate;
+        if (dto.ClearDisposalDate == true) existing.DisposalDate = null;
         if (dto.PurchasePrice.HasValue) existing.PurchasePrice = dto.PurchasePrice;
         if (dto.IsNew.HasValue) existing.IsNew = dto.IsNew.Value;
         if (dto.FinanceType != null) existing.FinanceType = dto.FinanceType;

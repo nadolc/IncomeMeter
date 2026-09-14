@@ -1,4 +1,4 @@
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace IncomeMeter.Api.Models;
@@ -47,6 +47,8 @@ public class Vehicle
     public int? Co2GPerKm { get; set; }
 
     public DateTime? PurchaseDate { get; set; }
+    /// <summary>Date the vehicle was sold / stopped being used. Routes and expenses after this go to the next vehicle.</summary>
+    public DateTime? DisposalDate { get; set; }
     public decimal? PurchasePrice { get; set; }
 
     /// <summary>True if bought new (unused). Matters for the 100% zero-emission first-year allowance.</summary>

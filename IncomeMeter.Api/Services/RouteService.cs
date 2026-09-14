@@ -32,7 +32,7 @@ public class RouteService : IRouteService
     {
         var user = await _userService.GetUserByIdAsync(userId);
         var userTimezone = user?.Settings?.TimeZone ?? "UTC";
-        var vehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId);
+        var vehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId, routeDto.ActualStartTime ?? routeDto.ScheduleStart);
 
         var route = BuildRoute(routeDto, userId, userTimezone, vehicleId);
         await _routes.InsertOneAsync(route);
@@ -47,10 +47,11 @@ public class RouteService : IRouteService
         // One lookup for the whole batch instead of per row.
         var user = await _userService.GetUserByIdAsync(userId);
         var userTimezone = user?.Settings?.TimeZone ?? "UTC";
-        var defaultVehicleId = await ResolveVehicleIdAsync(null, userId);
+        var vehicles = await LoadVehiclesAsync(userId);
 
         var routes = dtos
-            .Select(dto => BuildRoute(dto, userId, userTimezone, string.IsNullOrWhiteSpace(dto.VehicleId) ? defaultVehicleId : dto.VehicleId))
+            .Select(dto => BuildRoute(dto, userId, userTimezone,
+                string.IsNullOrWhiteSpace(dto.VehicleId) ? VehicleAssignment.PickForDate(vehicles, dto.ActualStartTime ?? dto.ScheduleStart) : dto.VehicleId))
             .ToList();
         await _routes.InsertManyAsync(routes, new InsertManyOptions { IsOrdered = false });
         return routes;
@@ -101,7 +102,7 @@ public class RouteService : IRouteService
             UserId = userId,
             WorkType = routeDto.WorkType,
             WorkTypeId = routeDto.WorkTypeId,
-            VehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId),
+            VehicleId = await ResolveVehicleIdAsync(routeDto.VehicleId, userId, DateTime.UtcNow),
             StartMile = routeDto.StartMile,
             Status = "in_progress",
             ActualStartTime = DateTime.UtcNow,
@@ -525,18 +526,23 @@ public class RouteService : IRouteService
             .ToListAsync();
     }
 
-    /// <summary>Use the supplied vehicle, else the user's single active vehicle, else none.</summary>
-    private async Task<string?> ResolveVehicleIdAsync(string? requested, string userId)
+    /// <summary>Use the supplied vehicle, else the vehicle in use on the given date (see <see cref="VehicleAssignment"/>).</summary>
+    private async Task<string?> ResolveVehicleIdAsync(string? requested, string userId, DateTime date)
     {
         if (!string.IsNullOrWhiteSpace(requested)) return requested;
+        var vehicles = await LoadVehiclesAsync(userId);
+        return VehicleAssignment.PickForDate(vehicles, date);
+    }
+
+    private async Task<List<Vehicle>> LoadVehiclesAsync(string userId)
+    {
         try
         {
-            var active = await _vehicles.Find(v => v.UserId == userId && v.IsActive).Limit(2).ToListAsync();
-            return active.Count == 1 ? active[0].Id : null;
+            return await _vehicles.Find(v => v.UserId == userId).ToListAsync();
         }
         catch
         {
-            return null; // vehicles collection unavailable (e.g. in unit tests) – routes still save
+            return new List<Vehicle>(); // vehicles collection unavailable (e.g. in unit tests) – routes still save
         }
     }
 }

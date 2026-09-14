@@ -712,7 +712,9 @@
       "poolBfHint": "written-down value from last return",
       "poolYear": "Pool b/f for tax year",
       "notes": "Notes",
-      "active": "Active (currently in use)"
+      "active": "Active (currently in use)",
+      "disposalDate": "Sold / disposed date",
+      "disposalDateHint": "blank = still in use"
     },
     "lookup": {
       "button": "Look up",
@@ -737,6 +739,13 @@
       "confirmAll": "Assign {{reg}} to ALL routes, expenses and odometer readings since {{from}}, even ones already linked to another vehicle?",
       "done": "{{reg}}: {{routes}} routes, {{expenses}} expenses, {{readings}} odometer readings updated.",
       "failed": "Backfill failed."
+    },
+    "assignByDate": {
+      "button": "Assign by date",
+      "hint": "Link every route, expense and odometer reading to the vehicle in use on its date",
+      "confirm": "Re-link ALL routes, expenses and odometer readings to the vehicle in use on their date (purchase date to disposal date)? Existing links are re-evaluated.",
+      "done": "Updated {{routes}} routes, {{expenses}} expenses, {{readings}} odometer readings ({{per}}). {{unmatched}} records matched no vehicle.",
+      "failed": "Assign by date failed."
     }
   },
   "taxReport": {

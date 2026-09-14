@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle, backfillVehicle } from '../../utils/api';
+import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle, backfillVehicle, assignVehiclesByDate } from '../../utils/api';
 import type { Vehicle, VehicleInput, VehicleLookupResult } from '../../types';
 import ExpensesSubNav from '../Expenses/ExpensesSubNav';
 
@@ -12,6 +12,7 @@ const emptyForm: VehicleInput = {
   fuelType: 'petrol',
   co2GPerKm: null,
   purchaseDate: null,
+  disposalDate: null,
   purchasePrice: null,
   isNew: false,
   financeType: 'cash',
@@ -98,6 +99,7 @@ const Vehicles: React.FC = () => {
       fuelType: v.fuelType ?? 'petrol',
       co2GPerKm: v.co2GPerKm ?? null,
       purchaseDate: v.purchaseDate ? v.purchaseDate.slice(0, 10) : null,
+      disposalDate: v.disposalDate ? v.disposalDate.slice(0, 10) : null,
       purchasePrice: v.purchasePrice ?? null,
       isNew: v.isNew,
       financeType: v.financeType,
@@ -124,7 +126,10 @@ const Vehicles: React.FC = () => {
     try {
       const payload: VehicleInput = {
         ...form,
-        purchaseDate: form.purchaseDate ? new Date(form.purchaseDate).toISOString() : null
+        purchaseDate: form.purchaseDate ? new Date(form.purchaseDate).toISOString() : null,
+        disposalDate: form.disposalDate ? new Date(form.disposalDate).toISOString() : null,
+        // editing an existing vehicle and blanking the field clears it server-side
+        clearDisposalDate: editing !== 'new' && !form.disposalDate
       };
       if (editing === 'new') await createVehicle(payload);
       else if (editing) await updateVehicle(editing.id, payload);
@@ -140,6 +145,27 @@ const Vehicles: React.FC = () => {
 
   const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
   const [backfilling, setBackfilling] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState(false);
+
+  const handleAssignByDate = async () => {
+    if (!window.confirm(t('vehicles.assignByDate.confirm', 'Re-link ALL routes, expenses and odometer readings to the vehicle in use on their date (purchase date to disposal date)? Existing links are re-evaluated.'))) return;
+    setAssigning(true);
+    setBackfillMsg(null);
+    setError(null);
+    try {
+      const r = await assignVehiclesByDate(false);
+      const per = Object.entries(r.byVehicle).map(([reg, n]) => `${reg}: ${n}`).join(', ');
+      setBackfillMsg(t('vehicles.assignByDate.done', {
+        defaultValue: 'Updated {{routes}} routes, {{expenses}} expenses, {{readings}} odometer readings ({{per}}). {{unmatched}} records matched no vehicle.',
+        routes: r.routesUpdated, expenses: r.expensesUpdated, readings: r.odometerReadingsUpdated, per: per || '-', unmatched: r.unmatched
+      }));
+    } catch (err) {
+      console.error('Assign by date failed', err);
+      setError(t('vehicles.assignByDate.failed', 'Assign by date failed.'));
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const handleBackfill = async (v: Vehicle, reassignAll: boolean) => {
     const fromLabel = v.purchaseDate ? new Date(v.purchaseDate).toLocaleDateString('en-GB') : t('vehicles.backfill.allTime', 'all time');
@@ -190,9 +216,19 @@ const Vehicles: React.FC = () => {
             {t('vehicles.subtitle', 'CO2, purchase details and the claim method drive the capital allowance and the HMRC method lock.')}
           </p>
         </div>
-        <button onClick={openNew} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
-          {t('vehicles.add', 'Add vehicle')}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handleAssignByDate}
+            disabled={assigning || vehicles.length === 0}
+            className="px-4 py-2 rounded-md border border-indigo-600 text-indigo-700 text-sm font-medium hover:bg-indigo-50 disabled:opacity-50"
+            title={t('vehicles.assignByDate.hint', 'Link every route, expense and odometer reading to the vehicle in use on its date')}
+          >
+            {assigning ? '...' : t('vehicles.assignByDate.button', 'Assign by date')}
+          </button>
+          <button onClick={openNew} className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+            {t('vehicles.add', 'Add vehicle')}
+          </button>
+        </div>
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -218,6 +254,12 @@ const Vehicles: React.FC = () => {
                 <dd>{v.co2GPerKm ?? '—'}</dd>
                 <dt className="text-gray-500">{t('vehicles.fields.purchase', 'Purchase')}</dt>
                 <dd>{v.purchaseDate ? new Date(v.purchaseDate).toLocaleDateString('en-GB') : '—'}{v.purchasePrice != null ? ` · ${fmtMoney(v.purchasePrice)}` : ''}{v.isNew ? ` · ${t('vehicles.new', 'new')}` : ''}</dd>
+                {v.disposalDate && (
+                  <>
+                    <dt className="text-gray-500">{t('vehicles.fields.disposalDate', 'Sold / disposed date')}</dt>
+                    <dd>{new Date(v.disposalDate).toLocaleDateString('en-GB')}</dd>
+                  </>
+                )}
                 <dt className="text-gray-500">{t('vehicles.fields.claimMethod', 'Claim method')}</dt>
                 <dd>
                   {t(`vehicles.claimMethods.${v.claimMethod}`, v.claimMethod)}
@@ -312,6 +354,10 @@ const Vehicles: React.FC = () => {
               <label className="block">
                 <span className={label}>{t('vehicles.fields.purchaseDate', 'Purchase date')}</span>
                 <input type="date" className={input} value={form.purchaseDate ?? ''} onChange={e => set('purchaseDate', e.target.value || null)} />
+              </label>
+              <label className="block">
+                <span className={label}>{t('vehicles.fields.disposalDate', 'Sold / disposed date')} <span className="text-gray-400">({t('vehicles.fields.disposalDateHint', 'blank = still in use')})</span></span>
+                <input type="date" className={input} value={form.disposalDate ?? ''} onChange={e => set('disposalDate', e.target.value || null)} />
               </label>
               <label className="block">
                 <span className={label}>{t('vehicles.fields.purchasePrice', 'Purchase price (£)')}</span>

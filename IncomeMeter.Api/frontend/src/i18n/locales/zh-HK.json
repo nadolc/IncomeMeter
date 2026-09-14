@@ -712,7 +712,9 @@
       "poolBfHint": "上次報稅後嘅遞減帳面值",
       "poolYear": "結轉至稅年",
       "notes": "備註",
-      "active": "使用中"
+      "active": "使用中",
+      "disposalDate": "售出 / 停用日期",
+      "disposalDateHint": "留空 = 仍在使用"
     },
     "lookup": {
       "button": "查詢",
@@ -737,6 +739,13 @@
       "confirmAll": "將 {{from}} 起「全部」路線、費用及里程讀數指派給 {{reg}}，包括已連結其他車輛嘅？",
       "done": "{{reg}}：已更新 {{routes}} 條路線、{{expenses}} 筆費用、{{readings}} 個里程讀數。",
       "failed": "回填失敗。"
+    },
+    "assignByDate": {
+      "button": "按日期指派車輛",
+      "hint": "將所有路線、費用及里程讀數連結到當日使用中嘅車輛",
+      "confirm": "將「全部」路線、費用及里程讀數重新連結到當日使用中嘅車輛（購買日期至售出日期）？已有嘅連結會重新計算。",
+      "done": "已更新 {{routes}} 條路線、{{expenses}} 筆費用、{{readings}} 個里程讀數（{{per}}）。{{unmatched}} 筆紀錄無對應車輛。",
+      "failed": "按日期指派失敗。"
     }
   },
   "taxReport": {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, CreateExpenseRequest, CreateOdometerReadingRequest, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, CreateExpenseRequest, CreateOdometerReadingRequest, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult, AssignByDateResult } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -493,6 +493,12 @@ export const deleteVehicle = async (id: string): Promise<void> => {
 /** Attach a vehicle to existing routes / expenses / odometer readings (default: only unassigned ones, from the purchase date). */
 export const backfillVehicle = async (id: string, options: BackfillVehicleOptions = {}): Promise<BackfillVehicleResult> => {
   const response = await api.post<BackfillVehicleResult>(`/api/vehicles/${id}/backfill`, options);
+  return response.data;
+};
+
+/** Re-link every route / expense / odometer reading to the vehicle in use on its date (purchase -> disposal date). */
+export const assignVehiclesByDate = async (onlyUnassigned = false): Promise<AssignByDateResult> => {
+  const response = await api.post<AssignByDateResult>('/api/vehicles/assign-by-date', { onlyUnassigned });
   return response.data;
 };
 
