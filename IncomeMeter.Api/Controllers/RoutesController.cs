@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
+using IncomeMeter.Api.Services.Interfaces;
 using IncomeMeter.Api.Middleware;
 using System.Security.Claims;
 using Serilog;
@@ -72,6 +73,68 @@ public class RoutesController : ControllerBase
             .Information("Route created successfully");
 
         return CreatedAtAction(nameof(GetRouteById), new { id = route!.Id }, route);
+    }
+
+    /// <summary>
+    /// Create many routes at once (CSV import). Each item is created independently; the response is the list of
+    /// created routes. Imported routes with actual start/end times default to "completed" so they count towards
+    /// business mileage. Work type ids are resolved from the work type name when not supplied.
+    /// </summary>
+    [HttpPost("bulk")]
+    public async Task<IActionResult> CreateRoutesBulk(
+        [FromBody] List<CreateRouteDto> routes,
+        [FromServices] IWorkTypeConfigService workTypeConfigService)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        if (routes == null || routes.Count == 0) return BadRequest(new { error = "No routes supplied" });
+        if (routes.Count > 1000) return BadRequest(new { error = "Too many routes - maximum 1000 per request" });
+
+        var workTypes = await workTypeConfigService.GetWorkTypeConfigsByUserIdAsync(userId);
+        var byName = workTypes
+            .Where(w => w.IsActive)
+            .GroupBy(w => w.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var created = new List<Models.Route>();
+        var failures = new List<object>();
+
+        for (var i = 0; i < routes.Count; i++)
+        {
+            var dto = routes[i];
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.WorkType)) throw new ArgumentException("workType is required");
+                if (dto.ScheduleEnd <= dto.ScheduleStart) throw new ArgumentException("scheduleEnd must be after scheduleStart");
+
+                if (dto.WorkTypeId == null && byName.TryGetValue(dto.WorkType.Trim(), out var wt))
+                    dto.WorkTypeId = wt.Id;
+                if (dto.Status == null)
+                    dto.Status = dto.ActualEndTime.HasValue || dto.EndMile.HasValue ? "completed" : "scheduled";
+
+                created.Add(await _routeService.CreateRouteAsync(dto, userId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Bulk route import item {Index} failed", i);
+                failures.Add(new { index = i, workType = dto.WorkType, error = ex.Message });
+            }
+        }
+
+        Log.Logger
+            .ForContext("EventType", "RoutesBulkCreated")
+            .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
+            .ForContext("Created", created.Count)
+            .ForContext("Failed", failures.Count)
+            .Information("Bulk route import finished");
+
+        if (created.Count == 0)
+            return BadRequest(new { error = "No routes were imported", failures });
+
+        if (failures.Count > 0)
+            Response.Headers["X-Import-Failures"] = failures.Count.ToString();
+
+        return Ok(created);
     }
 
     [HttpGet("{id}")]
