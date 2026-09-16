@@ -137,8 +137,21 @@ const TaxReport: React.FC = () => {
             </div>
           )}
 
+          {/* Flat-rate vehicle: the claim is the mileage amount + parking/tolls */}
+          {report.totals.flatRateVehicle && (
+            <div className="rounded-lg border border-green-400 bg-green-50 p-4">
+              <div className="text-xs text-gray-600">{t('taxReport.flatRateClaim', 'Flat-rate mileage claim for this vehicle')}</div>
+              <div className="text-2xl font-semibold mt-1">{money(report.totals.flatRateClaim)}</div>
+              <div className="text-xs text-gray-600 mt-1">
+                {Math.round(report.simplifiedExpenses.businessMiles).toLocaleString()} mi → {money(report.simplifiedExpenses.amount)}
+                {report.totals.allowable > 0 && ` + ${money(report.totals.allowable)} ${t('taxReport.parkingTolls', 'parking / tolls')}`}
+                {' · '}{t('taxReport.flatRateNote', 'fuel, insurance, servicing and the vehicle cost are inside the rate')}
+              </div>
+            </div>
+          )}
+
           {/* Headline comparison */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${report.totals.flatRateVehicle ? 'opacity-60' : ''}`}>
             <div className={`rounded-lg border p-4 ${report.comparison.betterMethod === 'actualCost' ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-white'}`}>
               <div className="text-xs text-gray-500">{t('taxReport.actualCostMethod', 'Actual cost method')}</div>
               <div className="text-2xl font-semibold mt-1">{money(report.comparison.actualCostTotal)}</div>
@@ -265,8 +278,12 @@ const TaxReport: React.FC = () => {
                   <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-500">{t('expenses.empty', 'No expenses in this tax year yet.')}</td></tr>
                 )}
                 {report.categories.map(c => (
-                  <tr key={c.category} className={c.excludedFromRunningCosts ? 'text-gray-400 italic' : ''}>
-                    <td className="px-3 py-2">{catLabel(c.category)}{c.excludedFromRunningCosts && <span className="ml-1 text-xs">({t('taxReport.viaCapitalAllowance', 'via capital allowance')})</span>}</td>
+                  <tr key={c.category} className={c.excludedFromRunningCosts || c.coveredByFlatRate ? 'text-gray-400 italic' : ''}>
+                    <td className="px-3 py-2">
+                      {catLabel(c.category)}
+                      {c.excludedFromRunningCosts && <span className="ml-1 text-xs">({t('taxReport.viaCapitalAllowance', 'via capital allowance')})</span>}
+                      {c.coveredByFlatRate && <span className="ml-1 text-xs">({t('taxReport.coveredByFlatRate', 'covered by flat rate')})</span>}
+                    </td>
                     <td className="px-3 py-2 text-right">{c.count}</td>
                     <td className="px-3 py-2 text-right">{money(c.total)}</td>
                     <td className="px-3 py-2 text-right">{c.fullyBusinessTotal > 0 ? money(c.fullyBusinessTotal) : '—'}</td>

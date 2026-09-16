@@ -806,6 +806,10 @@
     "balancingAllowance": "Balancing allowance（總額）",
     "balancingCharge": "Balancing charge（總額）",
     "chargeToClaim": "Balancing charge（加回利潤）",
-    "disposalNote": "處置年度：不計遞減免稅額；pool 結清為 £0。"
+    "disposalNote": "處置年度：不計遞減免稅額；pool 結清為 £0。",
+    "flatRateClaim": "此車輛嘅每英里固定費率申報額",
+    "parkingTolls": "停車 / 過路費",
+    "flatRateNote": "燃油、保險、保養及車價已包含喺費率內",
+    "coveredByFlatRate": "已包含喺固定費率"
   }
 }

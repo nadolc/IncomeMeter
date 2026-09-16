@@ -390,7 +390,33 @@ public class TaxYearReportServiceTests
     }
 
     [Fact]
-    public async Task Vehicle_locked_to_mileage_method_blocks_capital_allowance_and_warns()
+    public async Task Flat_rate_vehicle_claims_mileage_plus_parking_and_nothing_else()
+    {
+        // Subaru: flat rate since 2024/25, scrapped 27 May 2025 for £1,000 – no balancing adjustment
+        var v = AddCar(co2: 150, purchaseDate: D(9, 18, 2018), price: 25_800m, claimMethod: ClaimMethods.Mileage, lockedFrom: 2024);
+        v.DisposalDate = D(5, 27); v.DisposalProceeds = 1_000m;
+        AddRoute(0, 1_200, when: D(4, 20));
+        AddExpense(ExpenseCategories.Fuel, 150m, when: D(4, 25));                   // covered by the flat rate
+        AddExpense(ExpenseCategories.Parking, 6m, fullyBusiness: true, when: D(5, 1));
+
+        var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 100);
+
+        report.Totals.FlatRateVehicle.Should().BeTrue();
+        report.SimplifiedExpenses.Amount.Should().Be(540m);                        // 1,200 × 45p
+        report.Categories.Single(c => c.Category == ExpenseCategories.Fuel).CoveredByFlatRate.Should().BeTrue();
+        report.Categories.Single(c => c.Category == ExpenseCategories.Fuel).Allowable.Should().Be(0m);
+        report.Categories.Single(c => c.Category == ExpenseCategories.Parking).Allowable.Should().Be(6m);
+        report.Totals.FlatRateClaim.Should().Be(546m);
+        report.CapitalAllowance.Applicable.Should().BeFalse();
+        report.CapitalAllowance.Reason.Should().Contain("no balancing");
+        report.Sa103Boxes.Single(b => b.Box == "20").Amount.Should().Be(546m);
+        report.Sa103Boxes.Single(b => b.Box == "35").Amount.Should().Be(0m);
+        report.Warnings.Should().Contain(w => w.Code == "FLAT_RATE_VEHICLE");
+        report.Warnings.Should().Contain(w => w.Code == "COSTS_COVERED_BY_FLAT_RATE");
+    }
+
+    [Fact]
+    public async Task Vehicle_locked_to_mileage_method_blocks_capital_allowance_and_flags_the_lock()
     {
         AddCar(co2: 45, purchaseDate: D(5, 10), price: 10_000m, claimMethod: ClaimMethods.Mileage, lockedFrom: 2023);
         AddRoute(0, 1_000);
@@ -399,8 +425,8 @@ public class TaxYearReportServiceTests
         var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 100);
 
         report.CapitalAllowance.Applicable.Should().BeFalse();
-        report.Warnings.Should().Contain(w => w.Code == "METHOD_LOCKED_MILEAGE" && w.Severity == "error");
-        report.Comparison.LockedToOtherMethod.Should().BeTrue();
+        report.Warnings.Should().Contain(w => w.Code == "FLAT_RATE_VEHICLE");
+        report.Comparison.LockedToOtherMethod.Should().BeFalse();   // fuel is not claimable, so actual-cost total is 0 < 450
     }
 
     // ---------- CSV ----------

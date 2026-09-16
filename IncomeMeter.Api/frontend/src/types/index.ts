@@ -516,6 +516,7 @@ export interface TaxReportCategory {
   disallowable: number;
   receiptsMissing: number;
   excludedFromRunningCosts: boolean;
+  coveredByFlatRate: boolean;
 }
 
 export interface TaxYearReport {
@@ -548,7 +549,7 @@ export interface TaxYearReport {
     businessUseSource: 'odometer' | 'override' | 'unavailable';
   };
   categories: TaxReportCategory[];
-  totals: { totalExpenses: number; allowable: number; disallowable: number; receiptsMissing: number };
+  totals: { totalExpenses: number; allowable: number; disallowable: number; receiptsMissing: number; flatRateVehicle: boolean; flatRateClaim: number };
   capitalAllowance: {
     applicable: boolean;
     reason?: string | null;

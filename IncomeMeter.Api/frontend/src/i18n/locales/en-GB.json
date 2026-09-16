@@ -806,6 +806,10 @@
     "balancingAllowance": "Balancing allowance (gross)",
     "balancingCharge": "Balancing charge (gross)",
     "chargeToClaim": "Balancing charge (added to profit)",
-    "disposalNote": "Disposal year: no writing-down allowance; the pool closes at £0."
+    "disposalNote": "Disposal year: no writing-down allowance; the pool closes at £0.",
+    "flatRateClaim": "Flat-rate mileage claim for this vehicle",
+    "parkingTolls": "parking / tolls",
+    "flatRateNote": "fuel, insurance, servicing and the vehicle cost are inside the rate",
+    "coveredByFlatRate": "covered by flat rate"
   }
 }

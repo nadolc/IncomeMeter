@@ -79,6 +79,8 @@ public class TaxReportCategoryDto
     public int ReceiptsMissing { get; set; }
     /// <summary>Excluded from running costs because it is handled via capital allowances.</summary>
     public bool ExcludedFromRunningCosts { get; set; }
+    /// <summary>Flat-rate vehicle: this cost is already covered by the mileage rate and cannot be claimed again.</summary>
+    public bool CoveredByFlatRate { get; set; }
 }
 
 public class TaxReportTotalsDto
@@ -87,6 +89,10 @@ public class TaxReportTotalsDto
     public decimal Allowable { get; set; }
     public decimal Disallowable { get; set; }
     public int ReceiptsMissing { get; set; }
+    /// <summary>True when the vehicle is claimed with the flat-rate mileage method.</summary>
+    public bool FlatRateVehicle { get; set; }
+    /// <summary>Flat-rate vehicle: mileage amount + allowable parking/tolls = the figure to claim.</summary>
+    public decimal FlatRateClaim { get; set; }
 }
 
 public class TaxReportCapitalAllowanceDto

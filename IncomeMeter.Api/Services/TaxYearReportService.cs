@@ -106,9 +106,11 @@ public class TaxYearReportService : ITaxYearReportService
                 PurchasePrice = vehicle.PurchasePrice
             };
 
-            if (vehicle.ClaimMethod == ClaimMethods.Mileage && vehicle.ClaimMethodLockedFromTaxYear.HasValue)
-                warnings.Add(Warn("error", "METHOD_LOCKED_MILEAGE",
-                    $"{vehicle.Registration} has been claimed with the flat-rate mileage method since {Label(vehicle.ClaimMethodLockedFromTaxYear.Value)}. HMRC does not allow switching this vehicle to actual costs – use the simplified-expenses figure below."));
+            if (vehicle.ClaimMethod == ClaimMethods.Mileage)
+                warnings.Add(Warn("info", "FLAT_RATE_VEHICLE",
+                    $"{vehicle.Registration} is claimed with the flat-rate mileage method" +
+                    (vehicle.ClaimMethodLockedFromTaxYear.HasValue ? $" (since {Label(vehicle.ClaimMethodLockedFromTaxYear.Value)}; HMRC does not allow switching this vehicle to actual costs)" : "") +
+                    ". Fuel, insurance, servicing and the vehicle cost are covered by the rate; only parking and tolls can be claimed on top."));
         }
         else
         {
@@ -217,6 +219,9 @@ public class TaxYearReportService : ITaxYearReportService
         var attachmentIds = expenses.SelectMany(e => e.AttachmentIds).Distinct().ToList();
         var owned = (await _attachments.GetByIdsAsync(attachmentIds, userId)).Select(a => a.Id!).ToHashSet();
 
+        var flatRate = vehicle?.ClaimMethod == ClaimMethods.Mileage;
+        report.Totals.FlatRateVehicle = flatRate;
+
         foreach (var group in expenses.GroupBy(e => e.Category).OrderBy(g => Array.IndexOf(ExpenseCategories.All, g.Key)))
         {
             var cat = new TaxReportCategoryDto
@@ -226,14 +231,16 @@ public class TaxYearReportService : ITaxYearReportService
                 Total = group.Sum(e => e.Amount),
                 FullyBusinessTotal = group.Where(e => e.IsFullyBusiness).Sum(e => e.Amount),
                 ReceiptsMissing = group.Count(e => !e.AttachmentIds.Any(owned.Contains)),
-                ExcludedFromRunningCosts = group.Key == ExpenseCategories.VehiclePurchase
+                ExcludedFromRunningCosts = group.Key == ExpenseCategories.VehiclePurchase,
+                // Flat rate covers purchase, fuel, insurance, servicing, repairs, MOT, tax, breakdown … – only parking and tolls are extra.
+                CoveredByFlatRate = flatRate && group.Key is not (ExpenseCategories.Parking or ExpenseCategories.Tolls)
             };
 
-            if (cat.ExcludedFromRunningCosts)
+            if (cat.ExcludedFromRunningCosts || cat.CoveredByFlatRate)
             {
-                // The vehicle itself is capital expenditure – handled through capital allowances below.
+                // Capital expenditure (capital allowances) or already inside the flat rate – nothing to claim here.
                 cat.Allowable = 0;
-                cat.Disallowable = 0;
+                cat.Disallowable = cat.CoveredByFlatRate ? cat.Total : 0;
             }
             else if (businessFraction.HasValue)
             {
@@ -254,6 +261,9 @@ public class TaxYearReportService : ITaxYearReportService
         report.Totals.TotalExpenses = report.Categories.Where(c => !c.ExcludedFromRunningCosts).Sum(c => c.Total);
         report.Totals.Allowable = report.Categories.Sum(c => c.Allowable);
         report.Totals.Disallowable = report.Categories.Where(c => !c.ExcludedFromRunningCosts).Sum(c => c.Disallowable);
+        if (flatRate && report.Categories.Any(c => c.CoveredByFlatRate && c.Total > 0))
+            warnings.Add(Warn("info", "COSTS_COVERED_BY_FLAT_RATE",
+                $"£{report.Categories.Where(c => c.CoveredByFlatRate).Sum(c => c.Total):N2} of recorded costs are covered by the flat rate and are not claimable separately (kept for your records)."));
         report.Totals.ReceiptsMissing = report.Categories.Sum(c => c.ReceiptsMissing);
 
         if (!businessFraction.HasValue && report.Totals.TotalExpenses > 0)
@@ -272,6 +282,8 @@ public class TaxYearReportService : ITaxYearReportService
         // --- Comparison ---
         var actualTotal = Round2(report.Totals.Allowable + report.CapitalAllowance.Allowance);
         var simplifiedTotal = report.SimplifiedExpenses.Amount;
+        if (flatRate)
+            report.Totals.FlatRateClaim = Round2(simplifiedTotal + report.Totals.Allowable);   // mileage + parking/tolls
         report.Comparison = new TaxReportComparisonDto
         {
             ActualCostTotal = actualTotal,
@@ -306,7 +318,9 @@ public class TaxYearReportService : ITaxYearReportService
         }
         if (vehicle.ClaimMethod == ClaimMethods.Mileage)
         {
-            ca.Reason = "Capital allowances cannot be claimed alongside the flat-rate mileage method.";
+            ca.Reason = vehicle.DisposalDate.HasValue && vehicle.DisposalDate.Value >= from && vehicle.DisposalDate.Value <= to
+                ? "Flat-rate mileage vehicle: no capital allowances were ever claimed, so its disposal has no balancing allowance or charge."
+                : "Capital allowances cannot be claimed alongside the flat-rate mileage method (the rate already includes the cost of the vehicle).";
             return ca;
         }
         if (vehicle.FinanceType == "lease")
@@ -517,6 +531,17 @@ public class TaxYearReportService : ITaxYearReportService
 
     private static List<TaxReportBoxDto> BuildBoxes(TaxYearReportDto r)
     {
+        if (r.Totals.FlatRateVehicle)
+        {
+            return new List<TaxReportBoxDto>
+            {
+                new() { Box = "20", Label = "Car, van and travel expenses (flat-rate mileage + parking/tolls)", Amount = r.Totals.FlatRateClaim,
+                        Note = $"{r.SimplifiedExpenses.BusinessMiles:N0} business miles at the flat rate = £{r.SimplifiedExpenses.Amount:N2}, plus £{r.Totals.Allowable:N2} allowable parking/tolls. Enter the same figure on SA103S box 11." },
+                new() { Box = "35", Label = "Disallowable car, van and travel expenses", Amount = 0m,
+                        Note = "Simplified expenses are entered net – nothing to disallow." }
+            };
+        }
+
         var boxes = new List<TaxReportBoxDto>
         {
             new() { Box = "20", Label = "Car, van and travel expenses (total)", Amount = r.Totals.TotalExpenses,
