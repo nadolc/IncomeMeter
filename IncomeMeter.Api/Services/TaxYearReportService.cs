@@ -610,7 +610,9 @@ public class TaxYearReportService : ITaxYearReportService
                 new() { Box = "20", Label = "Car, van and travel expenses (flat-rate mileage + parking/tolls)", Amount = r.Totals.FlatRateClaim,
                         Note = $"{r.SimplifiedExpenses.BusinessMiles:N0} business miles at the flat rate = £{r.SimplifiedExpenses.Amount:N2}, plus £{r.Totals.Allowable:N2} allowable parking/tolls. Enter the same figure on SA103S box 11." },
                 new() { Box = "35", Label = "Disallowable car, van and travel expenses", Amount = 0m,
-                        Note = "Simplified expenses are entered net – nothing to disallow." }
+                        Note = "Simplified expenses are entered net – nothing to disallow." },
+                new() { Form = "SA103S", Box = "11", Label = "Car, van and travel expenses (short form – enter the allowable amount)", Amount = r.Totals.FlatRateClaim,
+                        Note = "Same flat-rate figure as box 20." }
             };
         }
 
