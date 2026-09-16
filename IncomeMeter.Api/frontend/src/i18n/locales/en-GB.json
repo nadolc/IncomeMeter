@@ -67,7 +67,9 @@
         "coordinates": "Coordinates",
         "distanceFromPrevious": "Distance from previous",
         "gpsAccuracy": "GPS Accuracy"
-      }
+      },
+      "vehicle": "Vehicle",
+      "noVehicle": "Not assigned"
     },
     "list": {
       "title": "My Routes",

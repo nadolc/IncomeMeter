@@ -6,6 +6,7 @@ import type { Route, WorkTypeConfig } from '../../types';
 import { getDisplayDistance } from '../../utils/distance';
 import { getRoutes, createBulkRoutes, getActiveWorkTypeConfigs } from '../../utils/api';
 import BulkRouteImport from '../Import/BulkRouteImport';
+import VehiclePlate from '../Common/VehiclePlate';
 
 const RouteList: React.FC = () => {
   const navigate = useNavigate();
@@ -236,7 +237,10 @@ const RouteList: React.FC = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{route.workType || 'Route'}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      {route.workType || 'Route'}
+                      <VehiclePlate vehicleId={route.vehicleId} />
+                    </h3>
                     <p className="text-sm text-gray-600">{route.status}</p>
                   </div>
                 </div>

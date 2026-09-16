@@ -6,6 +6,7 @@ import type { Route, Location } from '../../types';
 import { getDisplayDistance } from '../../utils/distance';
 import { getRouteById, getLocationsByRouteId } from '../../utils/api';
 import RouteMap from '../Maps/RouteMap';
+import VehiclePlate from '../Common/VehiclePlate';
 
 
 interface RouteWithLocations extends Route {
@@ -169,7 +170,10 @@ const RouteDetails: React.FC = () => {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">{t('routes.details.title')}</h1>
-            <p className="text-gray-600 mt-1">{route.workType || 'Route'}</p>
+            <p className="text-gray-600 mt-1 flex items-center gap-2">
+              {route.workType || 'Route'}
+              <VehiclePlate vehicleId={route.vehicleId} />
+            </p>
           </div>
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(route.status)}`}>
             {getStatusText(route.status)}
@@ -195,6 +199,20 @@ const RouteDetails: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600">{t('routes.details.date')}</p>
                     <p className="font-medium">{route.scheduleStart.toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13v5H5v-5z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-gray-600">{t('routes.details.vehicle', 'Vehicle')}</p>
+                    <p className="font-medium">
+                      {route.vehicleId
+                        ? <VehiclePlate vehicleId={route.vehicleId} variant="text" />
+                        : <span className="text-gray-400">{t('routes.details.noVehicle', 'Not assigned')}</span>}
+                    </p>
                   </div>
                 </div>
 

@@ -67,7 +67,9 @@
         "coordinates": "座標",
         "distanceFromPrevious": "與上一點的距離",
         "gpsAccuracy": "GPS 準確度"
-      }
+      },
+      "vehicle": "車輛",
+      "noVehicle": "未指定"
     },
     "list": {
       "title": "我的路線",

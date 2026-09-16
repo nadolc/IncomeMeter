@@ -3,6 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle, lookupVehicle, backfillVehicle, assignVehiclesByDate } from '../../utils/api';
 import type { Vehicle, VehicleInput, VehicleLookupResult } from '../../types';
 import ExpensesSubNav from '../Expenses/ExpensesSubNav';
+import { invalidateVehicleCache } from '../../utils/vehicleCache';
 
 const emptyForm: VehicleInput = {
   registration: '',
@@ -70,6 +71,7 @@ const Vehicles: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      invalidateVehicleCache();
       setVehicles(await getVehicles(true));
     } catch (err) {
       console.error('Failed to load vehicles', err);

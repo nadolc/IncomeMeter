@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../contexts/SettingsContext';
 import { getDisplayDistance } from '../../utils/distance';
 import type { Route } from '../../types';
+import VehiclePlate from '../Common/VehiclePlate';
 
 interface CompactRouteItemProps {
   route: Route;
@@ -86,6 +87,7 @@ const CompactRouteItem: React.FC<CompactRouteItemProps> = ({ route, onEdit, onDe
               <h3 className="text-sm font-semibold text-gray-900 truncate">
                 {route.workType || 'Route'}
               </h3>
+              <VehiclePlate vehicleId={route.vehicleId} />
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(route.status)}`}>
                 {getStatusText(route.status)}
               </span>
@@ -152,6 +154,7 @@ const CompactRouteItem: React.FC<CompactRouteItemProps> = ({ route, onEdit, onDe
             <h3 className="text-sm font-semibold text-gray-900 truncate">
               {route.workType || 'Route'}
             </h3>
+            <VehiclePlate vehicleId={route.vehicleId} />
             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(route.status)}`}>
               {getStatusText(route.status)}
             </span>
