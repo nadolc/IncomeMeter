@@ -17,6 +17,8 @@ public class CreateVehicleDto
     public DateTime? PurchaseDate { get; set; }
     public DateTime? DisposalDate { get; set; }
     [Range(0, 10_000_000)]
+    public decimal? DisposalProceeds { get; set; }
+    [Range(0, 10_000_000)]
     public decimal? PurchasePrice { get; set; }
     public bool IsNew { get; set; }
     public string FinanceType { get; set; } = "cash";
@@ -43,6 +45,8 @@ public class UpdateVehicleDto
     public DateTime? DisposalDate { get; set; }
     /// <summary>Set true to clear the disposal date.</summary>
     public bool? ClearDisposalDate { get; set; }
+    [Range(0, 10_000_000)]
+    public decimal? DisposalProceeds { get; set; }
     [Range(0, 10_000_000)]
     public decimal? PurchasePrice { get; set; }
     public bool? IsNew { get; set; }

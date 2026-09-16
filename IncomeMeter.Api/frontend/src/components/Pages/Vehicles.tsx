@@ -14,6 +14,7 @@ const emptyForm: VehicleInput = {
   co2GPerKm: null,
   purchaseDate: null,
   disposalDate: null,
+  disposalProceeds: null,
   purchasePrice: null,
   isNew: false,
   financeType: 'cash',
@@ -102,6 +103,7 @@ const Vehicles: React.FC = () => {
       co2GPerKm: v.co2GPerKm ?? null,
       purchaseDate: v.purchaseDate ? v.purchaseDate.slice(0, 10) : null,
       disposalDate: v.disposalDate ? v.disposalDate.slice(0, 10) : null,
+      disposalProceeds: v.disposalProceeds ?? null,
       purchasePrice: v.purchasePrice ?? null,
       isNew: v.isNew,
       financeType: v.financeType,
@@ -259,7 +261,7 @@ const Vehicles: React.FC = () => {
                 {v.disposalDate && (
                   <>
                     <dt className="text-gray-500">{t('vehicles.fields.disposalDate', 'Sold / disposed date')}</dt>
-                    <dd>{new Date(v.disposalDate).toLocaleDateString('en-GB')}</dd>
+                    <dd>{new Date(v.disposalDate).toLocaleDateString('en-GB')}{v.disposalProceeds != null ? ` · ${fmtMoney(v.disposalProceeds)}` : ''}</dd>
                   </>
                 )}
                 <dt className="text-gray-500">{t('vehicles.fields.claimMethod', 'Claim method')}</dt>
@@ -360,6 +362,10 @@ const Vehicles: React.FC = () => {
               <label className="block">
                 <span className={label}>{t('vehicles.fields.disposalDate', 'Sold / disposed date')} <span className="text-gray-400">({t('vehicles.fields.disposalDateHint', 'blank = still in use')})</span></span>
                 <input type="date" className={input} value={form.disposalDate ?? ''} onChange={e => set('disposalDate', e.target.value || null)} />
+              </label>
+              <label className="block">
+                <span className={label}>{t('vehicles.fields.disposalProceeds', 'Sale / scrap proceeds (£)')} <span className="text-gray-400">({t('vehicles.fields.disposalProceedsHint', '0 if scrapped for nothing')})</span></span>
+                <input type="number" min="0" step="0.01" className={input} value={form.disposalProceeds ?? ''} onChange={e => set('disposalProceeds', numOrNull(e.target.value))} disabled={!form.disposalDate} />
               </label>
               <label className="block">
                 <span className={label}>{t('vehicles.fields.purchasePrice', 'Purchase price (£)')}</span>

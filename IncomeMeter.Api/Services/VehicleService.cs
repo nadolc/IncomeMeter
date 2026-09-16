@@ -153,6 +153,7 @@ public class VehicleService : IVehicleService
             Co2GPerKm = dto.Co2GPerKm,
             PurchaseDate = dto.PurchaseDate,
             DisposalDate = dto.DisposalDate,
+            DisposalProceeds = dto.DisposalProceeds,
             PurchasePrice = dto.PurchasePrice,
             IsNew = dto.IsNew,
             FinanceType = dto.FinanceType,
@@ -193,6 +194,7 @@ public class VehicleService : IVehicleService
         if (dto.PurchaseDate.HasValue) existing.PurchaseDate = dto.PurchaseDate;
         if (dto.DisposalDate.HasValue) existing.DisposalDate = dto.DisposalDate;
         if (dto.ClearDisposalDate == true) existing.DisposalDate = null;
+        if (dto.DisposalProceeds.HasValue) existing.DisposalProceeds = dto.DisposalProceeds;
         if (dto.PurchasePrice.HasValue) existing.PurchasePrice = dto.PurchasePrice;
         if (dto.IsNew.HasValue) existing.IsNew = dto.IsNew.Value;
         if (dto.FinanceType != null) existing.FinanceType = dto.FinanceType;

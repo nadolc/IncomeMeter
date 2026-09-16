@@ -94,6 +94,8 @@ public class TaxYearReportService : ITaxYearReportService
             {
                 Id = vehicle.Id!,
                 Registration = vehicle.Registration,
+                DisposalDate = vehicle.DisposalDate,
+                DisposalProceeds = vehicle.DisposalProceeds,
                 Description = string.Join(" ", new[] { vehicle.Make, vehicle.Model }.Where(s => !string.IsNullOrWhiteSpace(s))),
                 VehicleType = vehicle.VehicleType,
                 ClaimMethod = vehicle.ClaimMethod,
@@ -318,6 +320,79 @@ public class TaxYearReportService : ITaxYearReportService
         var purchasePrice = vehicle.PurchasePrice
                             ?? expenses.Where(e => e.Category == ExpenseCategories.VehiclePurchase).Sum(e => (decimal?)e.Amount);
 
+        // Disposal in this tax year → no writing-down allowance; instead a balancing adjustment on the single-asset pool:
+        // written-down value b/f (or cost, if bought and sold in the same year) minus proceeds (capped at cost).
+        var disposedThisYear = vehicle.DisposalDate.HasValue && vehicle.DisposalDate.Value >= from && vehicle.DisposalDate.Value <= to;
+        if (disposedThisYear)
+        {
+            ca.IsDisposal = true;
+            ca.DisposalDate = vehicle.DisposalDate;
+
+            decimal wdv;
+            if (boughtThisYear)
+            {
+                if (purchasePrice is null or <= 0)
+                {
+                    ca.Reason = "Vehicle was bought and disposed of this tax year but no purchase price is recorded.";
+                    warnings.Add(Warn("warning", "NO_PURCHASE_PRICE", "Enter the vehicle purchase price to calculate the balancing adjustment."));
+                    return ca;
+                }
+                wdv = purchasePrice.Value;
+                ca.QualifyingExpenditure = wdv;
+            }
+            else
+            {
+                if (vehicle.PoolBroughtForwardTaxYear.HasValue && vehicle.PoolBroughtForwardTaxYear.Value != taxYear)
+                {
+                    ca.Reason = $"The pool value on record is for {Label(vehicle.PoolBroughtForwardTaxYear.Value)}, not {Label(taxYear)}. Enter the written-down value carried forward into the disposal year.";
+                    warnings.Add(Warn("warning", "POOL_YEAR_MISMATCH", ca.Reason));
+                    return ca;
+                }
+                if (vehicle.CapitalAllowancePoolBroughtForward is null or <= 0)
+                {
+                    ca.Reason = $"Disposed of in {Label(taxYear)} but no written-down value brought forward is recorded. Enter the pool b/f (value after last year's allowance) on the Vehicles page.";
+                    warnings.Add(Warn("warning", "NO_POOL_BF_DISPOSAL", ca.Reason));
+                    return ca;
+                }
+                wdv = vehicle.CapitalAllowancePoolBroughtForward.Value;
+                ca.PoolBroughtForward = wdv;
+            }
+
+            var proceeds = vehicle.DisposalProceeds ?? 0m;
+            if (vehicle.DisposalProceeds == null)
+                warnings.Add(Warn("warning", "NO_DISPOSAL_PROCEEDS", "No disposal proceeds recorded – treated as £0 (scrapped for nothing). Enter the sale / scrap / insurance amount on the Vehicles page if you received anything."));
+            if (purchasePrice.HasValue && proceeds > purchasePrice.Value)
+            {
+                warnings.Add(Warn("info", "PROCEEDS_CAPPED", $"Disposal proceeds (£{proceeds:N0}) exceed the original cost (£{purchasePrice:N0}); the balancing charge is capped at cost."));
+                proceeds = purchasePrice.Value;
+            }
+            ca.DisposalProceeds = proceeds;
+
+            var gross = Round2(wdv - proceeds);
+            ca.BalancingAdjustmentGross = gross;
+            ca.Applicable = true;
+            ca.Rate = 0;
+            ca.PoolCarriedForward = 0;
+            if (gross >= 0)
+            {
+                ca.BalancingType = "balancingAllowance";
+                (ca.AllowanceType, ca.AllowanceLabel, ca.Sa103Box) = ("balancingAllowance", $"Balancing allowance on disposal ({vehicle.DisposalDate:d MMM yyyy}): written-down value £{wdv:N2} − proceeds £{proceeds:N2}", "56");
+                ca.GrossAllowance = gross;
+                ca.Allowance = businessFraction.HasValue ? Round2(gross * businessFraction.Value) : 0;
+            }
+            else
+            {
+                ca.BalancingType = "balancingCharge";
+                (ca.AllowanceType, ca.AllowanceLabel, ca.Sa103Box) = ("balancingCharge", $"Balancing charge on disposal ({vehicle.DisposalDate:d MMM yyyy}): proceeds £{proceeds:N2} − written-down value £{wdv:N2}", "58");
+                ca.GrossAllowance = gross;                       // negative
+                ca.Allowance = businessFraction.HasValue ? Round2(gross * businessFraction.Value) : 0;   // negative = added to profit
+                warnings.Add(Warn("info", "BALANCING_CHARGE", $"Proceeds exceed the written-down value: a balancing charge of £{-ca.Allowance:N2} (business share) is added to your profit."));
+            }
+            if (!businessFraction.HasValue)
+                warnings.Add(Warn("warning", "CA_NO_BUSINESS_PERCENT", "The balancing adjustment is shown as £0 because the business-use % is unknown."));
+            return ca;
+        }
+
         decimal baseAmount;
         if (boughtThisYear)
         {
@@ -461,10 +536,14 @@ public class TaxYearReportService : ITaxYearReportService
                     "50" => "Capital allowances at 18% on equipment, including cars with lower CO2 emissions",
                     "51" => "Capital allowances at 6% on equipment, including cars with higher CO2 emissions",
                     "52" => "Zero-emission car allowance",
+                    "56" => "Other capital allowances (balancing allowance on disposal)",
+                    "58" => "Balancing charge on sale or cessation of business use",
                     _ => "Capital allowance"
                 },
-                Amount = r.CapitalAllowance.Allowance,
-                Note = "Already reduced for private use."
+                Amount = Math.Abs(r.CapitalAllowance.Allowance),
+                Note = r.CapitalAllowance.BalancingType == "balancingCharge"
+                    ? "Added to profit (business share). Already reduced for private use."
+                    : "Already reduced for private use."
             });
         }
 

@@ -49,6 +49,8 @@ public class Vehicle
     public DateTime? PurchaseDate { get; set; }
     /// <summary>Date the vehicle was sold / stopped being used. Routes and expenses after this go to the next vehicle.</summary>
     public DateTime? DisposalDate { get; set; }
+    /// <summary>Sale / scrap / insurance proceeds on disposal. Drives the balancing allowance or charge in the disposal year.</summary>
+    public decimal? DisposalProceeds { get; set; }
     public decimal? PurchasePrice { get; set; }
 
     /// <summary>True if bought new (unused). Matters for the 100% zero-emission first-year allowance.</summary>

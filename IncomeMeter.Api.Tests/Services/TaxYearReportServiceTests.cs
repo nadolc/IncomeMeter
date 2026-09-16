@@ -293,6 +293,72 @@ public class TaxYearReportServiceTests
         report.Warnings.Should().Contain(w => w.Code == "NO_CO2");
     }
 
+    // ---------- disposal: balancing adjustment ----------
+
+    [Fact]
+    public async Task Disposal_below_written_down_value_gives_balancing_allowance()
+    {
+        // Subaru: pool b/f into 2025/26 £11,280, scrapped for £1,000 on 27 May 2025
+        var v = AddCar(co2: 150, purchaseDate: D(9, 18, 2018), price: 25_800m, poolBf: 11_280m, poolYear: TaxYear);
+        v.DisposalDate = D(5, 27); v.DisposalProceeds = 1_000m;
+
+        var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 80);
+
+        var ca = report.CapitalAllowance;
+        ca.Applicable.Should().BeTrue();
+        ca.IsDisposal.Should().BeTrue();
+        ca.BalancingType.Should().Be("balancingAllowance");
+        ca.BalancingAdjustmentGross.Should().Be(10_280m);
+        ca.Allowance.Should().Be(8_224m);          // × 80%
+        ca.PoolCarriedForward.Should().Be(0m);
+        ca.Sa103Box.Should().Be("56");
+        report.Sa103Boxes.Should().Contain(b => b.Box == "56" && b.Amount == 8_224m);
+    }
+
+    [Fact]
+    public async Task Disposal_above_written_down_value_gives_balancing_charge()
+    {
+        var v = AddCar(co2: 150, purchaseDate: D(1, 1, 2023), price: 20_000m, poolBf: 8_000m, poolYear: TaxYear);
+        v.DisposalDate = D(8, 1); v.DisposalProceeds = 9_500m;
+
+        var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 50);
+
+        var ca = report.CapitalAllowance;
+        ca.BalancingType.Should().Be("balancingCharge");
+        ca.BalancingAdjustmentGross.Should().Be(-1_500m);
+        ca.Allowance.Should().Be(-750m);
+        ca.Sa103Box.Should().Be("58");
+        report.Sa103Boxes.Should().Contain(b => b.Box == "58" && b.Amount == 750m);
+        report.Warnings.Should().Contain(w => w.Code == "BALANCING_CHARGE");
+        report.Comparison.ActualCostTotal.Should().Be(-750m);   // no running costs in this test; charge reduces the total
+    }
+
+    [Fact]
+    public async Task Disposal_without_pool_value_explains_what_to_enter()
+    {
+        var v = AddCar(co2: 150, purchaseDate: D(1, 1, 2023), price: 20_000m);
+        v.DisposalDate = D(8, 1); v.DisposalProceeds = 1_000m;
+
+        var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 50);
+
+        report.CapitalAllowance.Applicable.Should().BeFalse();
+        report.Warnings.Should().Contain(w => w.Code == "NO_POOL_BF_DISPOSAL");
+    }
+
+    [Fact]
+    public async Task Bought_and_disposed_in_same_year_uses_cost_and_caps_proceeds_at_cost()
+    {
+        var v = AddCar(co2: 45, purchaseDate: D(6, 1), price: 5_000m);
+        v.DisposalDate = D(12, 1); v.DisposalProceeds = 6_000m;   // sold for more than cost
+
+        var report = await CreateSut().BuildReportAsync(UserId, TaxYear, businessUsePercentOverride: 100);
+
+        report.CapitalAllowance.DisposalProceeds.Should().Be(5_000m);
+        report.CapitalAllowance.BalancingAdjustmentGross.Should().Be(0m);
+        report.CapitalAllowance.BalancingType.Should().Be("balancingAllowance");
+        report.Warnings.Should().Contain(w => w.Code == "PROCEEDS_CAPPED");
+    }
+
     // ---------- simplified expenses & comparison ----------
 
     [Fact]

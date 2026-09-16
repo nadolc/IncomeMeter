@@ -716,7 +716,9 @@
       "notes": "備註",
       "active": "使用中",
       "disposalDate": "售出 / 停用日期",
-      "disposalDateHint": "留空 = 仍在使用"
+      "disposalDateHint": "留空 = 仍在使用",
+      "disposalProceeds": "售出 / 報廢收入 (£)",
+      "disposalProceedsHint": "報廢無收入填 0"
     },
     "lookup": {
       "button": "查詢",
@@ -799,6 +801,11 @@
     "form": "表格",
     "box": "欄",
     "label": "項目",
-    "amount": "金額"
+    "amount": "金額",
+    "disposalProceeds": "處置收入",
+    "balancingAllowance": "Balancing allowance（總額）",
+    "balancingCharge": "Balancing charge（總額）",
+    "chargeToClaim": "Balancing charge（加回利潤）",
+    "disposalNote": "處置年度：不計遞減免稅額；pool 結清為 £0。"
   }
 }

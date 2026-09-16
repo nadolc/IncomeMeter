@@ -199,7 +199,24 @@ const TaxReport: React.FC = () => {
                     {report.vehicle.co2GPerKm != null && ` · ${report.vehicle.co2GPerKm} g/km`}
                   </div>
                 )}
-                {report.capitalAllowance.applicable ? (
+                {report.capitalAllowance.applicable && report.capitalAllowance.isDisposal ? (
+                  <dl className="grid grid-cols-2 gap-y-2">
+                    <dt className="text-gray-500 col-span-2 text-xs">{report.capitalAllowance.allowanceLabel}</dt>
+                    <dt className="text-gray-500">{report.capitalAllowance.qualifyingExpenditure > 0 ? t('taxReport.qualifying', 'Qualifying expenditure') : t('taxReport.poolBf', 'Pool brought forward')}</dt>
+                    <dd className="text-right">{money(report.capitalAllowance.qualifyingExpenditure > 0 ? report.capitalAllowance.qualifyingExpenditure : report.capitalAllowance.poolBroughtForward)}</dd>
+                    <dt className="text-gray-500">− {t('taxReport.disposalProceeds', 'Disposal proceeds')}</dt>
+                    <dd className="text-right">{money(report.capitalAllowance.disposalProceeds)}</dd>
+                    <dt className="text-gray-500">{report.capitalAllowance.balancingType === 'balancingCharge' ? t('taxReport.balancingCharge', 'Balancing charge (gross)') : t('taxReport.balancingAllowance', 'Balancing allowance (gross)')}</dt>
+                    <dd className="text-right">{money(Math.abs(report.capitalAllowance.balancingAdjustmentGross))}</dd>
+                    <dt className="text-gray-500">× {t('taxReport.businessPct', 'Business use')}</dt>
+                    <dd className="text-right">{pct(report.capitalAllowance.businessUsePercent)}</dd>
+                    <dt className={`font-medium ${report.capitalAllowance.balancingType === 'balancingCharge' ? 'text-red-700' : 'text-gray-700'}`}>
+                      {report.capitalAllowance.balancingType === 'balancingCharge' ? t('taxReport.chargeToClaim', 'Balancing charge (added to profit)') : t('taxReport.allowance', 'Allowance to claim')}
+                    </dt>
+                    <dd className={`text-right font-semibold text-lg ${report.capitalAllowance.balancingType === 'balancingCharge' ? 'text-red-700' : ''}`}>{money(Math.abs(report.capitalAllowance.allowance))}</dd>
+                    <dd className="col-span-2 text-xs text-gray-400">{t('taxReport.disposalNote', 'Disposal year: no writing-down allowance; the pool closes at £0.')}</dd>
+                  </dl>
+                ) : report.capitalAllowance.applicable ? (
                   <dl className="grid grid-cols-2 gap-y-2">
                     <dt className="text-gray-500 col-span-2 text-xs">{report.capitalAllowance.allowanceLabel}</dt>
                     {report.capitalAllowance.qualifyingExpenditure > 0 && (<>

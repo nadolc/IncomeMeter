@@ -716,7 +716,9 @@
       "notes": "Notes",
       "active": "Active (currently in use)",
       "disposalDate": "Sold / disposed date",
-      "disposalDateHint": "blank = still in use"
+      "disposalDateHint": "blank = still in use",
+      "disposalProceeds": "Sale / scrap proceeds (£)",
+      "disposalProceedsHint": "0 if scrapped for nothing"
     },
     "lookup": {
       "button": "Look up",
@@ -799,6 +801,11 @@
     "form": "Form",
     "box": "Box",
     "label": "Label",
-    "amount": "Amount"
+    "amount": "Amount",
+    "disposalProceeds": "Disposal proceeds",
+    "balancingAllowance": "Balancing allowance (gross)",
+    "balancingCharge": "Balancing charge (gross)",
+    "chargeToClaim": "Balancing charge (added to profit)",
+    "disposalNote": "Disposal year: no writing-down allowance; the pool closes at £0."
   }
 }

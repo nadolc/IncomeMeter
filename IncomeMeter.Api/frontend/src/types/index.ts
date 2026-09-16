@@ -469,6 +469,7 @@ export interface Vehicle {
   co2GPerKm?: number | null;
   purchaseDate?: string | null;
   disposalDate?: string | null;
+  disposalProceeds?: number | null;
   purchasePrice?: number | null;
   isNew: boolean;
   financeType: FinanceType;
@@ -561,6 +562,11 @@ export interface TaxYearReport {
     allowance: number;
     poolCarriedForward: number;
     sa103Box?: string | null;
+    isDisposal: boolean;
+    disposalDate?: string | null;
+    disposalProceeds: number;
+    balancingAdjustmentGross: number;
+    balancingType?: 'balancingAllowance' | 'balancingCharge' | null;
   };
   simplifiedExpenses: {
     businessMiles: number;

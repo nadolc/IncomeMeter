@@ -1,4 +1,4 @@
-namespace IncomeMeter.Api.DTOs;
+﻿namespace IncomeMeter.Api.DTOs;
 
 public class TaxYearReportDto
 {
@@ -28,6 +28,8 @@ public class TaxReportVehicleDto
 {
     public string Id { get; set; } = null!;
     public string Registration { get; set; } = null!;
+    public DateTime? DisposalDate { get; set; }
+    public decimal? DisposalProceeds { get; set; }
     public string? Description { get; set; }
     public string VehicleType { get; set; } = null!;
     public string ClaimMethod { get; set; } = null!;
@@ -104,6 +106,15 @@ public class TaxReportCapitalAllowanceDto
     public decimal Allowance { get; set; }
     public decimal PoolCarriedForward { get; set; }
     public string? Sa103Box { get; set; }
+
+    // Disposal year only
+    public bool IsDisposal { get; set; }
+    public DateTime? DisposalDate { get; set; }
+    public decimal DisposalProceeds { get; set; }
+    /// <summary>Written-down value minus proceeds, before the private-use reduction. Positive = balancing allowance, negative = balancing charge.</summary>
+    public decimal BalancingAdjustmentGross { get; set; }
+    /// <summary>"balancingAllowance" | "balancingCharge" | null</summary>
+    public string? BalancingType { get; set; }
 }
 
 public class TaxReportSimplifiedDto
