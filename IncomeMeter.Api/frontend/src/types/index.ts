@@ -137,7 +137,19 @@ export interface ChartDataPoint {
   income: number;
   routes: number;
   distance: number;
+  /** Income in this bucket split by work type (source). */
+  incomeBySource?: Record<string, number>;
 }
+
+/** Colours used for income sources everywhere on the dashboard (Tailwind 500 shades), by rank. */
+export const SOURCE_COLORS = [
+  { bg: 'bg-blue-500', hex: '#3B82F6' },
+  { bg: 'bg-green-500', hex: '#22C55E' },
+  { bg: 'bg-yellow-500', hex: '#EAB308' },
+  { bg: 'bg-purple-500', hex: '#A855F7' },
+  { bg: 'bg-red-500', hex: '#EF4444' },
+  { bg: 'bg-indigo-500', hex: '#6366F1' },
+];
 
 // Navigation controls for period browsing
 export interface PeriodNavigation {

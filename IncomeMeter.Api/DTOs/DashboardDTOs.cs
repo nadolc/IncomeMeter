@@ -1,4 +1,4 @@
-namespace IncomeMeter.Api.DTOs;
+﻿namespace IncomeMeter.Api.DTOs;
 
 public class PeriodIncomeRequestDto
 {
@@ -27,6 +27,8 @@ public class PeriodChartDataDto
     public decimal Income { get; set; }
     public int Routes { get; set; }
     public double Distance { get; set; }
+    /// <summary>Income in this bucket split by work type (source), for stacked bars.</summary>
+    public Dictionary<string, decimal> IncomeBySource { get; set; } = new();
 }
 
 public class PeriodNavigationDto

@@ -13,6 +13,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { getDisplayDistance } from '../../utils/distance';
 import type { PeriodType, ChartDataPoint } from '../../types';
+import { SOURCE_COLORS } from '../../types';
 
 ChartJS.register(
   CategoryScale,
@@ -27,13 +28,21 @@ ChartJS.register(
 interface PeriodChartProps {
   period: PeriodType;
   data: ChartDataPoint[];
+  /** Income sources in display order (index decides the colour, matching the side panel). */
+  sources?: string[];
   currentPeriodDisplay: string;
   className?: string;
 }
 
+const hexToRgba = (hex: string, alpha: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
 const PeriodChart: React.FC<PeriodChartProps> = ({
   period,
   data,
+  sources,
   currentPeriodDisplay,
   className = '',
 }) => {
@@ -102,27 +111,61 @@ const PeriodChart: React.FC<PeriodChartProps> = ({
     }));
   }, [data, period, language, getLocalizedLabel]);
 
+  // Source list: the order given by the parent (matches the side panel colours), plus any source that only
+  // appears in the buckets, so nothing is dropped.
+  const sourceList = React.useMemo(() => {
+    const seen = new Set(sources ?? []);
+    const list = [...(sources ?? [])];
+    for (const item of processedData) {
+      for (const key of Object.keys(item.incomeBySource ?? {})) {
+        if (!seen.has(key)) { seen.add(key); list.push(key); }
+      }
+    }
+    return list;
+  }, [sources, processedData]);
+
+  const stacked = sourceList.length > 0 && processedData.some(item => item.incomeBySource && Object.keys(item.incomeBySource).length > 0);
+
   const chartData = {
     labels: processedData.map(item => item.localizedLabel),
-    datasets: [
-      {
-        label: t('dashboard.stats.netIncome'),
-        data: processedData.map(item => item.income),
-        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-        borderRadius: 4,
-        borderSkipped: false,
-      },
-    ],
+    datasets: stacked
+      ? sourceList.map((source, i) => {
+          const hex = SOURCE_COLORS[i % SOURCE_COLORS.length].hex;
+          return {
+            label: source,
+            data: processedData.map(item => item.incomeBySource?.[source] ?? 0),
+            backgroundColor: hexToRgba(hex, 0.75),
+            hoverBackgroundColor: hex,
+            borderColor: hex,
+            borderWidth: 1,
+            borderRadius: 3,
+            borderSkipped: false,
+            stack: 'income',
+          };
+        })
+      : [
+          {
+            label: t('dashboard.stats.netIncome'),
+            data: processedData.map(item => item.income),
+            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+        ],
   };
 
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    // Hover (desktop) or tap (mobile) on a coloured segment shows that source only.
+    interaction: { mode: 'nearest' as const, intersect: true },
     plugins: {
       legend: {
-        display: false, // Hide legend for cleaner look
+        display: stacked,
+        position: 'bottom' as const,
+        labels: { usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, color: '#6B7280', font: { size: 11 } },
       },
       title: {
         display: true,
@@ -151,6 +194,16 @@ const PeriodChart: React.FC<PeriodChartProps> = ({
           },
           label: (context: any) => {
             const dataPoint = processedData[context.dataIndex];
+            if (stacked) {
+              const source = context.dataset.label as string;
+              const amount = Number(context.raw) || 0;
+              const share = dataPoint.income > 0 ? Math.round((amount / dataPoint.income) * 100) : 0;
+              return [
+                `${source}: ${formatCurrency(amount)} (${share}%)`,
+                `${t('dashboard.chart.barTotal', 'Total')}: ${formatCurrency(dataPoint.income)}`,
+                `${t('routes.title')}: ${dataPoint.routes}`,
+              ];
+            }
             return [
               `${t('routes.details.income')}: ${formatCurrency(dataPoint.income)}`,
               `${t('routes.title')}: ${dataPoint.routes}`,
@@ -162,6 +215,7 @@ const PeriodChart: React.FC<PeriodChartProps> = ({
     },
     scales: {
       x: {
+        stacked,
         grid: {
           display: false,
         },
@@ -173,6 +227,7 @@ const PeriodChart: React.FC<PeriodChartProps> = ({
         },
       },
       y: {
+        stacked,
         beginAtZero: true,
         grid: {
           color: 'rgba(107, 114, 128, 0.1)',

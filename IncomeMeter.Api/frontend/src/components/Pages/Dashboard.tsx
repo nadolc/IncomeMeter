@@ -4,6 +4,7 @@ import { useSwipeable } from 'react-swipeable';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import type { DashboardStats, Route, PeriodIncomeData, PeriodType } from '../../types';
+import { SOURCE_COLORS } from '../../types';
 import { getDashboardStats, getTodaysRoutes, getPeriodStats } from '../../utils/api';
 import { getDisplayDistance } from '../../utils/distance';
 import { formatHoursCompact } from '../../utils/time';
@@ -464,13 +465,17 @@ const Dashboard: React.FC = () => {
           ) : periodData ? (
             <PeriodChart
               period={selectedPeriod}
-              data={periodData.chartData?.map((item: { label: string; date: string; income: number; routes: number; distance: number }) => ({
+              data={periodData.chartData?.map((item: { label: string; date: string; income: number; routes: number; distance: number; incomeBySource?: Record<string, number> }) => ({
                 label: item.label,
                 date: item.date,
                 income: item.income,
                 routes: item.routes,
-                distance: item.distance
+                distance: item.distance,
+                incomeBySource: item.incomeBySource
               })) ?? []}
+              sources={Object.entries(periodData.incomeBySource)
+                .sort(([, a], [, b]) => ((b as { income: number }).income - (a as { income: number }).income))
+                .map(([workType]) => workType)}
               currentPeriodDisplay={getCurrentPeriodDisplay()}
             />
           ) : (
@@ -496,8 +501,7 @@ const Dashboard: React.FC = () => {
               {Object.entries(periodData.incomeBySource)
                 .sort(([,a], [,b]) => ((b as { income: number }).income - (a as { income: number }).income))
                 .map(([workType, stats], index) => {
-                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500'];
-                  const colorClass = colors[index % colors.length];
+                  const colorClass = SOURCE_COLORS[index % SOURCE_COLORS.length].bg;
                   const workTypeStats = stats as { 
                     income: number; 
                     routes: number; 

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using IncomeMeter.Api.Services;
 using IncomeMeter.Api.Models;
@@ -310,7 +310,8 @@ public class DashboardController : ControllerBase
                 Date = day,
                 Income = dayRoutes.Sum(r => r.TotalIncome),
                 Routes = dayRoutes.Count,
-                Distance = dayRoutes.Sum(r => r.Distance)
+                Distance = dayRoutes.Sum(r => r.Distance),
+                IncomeBySource = SplitBySource(dayRoutes)
             });
         }
         
@@ -387,7 +388,8 @@ public class DashboardController : ControllerBase
                     Date = weekStart,
                     Income = weekIncome,
                     Routes = weekRoutes.Count,
-                    Distance = weekRoutes.Sum(r => r.Distance)
+                    Distance = weekRoutes.Sum(r => r.Distance),
+                    IncomeBySource = SplitBySource(weekRoutes)
                 });
                 
                 weeksInMonth.Add(new WeekInMonthDto
@@ -474,7 +476,8 @@ public class DashboardController : ControllerBase
                 Date = monthStart,
                 Income = monthIncome,
                 Routes = monthRoutes.Count,
-                Distance = monthRoutes.Sum(r => r.Distance)
+                Distance = monthRoutes.Sum(r => r.Distance),
+                IncomeBySource = SplitBySource(monthRoutes)
             });
             
             monthsInFiscalYear.Add(new MonthInFiscalYearDto
@@ -512,6 +515,11 @@ public class DashboardController : ControllerBase
             }
         };
     }
+    /// <summary>Income per work type (source) for one chart bucket.</summary>
+    private static Dictionary<string, decimal> SplitBySource(IEnumerable<Models.Route> routes) =>
+        routes.GroupBy(r => string.IsNullOrWhiteSpace(r.WorkType) ? "Other" : r.WorkType!)
+              .ToDictionary(g => g.Key, g => g.Sum(r => r.TotalIncome));
+
 
     private static Dictionary<string, WorkTypeStatsDto> CalculateWorkTypeStats(List<IncomeMeter.Api.Models.Route> routes)
     {

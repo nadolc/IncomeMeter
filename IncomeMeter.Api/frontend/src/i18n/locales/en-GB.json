@@ -260,6 +260,9 @@
     "todayRoutes": {
       "title": "Today's Routes",
       "noRoutes": "No routes scheduled for today"
+    },
+    "chart": {
+      "barTotal": "Total"
     }
   },
   "settings": {

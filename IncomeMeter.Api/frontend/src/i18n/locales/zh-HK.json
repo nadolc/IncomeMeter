@@ -260,6 +260,9 @@
     "todayRoutes": {
       "title": "今日路線",
       "noRoutes": "今日沒有安排路線"
+    },
+    "chart": {
+      "barTotal": "合計"
     }
   },
   "settings": {
