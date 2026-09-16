@@ -33,6 +33,7 @@ const Vehicles: React.FC = () => {
   const [editing, setEditing] = useState<Vehicle | 'new' | null>(null);
   const [form, setForm] = useState<VehicleInput>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [lookup, setLookup] = useState<VehicleLookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -90,6 +91,7 @@ const Vehicles: React.FC = () => {
     setForm(emptyForm);
     setLookup(null);
     setLookupError(null);
+    setFormError(null);
     setEditing('new');
   };
 
@@ -114,6 +116,7 @@ const Vehicles: React.FC = () => {
       isActive: v.isActive,
       notes: v.notes ?? ''
     });
+    setFormError(null);
     setEditing(v);
   };
 
@@ -127,13 +130,16 @@ const Vehicles: React.FC = () => {
     if (!form.registration.trim()) return;
     setSaving(true);
     setError(null);
+    setFormError(null);
     try {
       const payload: VehicleInput = {
         ...form,
         purchaseDate: form.purchaseDate ? new Date(form.purchaseDate).toISOString() : null,
         disposalDate: form.disposalDate ? new Date(form.disposalDate).toISOString() : null,
         // editing an existing vehicle and blanking the field clears it server-side
-        clearDisposalDate: editing !== 'new' && !form.disposalDate
+        clearDisposalDate: editing !== 'new' && !form.disposalDate,
+        // Blank "first used" = not filed yet: clear the HMRC lock so the method can still be changed.
+        clearClaimMethodLock: editing !== 'new' && form.claimMethodLockedFromTaxYear == null
       };
       if (editing === 'new') await createVehicle(payload);
       else if (editing) await updateVehicle(editing.id, payload);
@@ -141,7 +147,7 @@ const Vehicles: React.FC = () => {
       await load();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? t('vehicles.errors.save', 'Failed to save vehicle.'));
+      setFormError(msg ?? t('vehicles.errors.save', 'Failed to save vehicle.'));
     } finally {
       setSaving(false);
     }
@@ -312,6 +318,9 @@ const Vehicles: React.FC = () => {
             </div>
 
             <div className="p-6 grid grid-cols-2 gap-3">
+              {formError && (
+                <div className="col-span-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{formError}</div>
+              )}
               <label className="block">
                 <span className={label}>{t('vehicles.fields.registration', 'Registration')} *</span>
                 <div className="flex gap-2">

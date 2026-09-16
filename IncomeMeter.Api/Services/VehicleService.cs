@@ -176,13 +176,17 @@ public class VehicleService : IVehicleService
 
         Validate(dto.VehicleType ?? existing.VehicleType, dto.ClaimMethod ?? existing.ClaimMethod, dto.FinanceType ?? existing.FinanceType);
 
+        // Clearing the lock in the same request means "not filed yet" – the method is then free to change.
+        if (dto.ClearClaimMethodLock == true) existing.ClaimMethodLockedFromTaxYear = null;
+
         // HMRC: once the flat-rate method has been used for a vehicle in a filed return it cannot be changed for that vehicle.
         if (dto.ClaimMethod != null && dto.ClaimMethod != existing.ClaimMethod
             && existing.ClaimMethod == ClaimMethods.Mileage && existing.ClaimMethodLockedFromTaxYear.HasValue)
         {
             throw new ArgumentException(
-                $"This vehicle has used the flat-rate mileage method since tax year {existing.ClaimMethodLockedFromTaxYear}/{(existing.ClaimMethodLockedFromTaxYear + 1) % 100:00}. " +
-                "HMRC does not allow switching to actual costs for the same vehicle.");
+                $"This vehicle is recorded as claimed at the flat mileage rate since tax year {existing.ClaimMethodLockedFromTaxYear}/{(existing.ClaimMethodLockedFromTaxYear + 1) % 100:00}, " +
+                "and HMRC does not allow switching a vehicle from the flat rate to actual costs. " +
+                "If that return has NOT been filed yet, clear the \"Method first used in tax year\" field and save again.");
         }
 
         if (dto.Registration != null) existing.Registration = NormaliseRegistration(dto.Registration);

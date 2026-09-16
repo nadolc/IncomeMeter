@@ -495,7 +495,7 @@ export interface Vehicle {
   updatedAt: string;
 }
 
-export type VehicleInput = Omit<Vehicle, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isActive'> & { isActive?: boolean; clearDisposalDate?: boolean };
+export type VehicleInput = Omit<Vehicle, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'isActive'> & { isActive?: boolean; clearDisposalDate?: boolean; clearClaimMethodLock?: boolean };
 
 export interface AssignByDateResult {
   routesUpdated: number;

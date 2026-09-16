@@ -53,6 +53,8 @@ public class UpdateVehicleDto
     public string? FinanceType { get; set; }
     public string? ClaimMethod { get; set; }
     public int? ClaimMethodLockedFromTaxYear { get; set; }
+    /// <summary>True = the method has not been used on a filed return yet: clears the lock so the method can be changed.</summary>
+    public bool? ClearClaimMethodLock { get; set; }
     [Range(0, 10_000_000)]
     public decimal? CapitalAllowancePoolBroughtForward { get; set; }
     public int? PoolBroughtForwardTaxYear { get; set; }
