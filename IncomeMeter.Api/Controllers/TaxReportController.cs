@@ -1,4 +1,4 @@
-using IncomeMeter.Api.Models;
+﻿using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +47,27 @@ public class TaxReportController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    /// <summary>All vehicles used in the year, each reported separately, with the SA103 boxes summed. Optional per-vehicle
+    /// business-use overrides: ?pct[vehicleId]=80</summary>
+    [HttpGet("{taxYear:int}/combined")]
+    public async Task<IActionResult> GetCombined(int taxYear)
+    {
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
+        if (taxYear < 2000 || taxYear > 2100) return BadRequest(new { error = "taxYear must be the start year, e.g. 2025" });
+
+        var overrides = new Dictionary<string, double>();
+        foreach (var (key, value) in Request.Query)
+        {
+            if (!key.StartsWith("pct[", StringComparison.OrdinalIgnoreCase) || !key.EndsWith("]")) continue;
+            var id = key[4..^1];
+            if (double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pct) && pct is >= 0 and <= 100)
+                overrides[id] = pct;
+        }
+
+        return Ok(await _reports.BuildCombinedReportAsync(userId, taxYear, overrides));
     }
 
     [HttpGet("{taxYear:int}/csv")]

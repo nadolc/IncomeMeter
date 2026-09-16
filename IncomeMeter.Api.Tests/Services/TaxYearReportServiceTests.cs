@@ -33,7 +33,8 @@ public class TaxYearReportServiceTests
         _expenses.Setup(e => e.GetOdometerReadingsAsync(UserId, It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync((string _, DateTime? from, DateTime? to) =>
                 _readingData.Where(r => r.Date >= from && r.Date <= to).ToList());
-        _vehicles.Setup(v => v.GetVehiclesAsync(UserId, false)).ReturnsAsync(_vehicleData);
+        _vehicles.Setup(v => v.GetVehiclesAsync(UserId, false)).ReturnsAsync(() => _vehicleData.Where(v => v.IsActive).ToList());
+        _vehicles.Setup(v => v.GetVehiclesAsync(UserId, true)).ReturnsAsync(_vehicleData);
         _vehicles.Setup(v => v.GetVehicleByIdAsync(It.IsAny<string>(), UserId))
             .ReturnsAsync((string id, string _) => _vehicleData.FirstOrDefault(v => v.Id == id));
         _attachments.Setup(a => a.GetByIdsAsync(It.IsAny<IEnumerable<string>>(), UserId))
@@ -46,16 +47,16 @@ public class TaxYearReportServiceTests
 
     private static DateTime D(int month, int day, int year = TaxYear) => new(year, month, day, 12, 0, 0, DateTimeKind.Utc);
 
-    private void AddRoute(double start, double end, DateTime? when = null) => _routeData.Add(new Route
+    private void AddRoute(double start, double end, DateTime? when = null, string? vehicleId = null) => _routeData.Add(new Route
     {
         UserId = UserId, Status = "completed", StartMile = start, EndMile = end,
-        ScheduleStart = when ?? D(6, 1), Distance = end - start
+        ScheduleStart = when ?? D(6, 1), Distance = end - start, VehicleId = vehicleId
     });
 
-    private void AddExpense(string category, decimal amount, bool fullyBusiness = false, string? attachmentId = "att", DateTime? when = null, double? odometer = null) =>
+    private void AddExpense(string category, decimal amount, bool fullyBusiness = false, string? attachmentId = "att", DateTime? when = null, double? odometer = null, string? vehicleId = null) =>
         _expenseData.Add(new Expense
         {
-            UserId = UserId, Category = category, Amount = amount, Date = when ?? D(7, 1), IsFullyBusiness = fullyBusiness,
+            UserId = UserId, Category = category, Amount = amount, Date = when ?? D(7, 1), IsFullyBusiness = fullyBusiness, VehicleId = vehicleId,
             AttachmentIds = attachmentId == null ? new List<string>() : new List<string> { attachmentId },
             Fuel = odometer.HasValue ? new FuelDetails { OdometerMiles = odometer } : null
         });
@@ -65,11 +66,11 @@ public class TaxYearReportServiceTests
 
     private Vehicle AddCar(int? co2 = 120, bool isNew = false, DateTime? purchaseDate = null, decimal? price = null,
         decimal? poolBf = null, int? poolYear = null, string type = VehicleTypes.Car, string claimMethod = ClaimMethods.ActualCost,
-        int? lockedFrom = null, string fuel = "petrol")
+        int? lockedFrom = null, string fuel = "petrol", string id = "veh-1", string reg = "AB12CDE", bool isActive = true)
     {
         var v = new Vehicle
         {
-            Id = "veh-1", UserId = UserId, Registration = "AB12CDE", VehicleType = type, Co2GPerKm = co2, IsNew = isNew,
+            Id = id, UserId = UserId, Registration = reg, VehicleType = type, Co2GPerKm = co2, IsNew = isNew, IsActive = isActive,
             PurchaseDate = purchaseDate, PurchasePrice = price, CapitalAllowancePoolBroughtForward = poolBf,
             PoolBroughtForwardTaxYear = poolYear, ClaimMethod = claimMethod, ClaimMethodLockedFromTaxYear = lockedFrom, FuelType = fuel
         };
@@ -427,6 +428,49 @@ public class TaxYearReportServiceTests
         report.CapitalAllowance.Applicable.Should().BeFalse();
         report.Warnings.Should().Contain(w => w.Code == "FLAT_RATE_VEHICLE");
         report.Comparison.LockedToOtherMethod.Should().BeFalse();   // fuel is not claimable, so actual-cost total is 0 < 450
+    }
+
+    // ---------- combined (all vehicles in the year) ----------
+
+    [Fact]
+    public async Task Combined_report_covers_a_sold_flat_rate_car_and_a_new_actual_cost_car()
+    {
+        // Subaru: flat rate, sold 27 May 2025, inactive. Kia: bought 27 May 2025, actual cost, 6% special rate.
+        var subaru = AddCar(id: "subaru", reg: "FE68HGM", co2: 150, purchaseDate: D(9, 18, 2018), price: 25_800m,
+            claimMethod: ClaimMethods.Mileage, lockedFrom: 2024, isActive: false);
+        subaru.DisposalDate = D(5, 27); subaru.DisposalProceeds = 1_000m;
+        AddCar(id: "kia", reg: "BP70BXO", co2: 110, purchaseDate: D(5, 27), price: 11_900m);
+
+        AddRoute(0, 1_000, when: D(4, 20), vehicleId: "subaru");                  // 1,000 mi × 45p = £450
+        AddExpense(ExpenseCategories.Fuel, 100m, when: D(4, 25), vehicleId: "subaru");   // inside the flat rate
+        AddRoute(0, 2_000, when: D(7, 1), vehicleId: "kia");
+        AddExpense(ExpenseCategories.Fuel, 500m, when: D(7, 5), vehicleId: "kia");
+        AddRoute(0, 10, when: D(8, 1));                                            // unassigned – excluded and reported
+
+        var c = await CreateSut().BuildCombinedReportAsync(UserId, TaxYear, new Dictionary<string, double> { ["kia"] = 80 });
+
+        c.Vehicles.Select(v => v.Vehicle!.Registration).Should().ContainInOrder("FE68HGM", "BP70BXO");
+        var sub = c.Vehicles[0]; var kia = c.Vehicles[1];
+
+        sub.Totals.FlatRateVehicle.Should().BeTrue();
+        sub.Totals.FlatRateClaim.Should().Be(450m);
+        sub.Mileage.BusinessMiles.Should().Be(1_000);                              // strict: only its own routes
+        sub.CapitalAllowance.Applicable.Should().BeFalse();
+
+        kia.Mileage.BusinessMiles.Should().Be(2_000);
+        kia.Totals.Allowable.Should().Be(400m);                                    // £500 × 80%
+        kia.CapitalAllowance.Allowance.Should().Be(571.20m);                       // 11,900 × 6% × 80%
+        kia.CapitalAllowance.Sa103Box.Should().Be("51");
+
+        c.TotalClaim.Should().Be(450m + 400m + 571.20m);
+        c.TotalBusinessMiles.Should().Be(3_000);
+        c.UnassignedRoutes.Should().Be(1);
+        c.Warnings.Should().Contain(w => w.Code == "UNASSIGNED_RECORDS");
+
+        c.Sa103Boxes.Single(b => b.Form == "SA103F" && b.Box == "20").Amount.Should().Be(450m + 500m);   // flat-rate claim + Kia running costs
+        c.Sa103Boxes.Single(b => b.Form == "SA103F" && b.Box == "35").Amount.Should().Be(100m);          // Kia private share only
+        c.Sa103Boxes.Single(b => b.Form == "SA103F" && b.Box == "51").Amount.Should().Be(571.20m);
+        c.Sa103Boxes.Single(b => b.Form == "SA103F" && b.Box == "20").Note.Should().Contain("FE68HGM").And.Contain("BP70BXO");
     }
 
     // ---------- CSV ----------

@@ -813,6 +813,12 @@
     "flatRateClaim": "此車輛嘅每英里固定費率申報額",
     "parkingTolls": "停車 / 過路費",
     "flatRateNote": "燃油、保險、保養及車價已包含喺費率內",
-    "coveredByFlatRate": "已包含喺固定費率"
+    "coveredByFlatRate": "已包含喺固定費率",
+    "allVehicles": "全部車輛（合併）",
+    "soldOn": "已售",
+    "inactive": "已停用",
+    "totalClaim": "全年車輛扣除總額",
+    "vehiclesInYear": "本年度使用過嘅車輛",
+    "sa103Combined": "SA103 欄位 – 全部車輛合計，直接抄入報稅表"
   }
 }

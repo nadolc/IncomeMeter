@@ -813,6 +813,12 @@
     "flatRateClaim": "Flat-rate mileage claim for this vehicle",
     "parkingTolls": "parking / tolls",
     "flatRateNote": "fuel, insurance, servicing and the vehicle cost are inside the rate",
-    "coveredByFlatRate": "covered by flat rate"
+    "coveredByFlatRate": "covered by flat rate",
+    "allVehicles": "All vehicles (combined)",
+    "soldOn": "sold",
+    "inactive": "inactive",
+    "totalClaim": "Total vehicle deduction for the year",
+    "vehiclesInYear": "Vehicles used this year",
+    "sa103Combined": "SA103 boxes – all vehicles summed, copy these into your return"
   }
 }

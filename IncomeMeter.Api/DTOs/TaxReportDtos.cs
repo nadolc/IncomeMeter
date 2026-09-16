@@ -161,3 +161,25 @@ public class TaxReportWarningDto
     public string Code { get; set; } = null!;
     public string Message { get; set; } = null!;
 }
+
+/// <summary>All vehicles used in the tax year, each reported separately, with the SA103 boxes summed.</summary>
+public class TaxYearCombinedReportDto
+{
+    public int TaxYear { get; set; }
+    public string TaxYearLabel { get; set; } = null!;
+    public DateTime PeriodFrom { get; set; }
+    public DateTime PeriodTo { get; set; }
+    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+    public List<TaxYearReportDto> Vehicles { get; set; } = new();
+    /// <summary>Boxes summed across vehicles – the figures to copy into the return.</summary>
+    public List<TaxReportBoxDto> Sa103Boxes { get; set; } = new();
+    /// <summary>Total deduction across vehicles: actual-cost vehicles' allowable + capital allowance, flat-rate vehicles' mileage claim.</summary>
+    public decimal TotalClaim { get; set; }
+    public double TotalBusinessMiles { get; set; }
+    /// <summary>Routes / expenses / readings in the year with no vehicle – not counted anywhere.</summary>
+    public int UnassignedRoutes { get; set; }
+    public int UnassignedExpenses { get; set; }
+    public int UnassignedOdometerReadings { get; set; }
+    public List<TaxReportWarningDto> Warnings { get; set; } = new();
+    public string Disclaimer { get; set; } = null!;
+}

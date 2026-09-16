@@ -600,3 +600,20 @@ export interface TaxYearReport {
   warnings: TaxReportWarning[];
   disclaimer: string;
 }
+
+export interface TaxYearCombinedReport {
+  taxYear: number;
+  taxYearLabel: string;
+  periodFrom: string;
+  periodTo: string;
+  generatedAt: string;
+  vehicles: TaxYearReport[];
+  sa103Boxes: Array<{ form: string; box: string; label: string; amount: number; note?: string | null }>;
+  totalClaim: number;
+  totalBusinessMiles: number;
+  unassignedRoutes: number;
+  unassignedExpenses: number;
+  unassignedOdometerReadings: number;
+  warnings: TaxReportWarning[];
+  disclaimer: string;
+}

@@ -13,7 +13,10 @@ public interface ITaxYearReportService
     int TaxYearFor(DateTime date);
     (DateTime from, DateTime to) TaxYearRange(int taxYear);
 
-    Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null);
+    /// <param name="strictVehicle">When true, only records explicitly tagged with the vehicle count (unassigned ones are excluded) – used for the combined view so nothing is counted twice.</param>
+    Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null, bool strictVehicle = false);
+    /// <summary>Every vehicle in use during the tax year (including sold / inactive ones), reported separately and summed.</summary>
+    Task<TaxYearCombinedReportDto> BuildCombinedReportAsync(string userId, int taxYear, IReadOnlyDictionary<string, double>? businessUseOverrides = null);
     string ToCsv(TaxYearReportDto report);
     Task<byte[]> BuildReceiptsZipAsync(string userId, int taxYear, string? vehicleId = null, CancellationToken ct = default);
 }
@@ -61,7 +64,7 @@ public class TaxYearReportService : ITaxYearReportService
 
     // ---------- Report ----------
 
-    public async Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null)
+    public async Task<TaxYearReportDto> BuildReportAsync(string userId, int taxYear, string? vehicleId = null, double? businessUsePercentOverride = null, bool strictVehicle = false)
     {
         var (from, to) = TaxYearRange(taxYear);
         var report = new TaxYearReportDto
@@ -120,7 +123,7 @@ public class TaxYearReportService : ITaxYearReportService
         // --- Business miles from routes ---
         var routes = await _routes.GetRoutesByDateRangeAsync(userId, from, to);
         if (vehicle != null)
-            routes = routes.Where(r => r.VehicleId == null || r.VehicleId == vehicle.Id).ToList();
+            routes = routes.Where(r => r.VehicleId == vehicle.Id || (!strictVehicle && r.VehicleId == null)).ToList();
         var completed = routes.Where(r => r.Status == "completed").ToList();
         double businessMiles = 0;
         int withoutMileage = 0;
@@ -147,8 +150,8 @@ public class TaxYearReportService : ITaxYearReportService
         var expenses = await _expenses.GetExpensesAsync(userId, from, to);
         if (vehicle != null)
         {
-            readings = readings.Where(r => r.VehicleId == null || r.VehicleId == vehicle.Id).ToList();
-            expenses = expenses.Where(e => e.VehicleId == null || e.VehicleId == vehicle.Id).ToList();
+            readings = readings.Where(r => r.VehicleId == vehicle.Id || (!strictVehicle && r.VehicleId == null)).ToList();
+            expenses = expenses.Where(e => e.VehicleId == vehicle.Id || (!strictVehicle && e.VehicleId == null)).ToList();
         }
 
         var points = readings
@@ -301,6 +304,75 @@ public class TaxYearReportService : ITaxYearReportService
         report.Sa103Boxes = BuildBoxes(report);
 
         return report;
+    }
+
+    // ---------- Combined (all vehicles) ----------
+
+    public async Task<TaxYearCombinedReportDto> BuildCombinedReportAsync(string userId, int taxYear, IReadOnlyDictionary<string, double>? businessUseOverrides = null)
+    {
+        var (from, to) = TaxYearRange(taxYear);
+        var combined = new TaxYearCombinedReportDto
+        {
+            TaxYear = taxYear,
+            TaxYearLabel = Label(taxYear),
+            PeriodFrom = from,
+            PeriodTo = to,
+            Disclaimer = new TaxYearReportDto().Disclaimer
+        };
+
+        // Vehicles whose ownership window overlaps the tax year – sold / inactive ones included.
+        var all = await _vehicles.GetVehiclesAsync(userId, includeInactive: true);
+        var inYear = all
+            .Where(v => (!v.PurchaseDate.HasValue || v.PurchaseDate.Value <= to) && (!v.DisposalDate.HasValue || v.DisposalDate.Value >= from))
+            .OrderBy(v => v.PurchaseDate ?? DateTime.MinValue)
+            .ToList();
+
+        foreach (var v in inYear)
+        {
+            double? pct = null;
+            if (businessUseOverrides != null && businessUseOverrides.TryGetValue(v.Id!, out var o)) pct = o;
+            var report = await BuildReportAsync(userId, taxYear, v.Id, pct, strictVehicle: true);
+            combined.Vehicles.Add(report);
+            combined.TotalBusinessMiles += report.Mileage.BusinessMiles;
+            combined.TotalClaim += report.Totals.FlatRateVehicle
+                ? report.Totals.FlatRateClaim
+                : Round2(report.Totals.Allowable + report.CapitalAllowance.Allowance);
+        }
+        combined.TotalClaim = Round2(combined.TotalClaim);
+
+        // Records with no vehicle are excluded from every per-vehicle report – tell the user.
+        var routes = await _routes.GetRoutesByDateRangeAsync(userId, from, to);
+        combined.UnassignedRoutes = routes.Count(r => r.Status == "completed" && r.VehicleId == null);
+        combined.UnassignedExpenses = (await _expenses.GetExpensesAsync(userId, from, to)).Count(e => e.VehicleId == null);
+        combined.UnassignedOdometerReadings = (await _expenses.GetOdometerReadingsAsync(userId, from, to)).Count(r => r.VehicleId == null);
+        if (combined.UnassignedRoutes + combined.UnassignedExpenses + combined.UnassignedOdometerReadings > 0)
+            combined.Warnings.Add(Warn("warning", "UNASSIGNED_RECORDS",
+                $"{combined.UnassignedRoutes} route(s), {combined.UnassignedExpenses} expense(s) and {combined.UnassignedOdometerReadings} odometer reading(s) have no vehicle and are not included. Use \"Assign by date\" on the Vehicles page."));
+        if (inYear.Count == 0)
+            combined.Warnings.Add(Warn("warning", "NO_VEHICLES_IN_YEAR", "No vehicle was in use during this tax year (check purchase / disposal dates)."));
+
+        // Sum boxes across vehicles (same form + box number).
+        combined.Sa103Boxes = combined.Vehicles
+            .SelectMany(r => r.Sa103Boxes.Select(b => (b, r.Vehicle?.Registration ?? "?")))
+            .GroupBy(x => (x.b.Form, x.b.Box))
+            .OrderBy(g => g.Key.Form == "SA103F" ? 0 : 1).ThenBy(g => int.TryParse(g.Key.Box, out var n) ? n : 999)
+            .Select(g => new TaxReportBoxDto
+            {
+                Form = g.Key.Form,
+                Box = g.Key.Box,
+                Label = g.First().b.Label.Replace(" (flat-rate mileage + parking/tolls)", "").Replace(" (total)", ""),
+                Amount = Round2(g.Sum(x => x.b.Amount)),
+                Note = string.Join(" + ", g.Select(x => $"{x.Item2} £{x.b.Amount:N2}"))
+            })
+            .ToList();
+
+        // Simplified-expenses 10,000-mile band is per business, not per vehicle.
+        var flatRateMiles = combined.Vehicles.Where(r => r.Totals.FlatRateVehicle).Sum(r => r.SimplifiedExpenses.BusinessMiles);
+        if (flatRateMiles > _rules.MileageFirstBandMiles && combined.Vehicles.Count(r => r.Totals.FlatRateVehicle) > 1)
+            combined.Warnings.Add(Warn("warning", "FLAT_RATE_BAND_SHARED",
+                $"Flat-rate vehicles together exceed {_rules.MileageFirstBandMiles:N0} business miles; the {_rules.MileageRateSecondBand:P0} band applies across the business, so the summed mileage claim is slightly overstated."));
+
+        return combined;
     }
 
     // ---------- Capital allowances ----------

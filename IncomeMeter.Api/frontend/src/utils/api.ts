@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, CreateExpenseRequest, CreateOdometerReadingRequest, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult, AssignByDateResult } from "../types";
+import type { DashboardStats, RegisterFormData, Route, User, UserSettings, WorkTypeConfig, CreateWorkTypeConfigRequest, UpdateWorkTypeConfigRequest, ConfigurationResponse, WorkTypeConfigResponseDto, ApiEndpoints, PeriodIncomeData, AttachmentUploadResult, Expense, OdometerReading, BatchImportItem, BatchImportResult, CreateExpenseRequest, CreateOdometerReadingRequest, Vehicle, VehicleInput, TaxYearReport, VehicleLookupResult, BackfillVehicleOptions, BackfillVehicleResult, AssignByDateResult, TaxYearCombinedReport } from "../types";
 
 // Get API URL from backend config endpoint
 /*const _getApiUrl = async (): Promise<string> => {
@@ -517,6 +517,14 @@ export interface TaxReportParams {
 
 export const getTaxYearReport = async (taxYear: number, params?: TaxReportParams): Promise<TaxYearReport> => {
   const response = await api.get<TaxYearReport>(`/api/tax-report/${taxYear}`, { params });
+  return response.data;
+};
+
+/** Every vehicle used in the tax year, reported separately with the SA103 boxes summed. */
+export const getCombinedTaxYearReport = async (taxYear: number, businessUseOverrides?: Record<string, number>): Promise<TaxYearCombinedReport> => {
+  const params: Record<string, number> = {};
+  for (const [id, pct] of Object.entries(businessUseOverrides ?? {})) params[`pct[${id}]`] = pct;
+  const response = await api.get<TaxYearCombinedReport>(`/api/tax-report/${taxYear}/combined`, { params });
   return response.data;
 };
 
