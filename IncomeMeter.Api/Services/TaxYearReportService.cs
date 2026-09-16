@@ -340,9 +340,21 @@ public class TaxYearReportService : ITaxYearReportService
             }
             if (vehicle.CapitalAllowancePoolBroughtForward is null or <= 0)
             {
-                ca.Reason = vehicle.PurchaseDate.HasValue && vehicle.PurchaseDate.Value < from
-                    ? "No written-down value brought forward is recorded for this vehicle (it was bought in an earlier year)."
-                    : "No purchase date recorded for this vehicle.";
+                if (vehicle.PurchaseDate.HasValue && vehicle.PurchaseDate.Value > to)
+                {
+                    ca.Reason = $"The vehicle's purchase date ({vehicle.PurchaseDate:d MMM yyyy}) is after this tax year – check the year on the Vehicles page.";
+                    warnings.Add(Warn("warning", "PURCHASE_AFTER_YEAR", ca.Reason));
+                }
+                else if (vehicle.PurchaseDate.HasValue && vehicle.PurchaseDate.Value < from)
+                {
+                    ca.Reason = $"Bought in an earlier year: enter the written-down value carried forward into {Label(taxYear)} on the Vehicles page (pool b/f) to claim the writing-down allowance.";
+                    warnings.Add(Warn("warning", "NO_POOL_BF", ca.Reason));
+                }
+                else
+                {
+                    ca.Reason = "No purchase date recorded for this vehicle.";
+                    warnings.Add(Warn("warning", "NO_PURCHASE_DATE", "Enter the vehicle's purchase date and price to calculate the capital allowance."));
+                }
                 return ca;
             }
             ca.PoolBroughtForward = vehicle.CapitalAllowancePoolBroughtForward.Value;
