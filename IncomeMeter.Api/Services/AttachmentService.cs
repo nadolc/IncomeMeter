@@ -1,4 +1,7 @@
 ﻿using System.Security.Cryptography;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using Microsoft.Extensions.Options;
@@ -97,6 +100,10 @@ public class AttachmentService : IAttachmentService
         await _storage.SaveAsync(storageKey, buffer, contentType, ct);
         buffer.Position = 0;
 
+        // Small preview for lists so the browser never has to pull the multi-megabyte original just to show a row.
+        var thumbnailKey = await TryCreateThumbnailAsync(buffer, contentType, storageKey, ct);
+        buffer.Position = 0;
+
         // Optional OCR pre-fill (merchant / date / total). Never blocks the upload.
         AttachmentOcr? ocr = null;
         if (_ocr.IsEnabled)
@@ -113,6 +120,7 @@ public class AttachmentService : IAttachmentService
             SizeBytes = file.Length,
             Sha256 = sha256,
             StorageKey = storageKey,
+            ThumbnailStorageKey = thumbnailKey,
             TakenAt = takenAt,
             DateSource = dateSource,
             UploadedAt = DateTime.UtcNow,
@@ -164,12 +172,61 @@ public class AttachmentService : IAttachmentService
     public Task<Stream?> OpenContentAsync(Attachment attachment, CancellationToken ct = default) =>
         _storage.OpenReadAsync(attachment.StorageKey, ct);
 
+    public async Task<Stream?> OpenThumbnailAsync(Attachment attachment, CancellationToken ct = default)
+    {
+        if (attachment.ThumbnailStorageKey != null)
+        {
+            var existing = await _storage.OpenReadAsync(attachment.ThumbnailStorageKey, ct);
+            if (existing != null) return existing;
+        }
+        if (!attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return null;
+
+        // Uploaded before thumbnails existed (or the file went missing): build it now and remember it.
+        await using var original = await _storage.OpenReadAsync(attachment.StorageKey, ct);
+        if (original == null) return null;
+        await using var buffer = new MemoryStream();
+        await original.CopyToAsync(buffer, ct);
+        buffer.Position = 0;
+        var key = await TryCreateThumbnailAsync(buffer, attachment.ContentType, attachment.StorageKey, ct);
+        if (key == null) return null;
+
+        await _attachments.UpdateOneAsync(a => a.Id == attachment.Id,
+            Builders<Attachment>.Update.Set(a => a.ThumbnailStorageKey, key), cancellationToken: ct);
+        return await _storage.OpenReadAsync(key, ct);
+    }
+
+    /// <summary>Resize to a 320px JPEG (honouring EXIF orientation). Returns the storage key, or null if the file is not a decodable image.</summary>
+    private async Task<string?> TryCreateThumbnailAsync(Stream source, string contentType, string storageKey, CancellationToken ct)
+    {
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return null;
+        try
+        {
+            source.Position = 0;
+            using var image = await Image.LoadAsync(source, ct);
+            image.Mutate(x => x.AutoOrient().Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(320, 320) }));
+            await using var thumb = new MemoryStream();
+            await image.SaveAsync(thumb, new JpegEncoder { Quality = 72 }, ct);
+            thumb.Position = 0;
+
+            var key = Path.ChangeExtension(storageKey, null) + "_thumb.jpg";
+            await _storage.SaveAsync(key, thumb, "image/jpeg", ct);
+            return key;
+        }
+        catch (Exception ex)
+        {
+            // HEIC and other formats ImageSharp cannot decode simply get no thumbnail.
+            _logger.LogDebug(ex, "No thumbnail for {Key}", storageKey);
+            return null;
+        }
+    }
+
     public async Task<bool> DeleteAsync(string id, string userId, CancellationToken ct = default)
     {
         var attachment = await GetByIdAsync(id, userId);
         if (attachment == null) return false;
 
         await _storage.DeleteAsync(attachment.StorageKey, ct);
+        if (attachment.ThumbnailStorageKey != null) await _storage.DeleteAsync(attachment.ThumbnailStorageKey, ct);
         await _attachments.DeleteOneAsync(a => a.Id == id && a.UserId == userId, ct);
         return true;
     }

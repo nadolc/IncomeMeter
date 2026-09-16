@@ -1,4 +1,4 @@
-using IncomeMeter.Api.DTOs;
+﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 
 namespace IncomeMeter.Api.Services;
@@ -13,5 +13,7 @@ public interface IAttachmentService
     Task<Attachment?> GetByIdAsync(string id, string userId);
     Task<List<Attachment>> GetByIdsAsync(IEnumerable<string> ids, string userId);
     Task<Stream?> OpenContentAsync(Attachment attachment, CancellationToken ct = default);
+    /// <summary>Small preview; generated and stored on first request for attachments uploaded before thumbnails existed. Null for non-images.</summary>
+    Task<Stream?> OpenThumbnailAsync(Attachment attachment, CancellationToken ct = default);
     Task<bool> DeleteAsync(string id, string userId, CancellationToken ct = default);
 }

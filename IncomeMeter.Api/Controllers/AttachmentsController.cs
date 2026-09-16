@@ -1,4 +1,4 @@
-using IncomeMeter.Api.DTOs;
+﻿using IncomeMeter.Api.DTOs;
 using IncomeMeter.Api.Models;
 using IncomeMeter.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -88,6 +88,25 @@ public class AttachmentsController : ControllerBase
 
         Response.Headers.CacheControl = "private, max-age=86400";
         return File(stream, attachment.ContentType, attachment.FileName, enableRangeProcessing: true);
+    }
+
+    /// <summary>Small JPEG preview for lists. Falls back to the original for non-image files.</summary>
+    [HttpGet("{id}/thumbnail")]
+    public async Task<IActionResult> GetThumbnail(string id, CancellationToken ct)
+    {
+        var userId = this.CurrentUserId();
+        if (userId == null) return Unauthorized(new { error = "Unauthorized" });
+
+        var attachment = await _attachmentService.GetByIdAsync(id, userId);
+        if (attachment == null) return NotFound();
+
+        var thumb = await _attachmentService.OpenThumbnailAsync(attachment, ct);
+        Response.Headers.CacheControl = "private, max-age=604800";
+        if (thumb != null) return File(thumb, "image/jpeg");
+
+        var stream = await _attachmentService.OpenContentAsync(attachment, ct);
+        if (stream == null) return NotFound(new { error = "File content is missing from storage" });
+        return File(stream, attachment.ContentType);
     }
 
     [HttpDelete("{id}")]

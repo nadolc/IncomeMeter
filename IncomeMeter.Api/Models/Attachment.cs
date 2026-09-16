@@ -25,6 +25,9 @@ public class Attachment
     /// <summary>Key/path inside the configured storage provider.</summary>
     public string StorageKey { get; set; } = null!;
 
+    /// <summary>Small JPEG preview (longest side ~320px) for lists; generated on upload or on first request.</summary>
+    public string? ThumbnailStorageKey { get; set; }
+
     /// <summary>
     /// When the photo was taken, derived from EXIF or the filename. Null if unknown.
     /// EXIF has no timezone, so this is a wall-clock value stored and returned without UTC conversion.

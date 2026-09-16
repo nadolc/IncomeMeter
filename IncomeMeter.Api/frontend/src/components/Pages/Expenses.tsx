@@ -361,7 +361,7 @@ const Expenses: React.FC = () => {
           className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4"
           onClick={() => setPreviewId(null)}
         >
-          <AttachmentImage attachmentId={previewId} className="max-h-full max-w-full object-contain rounded" />
+          <AttachmentImage attachmentId={previewId} full className="max-h-full max-w-full object-contain rounded" />
         </div>
       )}
 

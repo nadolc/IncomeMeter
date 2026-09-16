@@ -327,11 +327,20 @@ public class TaxYearReportService : ITaxYearReportService
             .OrderBy(v => v.PurchaseDate ?? DateTime.MinValue)
             .ToList();
 
-        foreach (var v in inYear)
+        // Per-vehicle reports and the unassigned counts are independent – run them all at once.
+        var reportTasks = inYear.Select(v =>
         {
             double? pct = null;
             if (businessUseOverrides != null && businessUseOverrides.TryGetValue(v.Id!, out var o)) pct = o;
-            var report = await BuildReportAsync(userId, taxYear, v.Id, pct, strictVehicle: true);
+            return BuildReportAsync(userId, taxYear, v.Id, pct, strictVehicle: true);
+        }).ToList();
+        var routesTask = _routes.GetRoutesByDateRangeAsync(userId, from, to);
+        var expensesTask = _expenses.GetExpensesAsync(userId, from, to);
+        var readingsTask = _expenses.GetOdometerReadingsAsync(userId, from, to);
+        await Task.WhenAll(reportTasks.Cast<Task>().Concat(new Task[] { routesTask, expensesTask, readingsTask }));
+
+        foreach (var report in reportTasks.Select(t => t.Result))
+        {
             combined.Vehicles.Add(report);
             combined.TotalBusinessMiles += report.Mileage.BusinessMiles;
             combined.TotalClaim += report.Totals.FlatRateVehicle
@@ -341,10 +350,9 @@ public class TaxYearReportService : ITaxYearReportService
         combined.TotalClaim = Round2(combined.TotalClaim);
 
         // Records with no vehicle are excluded from every per-vehicle report – tell the user.
-        var routes = await _routes.GetRoutesByDateRangeAsync(userId, from, to);
-        combined.UnassignedRoutes = routes.Count(r => r.Status == "completed" && r.VehicleId == null);
-        combined.UnassignedExpenses = (await _expenses.GetExpensesAsync(userId, from, to)).Count(e => e.VehicleId == null);
-        combined.UnassignedOdometerReadings = (await _expenses.GetOdometerReadingsAsync(userId, from, to)).Count(r => r.VehicleId == null);
+        combined.UnassignedRoutes = routesTask.Result.Count(r => r.Status == "completed" && r.VehicleId == null);
+        combined.UnassignedExpenses = expensesTask.Result.Count(e => e.VehicleId == null);
+        combined.UnassignedOdometerReadings = readingsTask.Result.Count(r => r.VehicleId == null);
         if (combined.UnassignedRoutes + combined.UnassignedExpenses + combined.UnassignedOdometerReadings > 0)
             combined.Warnings.Add(Warn("warning", "UNASSIGNED_RECORDS",
                 $"{combined.UnassignedRoutes} route(s), {combined.UnassignedExpenses} expense(s) and {combined.UnassignedOdometerReadings} odometer reading(s) have no vehicle and are not included. Use \"Assign by date\" on the Vehicles page."));

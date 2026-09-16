@@ -110,6 +110,7 @@ else
     builder.Services.AddSingleton<IFileStorageService, IncomeMeter.Api.Services.Storage.LocalFileStorageService>();
 }
 Console.WriteLine($"Attachment storage provider: {storageProvider}");
+builder.Services.AddHostedService<MongoIndexInitializer>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();

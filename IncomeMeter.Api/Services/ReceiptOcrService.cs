@@ -1,5 +1,8 @@
-using Azure;
+﻿using Azure;
 using Azure.AI.DocumentIntelligence;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 using IncomeMeter.Api.Models;
 using Microsoft.Extensions.Options;
 
@@ -54,6 +57,37 @@ public class AzureReceiptOcrService : IReceiptOcrService
 
     public bool IsEnabled => true;
 
+    // Document Intelligence F0 rejects files over 4 MB, and receipts read fine at ~2000px. Shrinking also
+    // cuts upload time and the per-page cost. PDFs and undecodable formats are sent as-is.
+    private const long MaxDirectBytes = 3 * 1024 * 1024;
+    private const int MaxSide = 2000;
+
+    private static async Task<BinaryData> PrepareForOcrAsync(Stream content, string contentType, CancellationToken ct)
+    {
+        var length = content.CanSeek ? content.Length : long.MaxValue;
+        if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            return await BinaryData.FromStreamAsync(content, ct);
+        try
+        {
+            using var image = await Image.LoadAsync(content, ct);
+            var tooBig = length > MaxDirectBytes || image.Width > MaxSide || image.Height > MaxSide;
+            if (!tooBig && image.Metadata.ExifProfile == null)
+            {
+                if (content.CanSeek) content.Position = 0;
+                return await BinaryData.FromStreamAsync(content, ct);
+            }
+            image.Mutate(x => x.AutoOrient().Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(MaxSide, MaxSide) }));
+            await using var ms = new MemoryStream();
+            await image.SaveAsync(ms, new JpegEncoder { Quality = 82 }, ct);
+            return BinaryData.FromBytes(ms.ToArray());
+        }
+        catch
+        {
+            if (content.CanSeek) content.Position = 0;
+            return await BinaryData.FromStreamAsync(content, ct);
+        }
+    }
+
     public async Task<AttachmentOcr?> AnalyseAsync(Stream content, string contentType, CancellationToken ct = default)
     {
         if (!Supported.Contains(contentType)) return null;
@@ -62,7 +96,8 @@ public class AzureReceiptOcrService : IReceiptOcrService
         try
         {
             if (content.CanSeek) content.Position = 0;
-            var options = new AnalyzeDocumentOptions(_settings.ModelId, await BinaryData.FromStreamAsync(content, ct));
+            var payload = await PrepareForOcrAsync(content, contentType, ct);
+            var options = new AnalyzeDocumentOptions(_settings.ModelId, payload);
             var operation = await _client.AnalyzeDocumentAsync(WaitUntil.Completed, options, ct);
             var analysis = operation.Value;
 

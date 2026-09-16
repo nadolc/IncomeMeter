@@ -425,6 +425,12 @@ export const fetchAttachmentObjectUrl = async (attachmentId: string): Promise<st
   return URL.createObjectURL(response.data as Blob);
 };
 
+/** Small preview (~10 KB JPEG) for lists; falls back to the original for non-image files. */
+export const fetchAttachmentThumbnailUrl = async (attachmentId: string): Promise<string> => {
+  const response = await api.get(`/api/attachments/${attachmentId}/thumbnail`, { responseType: 'blob' });
+  return URL.createObjectURL(response.data as Blob);
+};
+
 export const deleteAttachment = async (attachmentId: string): Promise<void> => {
   await api.delete(`/api/attachments/${attachmentId}`);
 };
