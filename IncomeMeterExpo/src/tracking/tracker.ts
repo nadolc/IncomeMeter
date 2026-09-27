@@ -296,7 +296,10 @@ export type TrackingMode = 'background' | 'foreground' | 'denied';
 
 export async function startTracking(routeId: string): Promise<TrackingMode> {
   const fg = await Location.requestForegroundPermissionsAsync();
-  if (fg.status !== 'granted') return 'denied';
+  if (fg.status !== 'granted') {
+    logEvent('tracking', 'denied (no location permission)');
+    return 'denied';
+  }
   setActiveTrackingRouteId(routeId);
   const mode = modeOf(routeId);
 
