@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getById, getLocations, getSettings, insertLocations, remove } from '../../db/repo';
-import { kmToUnit, pathKm } from '../../domain/geo';
+import { kmToUnit } from '../../domain/geo';
 import { routeIncome } from '../../domain/dashboard';
 import { vehicleLabel } from '../../services/data';
 import { cancelRoute } from '../../services/routes';
 import { fetchRouteLocations, isSignedIn } from '../../sync/api';
-import { getActiveTrackingRouteId, startTracking, TrackingMode } from '../../tracking/tracker';
+import { getActiveTrackingRouteId, recordStop, startTracking, trackedKm, TrackingMode } from '../../tracking/tracker';
 import { Badge, Banner, Button, Card, colors, Empty, H2, KV, Muted, Row, Screen, statusColor } from '../../ui/components';
 import { dateTime, duration, money, num, time } from '../../ui/format';
 import { useLive } from '../../ui/hooks';
@@ -21,17 +21,14 @@ export default function RouteDetail() {
   const points = useLive(() => getLocations(id), ['locations'], [id]);
   const recording = useLive(() => getActiveTrackingRouteId() === id, ['kv'], [id]);
   const [showPoints, setShowPoints] = useState(false);
+  const [stopBusy, setStopBusy] = useState(false);
   const unit = getSettings().mileageUnit;
 
   // Routes recorded on another device: fetch their path once.
   useEffect(() => {
     if (points.length > 0 || !route || route.status === 'in_progress') return;
     isSignedIn().then((ok) => (ok ? fetchRouteLocations(id) : [])).then((remote) => {
-      if (remote.length === 0) return;
-      insertLocations(remote.map((l) => ({
-        id: l.id, routeId: id, latitude: l.latitude, longitude: l.longitude, timestamp: l.timestamp, accuracy: l.accuracy ?? null,
-        speed: l.speed ?? null, address: l.address ?? null, distanceFromLastKm: l.distanceFromLastKm ?? null, distanceFromLastMi: l.distanceFromLastMi ?? null,
-      })), false);
+      if (remote.length > 0) insertLocations(remote, false);
     }).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -39,8 +36,23 @@ export default function RouteDetail() {
   if (!route) return <Screen><Empty>—</Empty></Screen>;
 
   const vehicle = getById('vehicles', route.vehicleId);
+  const track = points.filter((p) => p.kind === 'track');
+  const stops = points.filter((p) => p.kind === 'stop');
+  // Draw the driving path; routes without one (old shortcut routes) are drawn stop to stop.
+  const line = (track.length >= 2 ? track : stops).map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
   const coords = points.map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
-  const gpsDistance = kmToUnit(pathKm(coords), unit);
+  const gpsDistance = kmToUnit(trackedKm(route.id), unit);
+
+  const addStop = async () => {
+    setStopBusy(true);
+    try {
+      await recordStop(route.id);
+    } catch (e) {
+      Alert.alert(t('recordStop'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setStopBusy(false);
+    }
+  };
 
   const confirmDelete = () =>
     Alert.alert(t('confirmDelete'), undefined, [
@@ -66,9 +78,14 @@ export default function RouteDetail() {
             style={{ flex: 1 }}
             initialRegion={regionFor(coords)}
             showsUserLocation={route.status === 'in_progress'}>
-            <Polyline coordinates={coords} strokeWidth={4} strokeColor={colors.primary} />
-            <Marker coordinate={coords[0]} pinColor="green" title={t('actualStart')} />
-            {coords.length > 1 ? <Marker coordinate={coords[coords.length - 1]} pinColor="red" title={t('actualEnd')} /> : null}
+            {line.length > 1 ? <Polyline coordinates={line} strokeWidth={4} strokeColor={colors.primary} /> : null}
+            {track.length > 0 ? <Marker coordinate={line[0]} pinColor="green" title={t('actualStart')} /> : null}
+            {track.length > 1 && route.status !== 'in_progress'
+              ? <Marker coordinate={line[line.length - 1]} pinColor="red" title={t('actualEnd')} /> : null}
+            {stops.map((p, i) => (
+              <Marker key={p.id} coordinate={{ latitude: p.latitude, longitude: p.longitude }} pinColor="orange"
+                title={`${i + 1}. ${time(p.timestamp)}`} description={p.address ?? undefined} />
+            ))}
           </MapView>
         </View>
       ) : (
@@ -81,6 +98,9 @@ export default function RouteDetail() {
           {!recording ? <Button kind="secondary" title={t('useGps')} onPress={resume} style={{ flex: 1 }} /> : null}
         </Row>
       ) : null}
+      {route.status === 'in_progress'
+        ? <Button kind="secondary" title={t('recordStop')} onPress={addStop} busy={stopBusy} />
+        : null}
 
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
@@ -96,7 +116,8 @@ export default function RouteDetail() {
         <KV k={t('startMile')} v={route.startMile != null ? num(route.startMile) : '—'} />
         <KV k={t('endMile')} v={route.endMile != null ? num(route.endMile) : '—'} />
         <KV k={t('distance')} v={`${num(route.distance)} ${unit}`} strong />
-        <KV k={t('gpsTracked')} v={`${num(gpsDistance)} ${unit} · ${points.length} ${t('gpsPoints')}${recording ? ' ●' : ''}`} />
+        <KV k={t('gpsTracked')} v={`${num(gpsDistance)} ${unit} · ${track.length} ${t('gpsPoints')}${recording ? ' ●' : ''}`} />
+        <KV k={t('stops')} v={stops.length} />
         <KV k={t('estimatedIncome')} v={money(route.estimatedIncome)} />
       </Card>
 
@@ -116,12 +137,22 @@ export default function RouteDetail() {
         <Button kind="danger" title={t('delete')} onPress={confirmDelete} style={{ flex: 1 }} />
       </Row>
 
-      {points.length > 0 ? (
+      {stops.length > 0 ? <H2>{t('stops')} ({stops.length})</H2> : null}
+      {stops.map((p, i) => (
+        <Card key={p.id}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text style={{ fontWeight: '600' }}>📍 {i + 1}. {time(p.timestamp)}</Text>
+          </Row>
+          <Muted>{p.address ?? `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`}</Muted>
+        </Card>
+      ))}
+
+      {track.length > 0 ? (
         <>
           <H2 right={<Button small kind="ghost" title={showPoints ? '▲' : '▼'} onPress={() => setShowPoints(!showPoints)} />}>
-            {t('gpsPoints')} ({points.length})
+            {t('gpsPoints')} ({track.length})
           </H2>
-          {showPoints && points.map((p) => (
+          {showPoints && track.map((p) => (
             <Card key={p.id}>
               <Row style={{ justifyContent: 'space-between' }}>
                 <Text>{time(p.timestamp)}</Text>

@@ -52,6 +52,7 @@ export default function RootLayout() {
         <Stack.Screen name="vehicles/edit" options={{ presentation: 'modal', title: t('newVehicle') }} />
         <Stack.Screen name="worktypes/index" options={{ title: t('workTypes') }} />
         <Stack.Screen name="worktypes/edit" options={{ presentation: 'modal', title: t('newWorkType') }} />
+        <Stack.Screen name="stop" options={{ presentation: 'modal', title: t('recordStop') }} />
       </Stack>
     </SafeAreaProvider>
   );

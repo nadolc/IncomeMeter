@@ -1,9 +1,9 @@
 import { newId, nowIso } from '../db/database';
-import { getAll, getById, getLocations, getSettings, save } from '../db/repo';
+import { getAll, getById, getSettings, save } from '../db/repo';
 import { kmToUnit } from '../domain/geo';
 import { pickVehicleForDate } from '../domain/vehicleAssignment';
 import { IncomeItem, Route, RouteStatus } from '../domain/types';
-import { startTracking, stopTracking, trackedKm, TrackingMode } from '../tracking/tracker';
+import { startTracking, stopTracking, trackedKm, trackedPointCount, TrackingMode } from '../tracking/tracker';
 
 const HOURS8 = 8 * 3_600_000;
 
@@ -86,7 +86,7 @@ export interface EndMileSuggestion {
 export function suggestEndMile(route: Route): EndMileSuggestion {
   const unit = getSettings().mileageUnit;
   const tracked = Math.round(kmToUnit(trackedKm(route.id), unit) * 10) / 10;
-  const points = getLocations(route.id).length;
+  const points = trackedPointCount(route.id);
   return {
     tracked,
     points,

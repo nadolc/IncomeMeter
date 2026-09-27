@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import { getSettings, saveSettings } from '../db/repo';
-import { AttachmentOcr } from '../domain/types';
+import { AttachmentOcr, LocationPoint } from '../domain/types';
 
 /**
  * Talks to IncomeMeter.Api on Azure. Signing in uses the existing Google OAuth flow in the system
@@ -137,6 +137,17 @@ export interface VehicleLookup {
 export const lookupVehicle = (registration: string) =>
   api<VehicleLookup>(`/api/vehicles/lookup/${encodeURIComponent(registration.replace(/\s+/g, ''))}`);
 
+export interface RemoteLocation {
+  id: string; routeId: string; latitude: number; longitude: number; timestamp: string; accuracy?: number | null; speed?: number | null;
+  address?: string | null; distanceFromLastKm?: number | null; distanceFromLastMi?: number | null; kind?: string | null;
+}
+
+/** Server points without a kind predate the app – they were all added by the iOS shortcut, i.e. stops. */
+export const toLocalPoint = (l: RemoteLocation): LocationPoint => ({
+  id: l.id, routeId: l.routeId, kind: l.kind === 'track' ? 'track' : 'stop', latitude: l.latitude, longitude: l.longitude,
+  timestamp: l.timestamp, accuracy: l.accuracy ?? null, speed: l.speed ?? null, address: l.address ?? null,
+  distanceFromLastKm: l.distanceFromLastKm ?? null, distanceFromLastMi: l.distanceFromLastMi ?? null,
+});
+
 export const fetchRouteLocations = (routeId: string) =>
-  api<{ id: string; routeId: string; latitude: number; longitude: number; timestamp: string; accuracy?: number; speed?: number; address?: string; distanceFromLastKm?: number; distanceFromLastMi?: number }[]>(
-    `/api/locations?routeId=${routeId}`);
+  api<RemoteLocation[]>(`/api/locations?routeId=${routeId}`).then((list) => list.map(toLocalPoint));

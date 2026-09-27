@@ -124,6 +124,7 @@ public class LocationService : ILocationService
             Timestamp = dto.Timestamp,
             Accuracy = dto.Accuracy,
             Speed = dto.Speed,
+            Kind = dto.Kind,
             Address = await _geoCodingService.GetAddressFromCoordinatesAsync(roundedLatitude, roundedLongitude),
             TimezoneId = timezoneId,
             TimezoneOffset = timezoneOffset
@@ -280,6 +281,24 @@ public class LocationService : ILocationService
     public async Task<Location?> AddLocationFromIOSAsync(CreateLocationIOSDto dto, string userId)
     {
         var correlationId = Guid.NewGuid().ToString("N")[..8];
+
+        // Routes are now started in the mobile app, so the shortcut either sends no route id or a stale one
+        // (the last route the old start-route shortcut created). Stops are only recorded while driving, so they
+        // belong on the route in progress whenever there is one.
+        var current = (await _routeService.GetRoutesByStatusAsync(userId, "in_progress"))
+            .OrderByDescending(r => r.ActualStartTime ?? r.ScheduleStart)
+            .FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(dto.RouteId))
+        {
+            if (current == null) return null;
+            dto.RouteId = current.Id!;
+        }
+        else if (current != null && current.Id != dto.RouteId)
+        {
+            var requested = await _routeService.GetRouteByIdAsync(dto.RouteId, userId);
+            if (requested == null || requested.Status != "in_progress")
+                dto.RouteId = current.Id!;
+        }
         
         Log.Logger
             .ForContext("EventType", "LocationAdditionIOSStarted")
@@ -296,7 +315,8 @@ public class LocationService : ILocationService
             Longitude = dto.Longitude,
             Timestamp = DateTime.UtcNow, // Automatically set to current time
             Accuracy = null, // iOS will provide basic coordinates only
-            Speed = null     // iOS will provide basic coordinates only
+            Speed = null,    // iOS will provide basic coordinates only
+            Kind = "stop"
         };
 
         Log.Logger

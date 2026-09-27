@@ -21,6 +21,9 @@ public class CreateLocationDto
     public double? Accuracy { get; set; }
 
     public double? Speed { get; set; }
+
+    /// <summary>"track" | "stop" – see <see cref="IncomeMeter.Api.Models.Location.Kind"/>.</summary>
+    public string? Kind { get; set; }
 }
 
 public class UpdateLocationDto
@@ -74,8 +77,8 @@ public class LocationResponseDto
 
 public class CreateLocationIOSDto
 {
-    [Required(ErrorMessage = "RouteId is required")]
-    public string RouteId { get; set; } = null!;
+    /// <summary>Optional: when omitted the stop is added to the user's route in progress (started in the mobile app).</summary>
+    public string? RouteId { get; set; }
 
     [Required(ErrorMessage = "Latitude is required")]
     [Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90 degrees")]

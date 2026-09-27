@@ -1,10 +1,10 @@
 import { Collection, notify } from '../db/database';
 import {
-  applyRemote, changeId, getAll, getById, getDirty, getDirtyLocations, getSettings, markClean, markLocationsClean,
+  applyRemote, changeId, getAll, getById, getDirty, getDirtyLocations, getSettings, insertLocations, markClean, markLocationsClean,
   removeMissing, save, saveSettings,
 } from '../db/repo';
 import { Attachment } from '../domain/types';
-import { api, isSignedIn, uploadAttachment } from './api';
+import { api, isSignedIn, RemoteLocation, toLocalPoint, uploadAttachment } from './api';
 
 const SYNCED: Exclude<Collection, 'attachments'>[] = ['vehicles', 'workTypes', 'routes', 'expenses', 'odometerReadings'];
 
@@ -23,6 +23,8 @@ interface SyncResponse {
   acceptedLocations: string[];
   changes: Record<string, any[]>;
   ids: Record<string, string[]>;
+  /** Stops added on the server since the last sync (e.g. by the iOS shortcut). */
+  locations?: RemoteLocation[];
 }
 
 let running: Promise<SyncResult> | null = null;
@@ -121,6 +123,8 @@ function applyResponse(res: SyncResponse, sent: Map<string, Map<string, string>>
     pushed += res.accepted[c]?.length ?? 0;
   }
   markLocationsClean(res.acceptedLocations ?? []);
+  // Already clean: they came from the server.
+  insertLocations((res.locations ?? []).map(toLocalPoint), false);
 
   let pulled = 0;
   for (const c of SYNCED) for (const doc of res.changes[c] ?? []) if (applyRemote(c, doc)) pulled++;

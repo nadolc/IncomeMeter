@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { getSettings } from '../db/repo';
 import { kmToUnit } from '../domain/geo';
 import { Route } from '../domain/types';
-import { getActiveTrackingRouteId, trackedKm, trackedPointCount } from '../tracking/tracker';
+import { getActiveTrackingRouteId, recordStop, stopCount, trackedKm, trackedPointCount } from '../tracking/tracker';
 import { Badge, Button, Card, colors, Muted, Row } from './components';
 import { duration, num } from './format';
 import { useLive } from './hooks';
@@ -20,8 +20,21 @@ export function ActiveRouteCard({ route }: { route: Route }) {
   }, []);
 
   const gps = useLive(() => ({
-    km: trackedKm(route.id), points: trackedPointCount(route.id), recording: getActiveTrackingRouteId() === route.id,
+    km: trackedKm(route.id), points: trackedPointCount(route.id), stops: stopCount(route.id),
+    recording: getActiveTrackingRouteId() === route.id,
   }), ['locations', 'kv'], [route.id]);
+  const [stopBusy, setStopBusy] = useState(false);
+
+  const addStop = async () => {
+    setStopBusy(true);
+    try {
+      await recordStop(route.id);
+    } catch (e) {
+      Alert.alert(t('recordStop'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setStopBusy(false);
+    }
+  };
   const unit = getSettings().mileageUnit;
 
   return (
@@ -46,8 +59,14 @@ export function ActiveRouteCard({ route }: { route: Route }) {
           </View>
         ) : null}
       </Row>
-      <Muted>{gps.recording ? `● ${t('trackingBackground')} · ${gps.points} ${t('gpsPoints')}` : t('trackingOff')}</Muted>
-      <Button title={t('endRoute')} onPress={() => router.push({ pathname: '/routes/end', params: { id: route.id } })} style={{ marginTop: 8 }} />
+      <Muted>
+        {gps.recording ? `● ${t('trackingBackground')} · ${gps.points} ${t('gpsPoints')}` : t('trackingOff')}
+        {gps.stops > 0 ? ` · ${gps.stops} ${t('stops')}` : ''}
+      </Muted>
+      <Row style={{ gap: 8, marginTop: 8 }}>
+        <Button kind="secondary" title={t('recordStop')} onPress={addStop} busy={stopBusy} style={{ flex: 1 }} />
+        <Button title={t('endRoute')} onPress={() => router.push({ pathname: '/routes/end', params: { id: route.id } })} style={{ flex: 1 }} />
+      </Row>
     </Card>
   );
 }

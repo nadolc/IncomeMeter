@@ -88,6 +88,11 @@ public class SyncController : ControllerBase
                 attachments = (await _db.Attachments.Find(a => a.UserId == userId && a.UploadedAt > since).ToListAsync(ct))
                     .Select(a => new { a.Id, a.FileName, a.ContentType, a.SizeBytes, a.TakenAt, a.Ocr, a.UploadedAt })
             },
+            // Points added on the server since the last sync – e.g. stops recorded by the iOS shortcut, whose
+            // timestamp is the server's clock. Skipped on a first full download; the app fetches a route's path on demand.
+            locations = request.Since == null
+                ? new List<Location>()
+                : await _db.Locations.Find(l => l.UserId == userId && l.Timestamp > since && l.Kind != "track").ToListAsync(ct),
             // Every id the server holds, so the device can drop records deleted on the web.
             ids = new
             {

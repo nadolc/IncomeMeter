@@ -29,8 +29,12 @@ export interface Route {
   updatedAt: string;
 }
 
+/** 'track' = recorded automatically while driving; 'stop' = marked by the driver (Record stop / iOS shortcut). */
+export type LocationKind = 'track' | 'stop';
+
 export interface LocationPoint {
   id: string;
+  kind: LocationKind;
   routeId: string;
   latitude: number;
   longitude: number;

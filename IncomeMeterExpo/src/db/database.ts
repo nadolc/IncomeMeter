@@ -37,6 +37,8 @@ const MIGRATIONS: string[] = [
    );
    CREATE INDEX IF NOT EXISTS ix_locations_route ON locations (route_id, timestamp);
    CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);`,
+  // 'track' = recorded while driving, 'stop' = marked by the driver (Record stop / iOS shortcut).
+  `ALTER TABLE locations ADD COLUMN kind TEXT NOT NULL DEFAULT 'track';`,
 ];
 
 export function getDb(): SQLite.SQLiteDatabase {

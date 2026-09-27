@@ -22,6 +22,7 @@ const en = {
   gpsTracked: 'GPS distance', gpsPoints: 'GPS points', useGps: 'Use GPS', autofilledFromGps: 'Filled in from the GPS path: start + {d}',
   trackingBackground: 'Recording GPS in the background', trackingForeground: 'Recording GPS while the app is open – allow "all the time" location to record in the background',
   trackingDenied: 'Location permission denied – distance is not being recorded', trackingOff: 'GPS recording is off (Settings)',
+  recordStop: '📍 Record stop', stops: 'Stops', stopRecorded: 'Stop recorded', noRouteInProgress: 'No route in progress – start one first', recordingStop: 'Recording stop…',
   map: 'Map', noPath: 'No GPS points recorded for this route', elapsed: 'Elapsed', last7: '7 days', last14: '14 days', last30: '30 days',
   sortNewest: 'Newest', sortOldest: 'Oldest', sortIncome: 'Income', endBeforeStart: 'End odometer is lower than the start',
   // expenses
@@ -75,6 +76,7 @@ const zh: Record<Key, string> = {
   gpsTracked: 'GPS 距離', gpsPoints: 'GPS 點數', useGps: '用 GPS', autofilledFromGps: '已按 GPS 路徑自動填寫：開始 + {d}',
   trackingBackground: '正在背景記錄 GPS', trackingForeground: '只會喺 app 開住時記錄 GPS – 允許「一律允許」位置權限先可以背景記錄',
   trackingDenied: '冇位置權限 – 無法記錄距離', trackingOff: 'GPS 記錄已關閉（設定）',
+  recordStop: '📍 記錄位置', stops: '停車點', stopRecorded: '已記錄位置', noRouteInProgress: '未有進行中嘅路線 – 請先開始路線', recordingStop: '正在記錄位置…',
   map: '地圖', noPath: '呢條路線未有 GPS 記錄', elapsed: '已用時間', last7: '7 日', last14: '14 日', last30: '30 日',
   sortNewest: '最新', sortOldest: '最舊', sortIncome: '收入', endBeforeStart: '結束里數低過開始里數',
   category: '類別', merchant: '商戶', litres: '公升', odometerOnReceipt: '里程表（英里）', fullyBusiness: '100% 業務用途（不分攤）',

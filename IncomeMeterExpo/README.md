@@ -37,6 +37,20 @@ On **End route**, the end odometer is **pre-filled as start odometer + distance 
 - Tuning values are in `src/domain/geo.ts` (`TRACKING`).
 - A unit test simulates a noisy 10-mile drive followed by 10 minutes parked, and checks the result is within 0.3 mi.
 
+### Stops (the iOS "記錄位置" shortcut)
+
+A stop is a point you mark yourself, for example a pickup or drop-off. Stops are stored separately from the automatic driving path. They show on the map as numbered orange pins, with the street address, and they don't add to the distance.
+
+There are three ways to record a stop:
+
+1. **Your existing CarPlay shortcut keeps working.** It posts to `POST /api/locations/add-with-apikey`.
+   - With no `routeId`, or with a stale one (the last route the old start-route shortcut created), the server puts the stop on the route that is **in progress**.
+   - The app uploads that route a few seconds after you start it, so this needs a signal at the start and at the stop.
+   - The stop reaches the phone on the next sync, for example when you open the app.
+   - Optional tidy-up: remove the "Get contents of routes folder → routeId" steps and the `routeId` field from the shortcut.
+2. **Without a signal:** a Shortcut with the action **Open URL** `incomemeter://stop`. It opens the app, records your current position on the route in progress, and returns. To use the Shortcut's own position, send `incomemeter://stop?lat=…&lon=…`. iOS may not open an app while the phone is locked.
+3. The **📍 Record stop** button on the in-progress card and on the route screen.
+
 ## Running it
 
 Background location, the foreground service and the `incomemeter://` sign-in redirect all need native config. That means you need a **development build**; Expo Go can't do these.

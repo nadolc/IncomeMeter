@@ -1,5 +1,5 @@
 import {
-  Attachment, DEFAULT_SETTINGS, Expense, LocationPoint, OdometerReading, Route, Settings, Vehicle, WorkType,
+  Attachment, DEFAULT_SETTINGS, Expense, LocationKind, LocationPoint, OdometerReading, Route, Settings, Vehicle, WorkType,
 } from '../domain/types';
 import { Collection, getDb, notify, nowIso } from './database';
 
@@ -128,21 +128,27 @@ export function changeId(collection: Collection, oldId: string, newId: string) {
 type LocRow = {
   id: string; route_id: string; latitude: number; longitude: number; timestamp: string;
   accuracy: number | null; speed: number | null; address: string | null; distance_km: number | null; distance_mi: number | null;
+  kind: LocationKind;
 };
 
 const toPoint = (r: LocRow): LocationPoint => ({
   id: r.id, routeId: r.route_id, latitude: r.latitude, longitude: r.longitude, timestamp: r.timestamp,
   accuracy: r.accuracy, speed: r.speed, address: r.address, distanceFromLastKm: r.distance_km, distanceFromLastMi: r.distance_mi,
+  kind: r.kind,
 });
 
-export function getLocations(routeId: string): LocationPoint[] {
+export function getLocations(routeId: string, kind?: LocationKind): LocationPoint[] {
   return getDb()
-    .getAllSync<LocRow>('SELECT * FROM locations WHERE route_id = ? ORDER BY timestamp', routeId)
+    .getAllSync<LocRow>(
+      `SELECT * FROM locations WHERE route_id = ?${kind ? ' AND kind = ?' : ''} ORDER BY timestamp`,
+      ...(kind ? [routeId, kind] : [routeId]))
     .map(toPoint);
 }
 
+/** Last recorded driving point – the reference for filtering the next GPS fix. */
 export function getLastLocation(routeId: string): LocationPoint | null {
-  const r = getDb().getFirstSync<LocRow>('SELECT * FROM locations WHERE route_id = ? ORDER BY timestamp DESC LIMIT 1', routeId);
+  const r = getDb().getFirstSync<LocRow>(
+    "SELECT * FROM locations WHERE route_id = ? AND kind = 'track' ORDER BY timestamp DESC LIMIT 1", routeId);
   return r ? toPoint(r) : null;
 }
 
@@ -152,10 +158,10 @@ export function insertLocations(points: LocationPoint[], dirty = true) {
   db.withTransactionSync(() => {
     for (const p of points) {
       db.runSync(
-        `INSERT OR IGNORE INTO locations (id, route_id, latitude, longitude, timestamp, accuracy, speed, address, distance_km, distance_mi, dirty)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO locations (id, route_id, latitude, longitude, timestamp, accuracy, speed, address, distance_km, distance_mi, dirty, kind)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         p.id, p.routeId, p.latitude, p.longitude, p.timestamp, p.accuracy, p.speed, p.address,
-        p.distanceFromLastKm, p.distanceFromLastMi, dirty ? 1 : 0);
+        p.distanceFromLastKm, p.distanceFromLastMi, dirty ? 1 : 0, p.kind);
     }
   });
   notify('locations');

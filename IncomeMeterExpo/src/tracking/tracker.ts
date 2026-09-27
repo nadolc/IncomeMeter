@@ -1,9 +1,9 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { getDb, newId, notify } from '../db/database';
-import { getLastLocation, insertLocations } from '../db/repo';
-import { acceptFix, Fix, KM_TO_MI } from '../domain/geo';
-import { LocationPoint } from '../domain/types';
+import { getLastLocation, getLocations, insertLocations } from '../db/repo';
+import { acceptFix, Fix, KM_TO_MI, pathKm } from '../domain/geo';
+import { LocationKind, LocationPoint } from '../domain/types';
 
 /**
  * Records where the car goes while a route is in progress, so the end odometer can be suggested
@@ -57,6 +57,7 @@ export function recordFixes(routeId: string, locations: Location.LocationObject[
       address: null,
       distanceFromLastKm: Math.round(accepted.stepKm * 1000) / 1000,
       distanceFromLastMi: Math.round(accepted.stepKm * KM_TO_MI * 1000) / 1000,
+      kind: 'track',
     });
     prev = fix;
   }
@@ -64,14 +65,73 @@ export function recordFixes(routeId: string, locations: Location.LocationObject[
   return points.length;
 }
 
-/** Distance recorded for a route so far, in km. */
+/**
+ * Distance driven so far, in km: the sum of the recorded driving path. Routes with no path (GPS off or denied,
+ * or recorded by the old iOS shortcut) fall back to straight lines between their stops – an underestimate.
+ */
 export function trackedKm(routeId: string): number {
-  const row = getDb().getFirstSync<{ km: number | null }>('SELECT SUM(distance_km) AS km FROM locations WHERE route_id = ?', routeId);
-  return row?.km ?? 0;
+  const row = getDb().getFirstSync<{ km: number | null; n: number }>(
+    "SELECT SUM(distance_km) AS km, COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = 'track'", routeId);
+  if (row && row.n >= 2) return row.km ?? 0;
+  return pathKm(getLocations(routeId, 'stop'));
 }
 
+/** Points that make up the distance: driving points, or the stops when there is no driving path. */
 export function trackedPointCount(routeId: string): number {
-  return getDb().getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM locations WHERE route_id = ?', routeId)?.n ?? 0;
+  const count = (kind: LocationKind) =>
+    getDb().getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = ?', routeId, kind)?.n ?? 0;
+  const track = count('track');
+  return track >= 2 ? track : count('stop');
+}
+
+export function stopCount(routeId: string): number {
+  return getDb().getFirstSync<{ n: number }>("SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = 'stop'", routeId)?.n ?? 0;
+}
+
+/** One-line address from the phone's geocoder, e.g. "12 High Street, Leeds". Best effort – null offline. */
+async function addressFor(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const [a] = await Location.reverseGeocodeAsync({ latitude, longitude });
+    if (!a) return null;
+    const street = [a.streetNumber, a.street].filter(Boolean).join(' ') || a.name;
+    return [street, a.city ?? a.subregion, a.postalCode].filter(Boolean).join(', ') || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Mark a stop (pickup / drop-off) on a route – what the iOS "記錄位置" shortcut did. Uses the given
+ * coordinates (e.g. passed in by a Shortcut) or the phone's current position.
+ */
+export async function recordStop(routeId: string, coords?: { latitude: number; longitude: number }): Promise<LocationPoint> {
+  let position = coords;
+  let accuracy: number | null = null;
+  if (!position) {
+    const perm = await Location.requestForegroundPermissionsAsync();
+    if (perm.status !== 'granted') throw new Error('Location permission denied');
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+      .catch(() => Location.getLastKnownPositionAsync());
+    if (!loc) throw new Error('Current location unavailable');
+    position = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+    accuracy = loc.coords.accuracy ?? null;
+  }
+  const point: LocationPoint = {
+    id: newId(),
+    routeId,
+    kind: 'stop',
+    latitude: Math.round(position.latitude * 1e6) / 1e6,
+    longitude: Math.round(position.longitude * 1e6) / 1e6,
+    timestamp: new Date().toISOString(),
+    accuracy,
+    speed: null,
+    address: await addressFor(position.latitude, position.longitude),
+    // Stops don't add distance – the driving path already covers it.
+    distanceFromLastKm: null,
+    distanceFromLastMi: null,
+  };
+  insertLocations([point]);
+  return point;
 }
 
 // Must be defined at module load (imported from the app entry) so the OS can wake it in the background.
