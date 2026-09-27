@@ -10,6 +10,18 @@ namespace IncomeMeter.Api.Services;
 
 public class LocationService : ILocationService
 {
+    /// <summary>Stops this close in time and place are one stop marked twice (same rule as the mobile app).</summary>
+    private static readonly TimeSpan SameStopWindow = TimeSpan.FromMinutes(5);
+    private const double SameStopMetres = 150;
+
+    private static double HaversineMetres(double lat1, double lon1, double lat2, double lon2)
+    {
+        static double Rad(double d) => d * Math.PI / 180;
+        var a = Math.Pow(Math.Sin(Rad(lat2 - lat1) / 2), 2)
+                + Math.Cos(Rad(lat1)) * Math.Cos(Rad(lat2)) * Math.Pow(Math.Sin(Rad(lon2 - lon1) / 2), 2);
+        return 2 * 6_371_008.8 * Math.Asin(Math.Min(1, Math.Sqrt(a)));
+    }
+
     private readonly IMongoCollection<Location> _locations;
     private readonly IRouteService _routeService;
     private readonly IGeoCodingService _geoCodingService;
@@ -306,6 +318,22 @@ public class LocationService : ILocationService
             .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
             .ForContext("UserId", userId[..Math.Min(8, userId.Length)] + "***")
             .Information("Starting iOS location addition with automatic timestamp");
+
+        // A CarPlay reconnect can fire the shortcut twice, and the mobile app may already have marked this stop:
+        // a stop within a few minutes and a short walk of the route's last stop is the same stop.
+        var lastStop = await _locations.Find(l => l.RouteId == dto.RouteId && l.UserId == userId && l.Kind != "track")
+            .SortByDescending(l => l.Timestamp)
+            .FirstOrDefaultAsync();
+        if (lastStop != null
+            && DateTime.UtcNow - lastStop.Timestamp <= SameStopWindow
+            && HaversineMetres(lastStop.Latitude, lastStop.Longitude, dto.Latitude, dto.Longitude) <= SameStopMetres)
+        {
+            Log.Logger
+                .ForContext("EventType", "LocationAdditionIOSDuplicateStop")
+                .ForContext("CorrelationId", correlationId)
+                .Information("Stop repeats the route's last stop; returning the existing one");
+            return lastStop;
+        }
 
         // Convert iOS DTO to full CreateLocationDto with current timestamp
         var createLocationDto = new CreateLocationDto

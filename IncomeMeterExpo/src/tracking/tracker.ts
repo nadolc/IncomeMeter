@@ -4,6 +4,7 @@ import { getDb, newId, notify } from '../db/database';
 import { getById, getLastLocation, getLocations, getSettings, insertLocations } from '../db/repo';
 import { acceptFix, Fix, GAP_S, haversineKm, KM_TO_MI, Mode, pathKm, PROFILES } from '../domain/geo';
 import { LocationKind, LocationPoint, TravelMode } from '../domain/types';
+import { syncQuietly } from '../sync/sync';
 
 /**
  * Records where you go while a route is in progress, so the end odometer can be suggested and walking /
@@ -19,7 +20,8 @@ export const TRACKING_TASK = 'incomemeter-route-tracking';
 const ACTIVE_KEY = 'tracking.activeRouteId';
 const POWER_KEY = 'tracking.power';
 
-type Power = 'moving' | 'still';
+/** 'fixed' = this phone won't change location settings from the background (Android): keep them as they are. */
+type Power = 'moving' | 'still' | 'fixed';
 
 let foregroundSub: Location.LocationSubscription | null = null;
 
@@ -134,9 +136,9 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
   const lastMs = new Date(last.timestamp).getTime();
   const power = (kvGet(POWER_KEY) as Power | null) ?? 'moving';
 
-  if (power === 'moving' && latest.timestamp - lastMs > GAP_S * 1000) {
+  if (power !== 'still' && latest.timestamp - lastMs > GAP_S * 1000) {
     if (profile.autoStopAfterS > 0 && getSettings().autoStops) await autoStop(routeId, last);
-    if (profile.adaptivePower && background) await switchPower(mode, 'still');
+    if (profile.adaptivePower && background && power === 'moving') await switchPower(mode, 'still');
   } else if (power === 'still') {
     // Moved away from where we stopped (by more than the fix's own uncertainty) → back to GPS.
     const away = locations.some((l) => {
@@ -153,8 +155,9 @@ async function switchPower(mode: Mode, power: Power) {
     // Calling start again on a running task updates its options.
     await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, power));
   } catch {
-    // Couldn't change settings from the background – keep the current ones (costs battery, loses nothing).
-    kvSet(POWER_KEY, 'moving');
+    // Android doesn't allow restarting the location service from the background. Keep the current settings
+    // for the rest of the route (costs battery, loses nothing) and stop trying.
+    kvSet(POWER_KEY, power === 'moving' ? 'fixed' : 'moving');
   }
 }
 
@@ -188,10 +191,6 @@ export function trackedPointCount(routeId: string): number {
     getDb().getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = ?', routeId, kind)?.n ?? 0;
   const track = count('track');
   return track >= 2 ? track : count('stop');
-}
-
-export function stopCount(routeId: string): number {
-  return getDb().getFirstSync<{ n: number }>("SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = 'stop'", routeId)?.n ?? 0;
 }
 
 /**
@@ -244,6 +243,8 @@ export async function recordStop(routeId: string, coords?: { latitude: number; l
     distanceFromLastMi: null,
   };
   insertLocations([point]);
+  // Send it up now, so a CarPlay-shortcut stop at the same place moments later is recognised as the same stop.
+  syncQuietly();
   return point;
 }
 
@@ -272,12 +273,20 @@ export async function startTracking(routeId: string): Promise<TrackingMode> {
     .then((loc) => recordFixes(routeId, [loc], mode))
     .catch(() => undefined);
 
-  let bg = await Location.getBackgroundPermissionsAsync();
-  if (bg.status !== 'granted' && bg.canAskAgain) bg = await Location.requestBackgroundPermissionsAsync();
+  // "Always" lets iOS relaunch the app to keep recording if it gets closed; ask, but don't depend on it.
+  const bg = await Location.getBackgroundPermissionsAsync();
+  if (bg.status !== 'granted' && bg.canAskAgain) Location.requestBackgroundPermissionsAsync().catch(() => undefined);
 
-  if (bg.status === 'granted' && (await Location.isBackgroundLocationAvailableAsync())) {
-    await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
-    return 'background';
+  // The background task only needs "While using the app" when it is started with the app open: iOS keeps
+  // it running in the background (blue location pill), Android as a foreground service. Only Expo Go, or a
+  // failure to start, falls back to recording while the app is on screen.
+  if (await Location.isBackgroundLocationAvailableAsync()) {
+    try {
+      await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
+      return 'background';
+    } catch {
+      // fall through
+    }
   }
 
   await startForegroundWatch(routeId, mode);

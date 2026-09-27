@@ -6,7 +6,7 @@ import { Alert, Platform, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getById, getLocations, getSettings, insertLocations, remove } from '../../db/repo';
 import { kmToUnit } from '../../domain/geo';
-import { Leg, routeLegs } from '../../domain/legs';
+import { Leg, mergeStops, routeLegs } from '../../domain/legs';
 import { routeIncome } from '../../domain/dashboard';
 import { routeRates } from '../../domain/metrics';
 import { vehicleLabel } from '../../services/data';
@@ -57,7 +57,7 @@ export default function RouteDetail() {
 
   const vehicle = getById('vehicles', route.vehicleId);
   const track = points.filter((p) => p.kind === 'track');
-  const stops = points.filter((p) => p.kind === 'stop');
+  const stops = mergeStops(points.filter((p) => p.kind === 'stop'));
   // Draw the driving path; routes without one (old shortcut routes) are drawn stop to stop.
   const line = (track.length >= 2 ? track : stops).map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
   const coords = points.map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
@@ -190,7 +190,8 @@ export default function RouteDetail() {
       {legs.length > 0 ? <H2>{t('legs')} · {stops.length} {t('stops')}</H2> : null}
       {legs.length > 0 && MAPS_AVAILABLE && coords.length > 0 ? <Muted>{t('tapLeg')}</Muted> : null}
       {legs.map((leg, i) => {
-        const fromLabel = leg.from?.kind === 'stop' ? `📍${stops.indexOf(leg.from) + 1}` : t('start');
+        // A leg that starts at a stop starts at the previous leg's stop (the last one for the final stretch).
+        const fromLabel = leg.from?.kind === 'stop' ? `📍${leg.toStop > 0 ? leg.toStop - 1 : stops.length}` : t('start');
         const toLabel = leg.toStop > 0 ? `📍${leg.toStop}` : t('end');
         return (
           <Card key={`${leg.to.id}-${i}`} onPress={() => selectLeg(i)}

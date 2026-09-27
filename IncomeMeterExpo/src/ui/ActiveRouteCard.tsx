@@ -4,7 +4,9 @@ import { Alert, Text, View } from 'react-native';
 import { getSettings } from '../db/repo';
 import { kmToUnit } from '../domain/geo';
 import { Route } from '../domain/types';
-import { getActiveTrackingRouteId, recordStop, stopCount, trackedKm, trackedPointCount } from '../tracking/tracker';
+import { getLocations } from '../db/repo';
+import { mergeStops } from '../domain/legs';
+import { getActiveTrackingRouteId, recordStop, trackedKm, trackedPointCount } from '../tracking/tracker';
 import { Badge, Button, Card, colors, Muted, Row } from './components';
 import { duration, num } from './format';
 import { useLive } from './hooks';
@@ -20,7 +22,7 @@ export function ActiveRouteCard({ route }: { route: Route }) {
   }, []);
 
   const gps = useLive(() => ({
-    km: trackedKm(route.id), points: trackedPointCount(route.id), stops: stopCount(route.id),
+    km: trackedKm(route.id), points: trackedPointCount(route.id), stops: mergeStops(getLocations(route.id, 'stop')).length,
     recording: getActiveTrackingRouteId() === route.id,
   }), ['locations', 'kv'], [route.id]);
   const [stopBusy, setStopBusy] = useState(false);

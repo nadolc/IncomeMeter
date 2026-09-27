@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { routeLegs } from '../legs';
+import { mergeStops, routeLegs } from '../legs';
 import { LocationPoint } from '../types';
 
 const DEG_PER_M = 1 / 111_195;
@@ -12,6 +12,19 @@ const pt = (kind: 'track' | 'stop', northM: number, minute: number, stepKm: numb
 });
 
 const close = (a: number, b: number, eps = 0.01) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
+
+describe('duplicate stops', () => {
+  it('merges a stop marked twice (CarPlay reconnect) but keeps nearby separate stops', () => {
+    const a = { ...pt('stop', 0, 25), address: null };
+    const b = { ...pt('stop', 20, 25), address: 'Rose And Crown, Swarkestone Road' };   // same minute, 20 m away
+    const c = pt('stop', 200, 27);                                                     // 200 m further: a new stop
+    const merged = mergeStops([b, c, a]);
+    assert.equal(merged.length, 2);
+    assert.ok([a.id, b.id].includes(merged[0].id), 'one of the two same-minute stops is kept');
+    assert.equal(merged[0].address, 'Rose And Crown, Swarkestone Road');
+    assert.equal(routeLegs([a, b, c]).length, 2);
+  });
+});
 
 describe('route legs', () => {
   it('splits the recorded path at each stop: start → stop 1 → stop 2 → end', () => {

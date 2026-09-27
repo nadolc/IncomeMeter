@@ -15,6 +15,24 @@ export interface Leg {
 }
 
 const ms = (p: LocationPoint) => new Date(p.timestamp).getTime();
+
+/** Stops this close in time and place are one stop marked twice (CarPlay reconnect fires the shortcut twice, or 📍 + shortcut). */
+export const SAME_STOP = { minutes: 5, metres: 150 };
+
+/** Drop repeated stops, keeping the first; its address is filled from a duplicate when it has none. */
+export function mergeStops(stops: LocationPoint[]): LocationPoint[] {
+  const kept: LocationPoint[] = [];
+  for (const s of [...stops].sort((a, b) => ms(a) - ms(b))) {
+    const prev = kept[kept.length - 1];
+    if (prev && ms(s) - ms(prev) <= SAME_STOP.minutes * 60_000
+      && haversineKm(prev.latitude, prev.longitude, s.latitude, s.longitude) * 1000 <= SAME_STOP.metres) {
+      if (!prev.address && s.address) kept[kept.length - 1] = { ...prev, address: s.address };
+      continue;
+    }
+    kept.push(s);
+  }
+  return kept;
+}
 const coord = (p: LocationPoint) => ({ latitude: p.latitude, longitude: p.longitude });
 
 /**
@@ -37,7 +55,7 @@ function pathFrom(start: LocationPoint | null, pts: LocationPoint[]): number {
 export function routeLegs(points: LocationPoint[]): Leg[] {
   const sorted = [...points].sort((a, b) => ms(a) - ms(b));
   const track = sorted.filter((p) => p.kind === 'track');
-  const stops = sorted.filter((p) => p.kind === 'stop');
+  const stops = mergeStops(sorted.filter((p) => p.kind === 'stop'));
   const legs: Leg[] = [];
 
   let prev: LocationPoint | null = track[0] && (!stops[0] || ms(track[0]) < ms(stops[0])) ? track[0] : null;
