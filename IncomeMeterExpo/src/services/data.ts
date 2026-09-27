@@ -1,5 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { getLocales } from 'expo-localization';
+import { getCalendars, getLocales } from 'expo-localization';
 import { getDb, newId, notify, nowIso } from '../db/database';
 import { applyRemote, getAll, getById, save, saveSettings } from '../db/repo';
 import { pickVehicleForDate } from '../domain/vehicleAssignment';
@@ -23,10 +23,13 @@ const HK_WORK_TYPE = {
   sources: [tpl('Keeta', 0), tpl('foodpanda', 1), tpl('貼士', 2), tpl('惡劣天氣加成', 3), tpl('獎勵', 4)],
 };
 
-/** Settings that suit each region. HK: tax year 1 April, HKD, km, walking. */
+/**
+ * Settings that suit each region. HK: tax year 1 April, HKD, km, walking. Language is left alone –
+ * a Cantonese speaker working in the UK keeps 繁體中文.
+ */
 export const REGION_DEFAULTS: Record<Region, Partial<Settings>> = {
-  UK: { region: 'UK', currencyCode: 'GBP', language: 'en-GB', mileageUnit: 'mi', fiscalYearStart: '04-06', timeZone: 'Europe/London', defaultTravelMode: 'car' },
-  HK: { region: 'HK', currencyCode: 'HKD', language: 'zh-HK', mileageUnit: 'km', fiscalYearStart: '04-01', timeZone: 'Asia/Hong_Kong', defaultTravelMode: 'walk' },
+  UK: { region: 'UK', currencyCode: 'GBP', mileageUnit: 'mi', fiscalYearStart: '04-06', timeZone: 'Europe/London', defaultTravelMode: 'car' },
+  HK: { region: 'HK', currencyCode: 'HKD', mileageUnit: 'km', fiscalYearStart: '04-01', timeZone: 'Asia/Hong_Kong', defaultTravelMode: 'walk' },
 };
 
 /** Switch region: apply its defaults and make sure the HK delivery work type exists. */
@@ -49,9 +52,14 @@ export function seedDefaults() {
   const seeded = getDb().getFirstSync<{ value: string }>("SELECT value FROM kv WHERE key = 'seeded'");
   if (seeded) return;
   const now = nowIso();
-  // A phone set to Hong Kong starts with the HK setup (HKD, km, 外賣 with Keeta / foodpanda).
-  const hk = getLocales()[0]?.regionCode === 'HK';
-  if (hk) saveSettings(REGION_DEFAULTS.HK);
+  // A phone in Hong Kong starts with the HK setup (HKD, km, 外賣 with Keeta / foodpanda). Judged by the
+  // time zone, not the region setting: a Hong Kong-region iPhone used in the UK is on London time.
+  const hk = getCalendars()[0]?.timeZone === 'Asia/Hong_Kong';
+  saveSettings({
+    ...(hk ? REGION_DEFAULTS.HK : {}),
+    // The app's language follows the phone: any Chinese → 繁體中文, otherwise English.
+    language: getLocales()[0]?.languageCode === 'zh' ? 'zh-HK' : 'en-GB',
+  });
   for (const wt of hk ? [HK_WORK_TYPE] : DEFAULT_WORK_TYPES) {
     applyRemote('workTypes', {
       id: newId(), name: wt.name, description: null, incomeSourceTemplates: wt.sources, isActive: true, createdAt: now, updatedAt: now,

@@ -68,8 +68,8 @@ There are three ways to record a stop:
   - "Usually needs x% of the time limit" turns the worst case into an expected rate.
   - The avoided-areas list is matched against the address you enter.
 - **Areas** (`/areas`): stops within 250 m are grouped. For each group you see visits, the average climb getting there, and how long you were stuck there afterwards. The app suggests avoiding big climbs (30 m or more) or long waits (12 min or more). Share the avoid list to paste into the Keeta shortcut.
-- **Region HK** (Settings, or automatic on a phone set to Hong Kong):
-  - HKD, km and 繁體中文
+- **Region HK** (Settings, or automatic on first launch when the phone is on Hong Kong time; the app language always follows the phone):
+  - HKD and km
   - fiscal year from 1 April
   - walking as the default travel mode
   - a 外賣 work type with Keeta, foodpanda, 貼士, 惡劣天氣加成 and 獎勵
