@@ -9,13 +9,13 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.incomemeter.app",
+      "bundleIdentifier": "com.nadolc.incomemeter",
       "infoPlist": {
         "UIBackgroundModes": ["location"]
       }
     },
     "android": {
-      "package": "com.incomemeter.app",
+      "package": "com.nadolc.incomemeter",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -32,6 +32,7 @@ const en = {
   movingTime: 'Moving', waitingTime: 'Waiting', hourlyOnline: 'Per hour online', hourlyMoving: 'Per hour moving', perDistance: 'Per',
   travelMode: 'Travel', walk: 'Walk', bicycle: 'Bicycle',
   recordStop: '📍 Record stop', stops: 'Stops', stopRecorded: 'Stop recorded', noRouteInProgress: 'No route in progress – start one first', recordingStop: 'Recording stop…',
+  mapUnavailable: 'Map not available in this build – the points are listed below.',
   map: 'Map', noPath: 'No GPS points recorded for this route', elapsed: 'Elapsed', last7: '7 days', last14: '14 days', last30: '30 days',
   sortNewest: 'Newest', sortOldest: 'Oldest', sortIncome: 'Income', endBeforeStart: 'End odometer is lower than the start',
   // expenses
@@ -95,6 +96,7 @@ const zh: Record<Key, string> = {
   movingTime: '移動時間', waitingTime: '等候時間', hourlyOnline: '在線時薪', hourlyMoving: '移動時薪', perDistance: '每',
   travelMode: '交通方式', walk: '行路', bicycle: '單車',
   recordStop: '📍 記錄位置', stops: '停車點', stopRecorded: '已記錄位置', noRouteInProgress: '未有進行中嘅路線 – 請先開始路線', recordingStop: '正在記錄位置…',
+  mapUnavailable: '呢個版本冇地圖，位置列喺下面。',
   map: '地圖', noPath: '呢條路線未有 GPS 記錄', elapsed: '已用時間', last7: '7 日', last14: '14 日', last30: '30 日',
   sortNewest: '最新', sortOldest: '最舊', sortIncome: '收入', endBeforeStart: '結束里數低過開始里數',
   category: '類別', merchant: '商戶', litres: '公升', odometerOnReceipt: '里程表（英里）', fullyBusiness: '100% 業務用途（不分攤）',

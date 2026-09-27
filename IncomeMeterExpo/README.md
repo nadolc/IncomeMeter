@@ -75,22 +75,41 @@ There are three ways to record a stop:
   - a 外賣 work type with Keeta, foodpanda, 貼士, 惡劣天氣加成 and 獎勵
   - the UK tax tab is hidden
 
-## Running it
+## Running it (no Mac needed)
 
-Background location, the foreground service and the `incomemeter://` sign-in redirect all need native config. That means you need a **development build**; Expo Go can't do these.
+**Try it in Expo Go (free).** Install Expo Go on the phone, then:
 
 ```bash
 cd IncomeMeterExpo
 npm install
-npx expo run:android          # local build, needs Android Studio / SDK
-# or build in the cloud:
-npx eas-cli@latest build --profile development --platform android
-npx expo start --dev-client
+npx expo start               # scan the QR code with the iPhone camera
 ```
 
-Expo Go still works for most screens. Recording then only happens while the app is open, and for sync you paste an API token instead of signing in with Google.
+Expo Go can't record GPS in the background or use the `incomemeter://` sign-in redirect (Expo docs: background location needs a development build). So in Expo Go:
+- GPS only records while the app is open.
+- For sync, paste an API token instead of signing in with Google.
 
-**Android maps:** development and release builds need a Google Maps API key (Maps SDK for Android). Put it in `app.json` → `android.config.googleMaps.apiKey`. Only Expo Go ships with its own key. iOS uses Apple Maps and needs no key.
+**Full app: build in Expo's cloud (EAS).** The iPhone app is built on Expo's Macs.
+- Installing it on an iPhone needs a paid **Apple Developer account** (US$99/year).
+- An Android APK needs no Google account fee.
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest init                                # links the project, adds its id to app.json
+# optional, Android maps (Maps SDK for Android key):
+npx eas-cli@latest env:create --name GOOGLE_MAPS_API_KEY --value <key> --environment preview --environment production --visibility sensitive
+
+npx eas-cli@latest build -p ios --profile production    # then:
+npx eas-cli@latest submit -p ios                        # → install from TestFlight
+npx eas-cli@latest build -p android --profile preview   # → APK link to install / send to a friend
+```
+
+- `eas.json` has three build profiles:
+  - `development`: a dev client for `npx expo start --dev-client`. On iPhone, first register the phone with `npx eas-cli@latest device:create`.
+  - `preview`: an internal build; an APK on Android.
+  - `production`: for the store and TestFlight.
+- The app id is `com.nadolc.incomemeter`. Change it in `app.json` before the first build if you prefer another.
+- **Android maps:** iOS uses Apple Maps, and Expo Go ships its own key, so neither needs one. Other Android builds need `GOOGLE_MAPS_API_KEY` (read by `app.config.js`). Without it the app still works; route screens list the points instead of drawing a map.
 
 ## Sync with Azure (optional)
 
