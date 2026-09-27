@@ -1,10 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { getById } from '../../db/repo';
+import { getById, getLocations } from '../../db/repo';
+import { movingMinutes } from '../../domain/geo';
+import { routeRates } from '../../domain/metrics';
+import { usesOdometer } from '../../domain/types';
 import { endRoute, suggestEndMile } from '../../services/routes';
 import { Button, Card, DateTimeField, Empty, KV, NumberInput, Screen } from '../../ui/components';
-import { duration, num, numText, parseNum } from '../../ui/format';
+import { duration, hours, money, num, numText, parseNum } from '../../ui/format';
 import { useLive, useSettings } from '../../ui/hooks';
 import { fromRows, IncomeEditor, IncomeRow, rowsFromWorkType, toRows } from '../../ui/IncomeEditor';
 import { useT } from '../../ui/i18n';
@@ -17,7 +20,7 @@ export default function EndRouteScreen() {
   const workType = getById('workTypes', route?.workTypeId);
 
   // Refreshes while GPS points keep arriving.
-  const gps = useLive(() => (route ? suggestEndMile(route) : null), ['locations'], [id]);
+  const gps = useLive(() => (route ? { ...suggestEndMile(route), moving: movingMinutes(getLocations(route.id, 'track')) } : null), ['locations'], [id]);
 
   const [endMile, setEndMile] = useState(() => numText(gps?.endMile));
   const [autofilled, setAutofilled] = useState(gps?.endMile != null);
@@ -28,7 +31,13 @@ export default function EndRouteScreen() {
 
   if (!route) return <Screen><Empty>—</Empty></Screen>;
 
-  const end = parseNum(endMile);
+  const odometer = usesOdometer(route.travelMode);
+  const end = odometer ? parseNum(endMile) : null;
+  // Preview of what this route earned per hour / per km with the income entered so far.
+  const rates = routeRates(
+    { ...route, actualEndTime: endTime ?? new Date().toISOString(), movingMinutes: gps?.moving ?? null,
+      distance: odometer && end != null && route.startMile != null ? Math.abs(end - route.startMile) : gps?.tracked ?? 0 },
+    fromRows(rows).reduce((s, r) => s + r.amount, 0));
   const invalid = end != null && route.startMile != null && end < route.startMile;
 
   const useGps = () => {
@@ -67,6 +76,7 @@ export default function EndRouteScreen() {
         <KV k={t('gpsPoints')} v={gps?.points ?? 0} />
       </Card>
 
+      {odometer ? (<>
       <NumberInput
         label={`${t('endMile')} (${mileageUnit})`}
         value={endMile}
@@ -75,9 +85,17 @@ export default function EndRouteScreen() {
         hint={autofilled && gps ? t('autofilledFromGps', { d: `${num(gps.tracked)} ${mileageUnit}` }) : undefined}
       />
       {gps?.endMile != null && !autofilled ? <Button small kind="secondary" title={`${t('useGps')}: ${num(gps.endMile)}`} onPress={useGps} /> : null}
+      </>) : null}
 
       <DateTimeField label={t('actualEnd')} value={endTime} onChange={setEndTime} />
       <IncomeEditor rows={rows} onChange={setRows} workType={workType} />
+      <Card>
+        {rates.movingMinutes != null ? <KV k={t('movingTime')} v={hours(rates.movingMinutes / 60)} /> : null}
+        {rates.waitingMinutes != null ? <KV k={t('waitingTime')} v={hours(rates.waitingMinutes / 60)} /> : null}
+        <KV k={t('hourlyOnline')} v={rates.hourlyOnline != null ? money(rates.hourlyOnline) : '—'} strong />
+        {rates.hourlyMoving != null ? <KV k={t('hourlyMoving')} v={money(rates.hourlyMoving)} /> : null}
+        <KV k={`${t('perDistance')} ${mileageUnit}`} v={rates.perDistance != null ? money(rates.perDistance) : '—'} />
+      </Card>
       <Button title={t('endRoute')} onPress={finish} busy={busy} />
     </Screen>
   );

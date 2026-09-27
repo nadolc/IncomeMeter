@@ -5,12 +5,13 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getById, getLocations, getSettings, insertLocations, remove } from '../../db/repo';
 import { kmToUnit } from '../../domain/geo';
 import { routeIncome } from '../../domain/dashboard';
+import { routeRates } from '../../domain/metrics';
 import { vehicleLabel } from '../../services/data';
 import { cancelRoute } from '../../services/routes';
 import { fetchRouteLocations, isSignedIn } from '../../sync/api';
 import { getActiveTrackingRouteId, recordStop, startTracking, trackedKm, TrackingMode } from '../../tracking/tracker';
 import { Badge, Banner, Button, Card, colors, Empty, H2, KV, Muted, Row, Screen, statusColor } from '../../ui/components';
-import { dateTime, duration, money, num, time } from '../../ui/format';
+import { dateTime, duration, hours, money, num, time } from '../../ui/format';
 import { useLive } from '../../ui/hooks';
 import { tOr, useT } from '../../ui/i18n';
 
@@ -120,6 +121,19 @@ export default function RouteDetail() {
         <KV k={t('stops')} v={stops.length} />
         <KV k={t('estimatedIncome')} v={money(route.estimatedIncome)} />
       </Card>
+
+      {route.status === 'completed' ? (() => {
+        const r = routeRates(route);
+        return (
+          <Card>
+            {r.movingMinutes != null ? <KV k={t('movingTime')} v={hours(r.movingMinutes / 60)} /> : null}
+            {r.waitingMinutes != null ? <KV k={t('waitingTime')} v={hours(r.waitingMinutes / 60)} /> : null}
+            <KV k={t('hourlyOnline')} v={r.hourlyOnline != null ? money(r.hourlyOnline) : '—'} strong />
+            {r.hourlyMoving != null ? <KV k={t('hourlyMoving')} v={money(r.hourlyMoving)} /> : null}
+            <KV k={`${t('perDistance')} ${unit}`} v={r.perDistance != null ? money(r.perDistance) : '—'} />
+          </Card>
+        );
+      })() : null}
 
       {route.incomes.length > 0 ? (
         <Card>

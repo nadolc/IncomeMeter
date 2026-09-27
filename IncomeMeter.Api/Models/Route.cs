@@ -56,6 +56,18 @@ public class Route
     [BsonElement("endMile")]
     public double? EndMile { get; set; }
 
+    /// <summary>"car" | "motorcycle" | "bicycle" | "walk" (mobile app). Walking / cycling routes have no odometer.</summary>
+    [BsonElement("travelMode")]
+    public string? TravelMode { get; set; }
+
+    /// <summary>GPS distance recorded by the mobile app, in the user's odometer unit.</summary>
+    [BsonElement("trackedMiles")]
+    public double? TrackedMiles { get; set; }
+
+    /// <summary>Minutes actually moving (from GPS); the rest of the route time was waiting.</summary>
+    [BsonElement("movingMinutes")]
+    public double? MovingMinutes { get; set; }
+
     [BsonElement("createTS")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -1,8 +1,9 @@
 import { Directory, File, Paths } from 'expo-file-system';
+import { getLocales } from 'expo-localization';
 import { getDb, newId, notify, nowIso } from '../db/database';
-import { applyRemote, getAll, getById, save } from '../db/repo';
+import { applyRemote, getAll, getById, save, saveSettings } from '../db/repo';
 import { pickVehicleForDate } from '../domain/vehicleAssignment';
-import { Attachment, IncomeSourceTemplate, Vehicle, WorkType } from '../domain/types';
+import { Attachment, IncomeSourceTemplate, Region, Settings, Vehicle, WorkType } from '../domain/types';
 
 // ---------- work types ----------
 
@@ -16,6 +17,30 @@ const DEFAULT_WORK_TYPES: { name: string; sources: IncomeSourceTemplate[] }[] = 
   { name: 'Rideshare', sources: ['Uber', 'Lyft', 'Bolt', 'Tips', 'Surge'].map((n, i) => tpl(n, i)) },
 ];
 
+/** Hong Kong food delivery on foot / by bicycle. */
+const HK_WORK_TYPE = {
+  name: '外賣',
+  sources: [tpl('Keeta', 0), tpl('foodpanda', 1), tpl('貼士', 2), tpl('惡劣天氣加成', 3), tpl('獎勵', 4)],
+};
+
+/** Settings that suit each region. HK: tax year 1 April, HKD, km, walking. */
+export const REGION_DEFAULTS: Record<Region, Partial<Settings>> = {
+  UK: { region: 'UK', currencyCode: 'GBP', language: 'en-GB', mileageUnit: 'mi', fiscalYearStart: '04-06', timeZone: 'Europe/London', defaultTravelMode: 'car' },
+  HK: { region: 'HK', currencyCode: 'HKD', language: 'zh-HK', mileageUnit: 'km', fiscalYearStart: '04-01', timeZone: 'Asia/Hong_Kong', defaultTravelMode: 'walk' },
+};
+
+/** Switch region: apply its defaults and make sure the HK delivery work type exists. */
+export function applyRegion(region: Region) {
+  saveSettings(REGION_DEFAULTS[region]);
+  if (region === 'HK' && !getAll('workTypes').some((w) => w.name === HK_WORK_TYPE.name)) {
+    const now = nowIso();
+    save('workTypes', {
+      id: newId(), name: HK_WORK_TYPE.name, description: 'Keeta / foodpanda', incomeSourceTemplates: HK_WORK_TYPE.sources,
+      isActive: true, createdAt: now, updatedAt: now,
+    });
+  }
+}
+
 /**
  * First launch: add the default work types. They are stored as "clean" (not pending upload), so the first
  * sync with an account that already has its own work types simply replaces them instead of duplicating.
@@ -24,7 +49,10 @@ export function seedDefaults() {
   const seeded = getDb().getFirstSync<{ value: string }>("SELECT value FROM kv WHERE key = 'seeded'");
   if (seeded) return;
   const now = nowIso();
-  for (const wt of DEFAULT_WORK_TYPES) {
+  // A phone set to Hong Kong starts with the HK setup (HKD, km, 外賣 with Keeta / foodpanda).
+  const hk = getLocales()[0]?.regionCode === 'HK';
+  if (hk) saveSettings(REGION_DEFAULTS.HK);
+  for (const wt of hk ? [HK_WORK_TYPE] : DEFAULT_WORK_TYPES) {
     applyRemote('workTypes', {
       id: newId(), name: wt.name, description: null, incomeSourceTemplates: wt.sources, isActive: true, createdAt: now, updatedAt: now,
     } as WorkType);

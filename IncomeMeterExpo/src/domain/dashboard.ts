@@ -20,6 +20,10 @@ export interface WorkTypeStats {
   hours: number;
   mileage: number;
   hourlyRate: number;
+  /** Hours actually moving (GPS) – only routes that recorded it. */
+  movingHours: number;
+  /** Income per moving hour, from routes with moving time. */
+  movingHourlyRate: number;
   earningsPerMile: number;
   incomeBySource: Record<string, number>;
 }
@@ -80,11 +84,16 @@ export function workTypeStats(routes: Route[]): WorkTypeStats[] {
     if (ms === 0) ms = rs.reduce((s, r) => s + Math.max(0, new Date(r.scheduleEnd).getTime() - new Date(r.scheduleStart).getTime()), 0);
     const hours = ms / 3_600_000;
     const mileage = rs.reduce((s, r) => s + (r.distance || 0), 0);
+    const withMoving = rs.filter((r) => (r.movingMinutes ?? 0) > 0);
+    const movingHours = withMoving.reduce((s, r) => s + r.movingMinutes! / 60, 0);
+    const movingIncome = withMoving.reduce((s, r) => s + r.totalIncome, 0);
     const incomeBySource: Record<string, number> = {};
     for (const r of rs) for (const i of r.incomes) incomeBySource[i.source] = (incomeBySource[i.source] ?? 0) + i.amount;
     return {
       workType, income, routes: rs.length, hours, mileage,
       hourlyRate: hours > 0 ? income / hours : 0,
+      movingHours,
+      movingHourlyRate: movingHours > 0 ? movingIncome / movingHours : 0,
       earningsPerMile: mileage > 0 ? income / mileage : 0,
       incomeBySource,
     };

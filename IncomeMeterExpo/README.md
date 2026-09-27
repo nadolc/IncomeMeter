@@ -51,6 +51,30 @@ There are three ways to record a stop:
 2. **Without a signal:** a Shortcut with the action **Open URL** `incomemeter://stop`. It opens the app, records your current position on the route in progress, and returns. To use the Shortcut's own position, send `incomemeter://stop?lat=…&lon=…`. iOS may not open an app while the phone is locked.
 3. The **📍 Record stop** button on the in-progress card and on the route screen.
 
+### Walking / cycling delivery (Hong Kong)
+
+- **Travel mode per route**: walk, bicycle, motorcycle or car.
+  - Walking and cycling don't use an odometer. Their distance comes from GPS, and the vehicle and odometer fields are hidden.
+- **Battery**: the GPS settings depend on the travel mode.
+  - Walking, cycling and motorcycle routes switch to low-power Wi-Fi/cell location after 2 minutes without movement (waiting for food, lifts). GPS comes back once you move more than 60 m.
+  - Android batches updates while walking.
+  - Car routes stay at full accuracy.
+- **MTR / tunnels**: after a gap of more than 2 minutes, the distance only counts if the speed is plausible for the mode. A walker coming out of the MTR two stations later hasn't walked it.
+- **Auto stops** (walking / cycling): standing still for 2 minutes marks a stop, with its address and altitude.
+- **Rates**: moving time, waiting time, income per hour online and per hour moving, and income per km. Shown on the end-route screen, the route screen and the dashboard.
+- **Offer check** (`/offer`) and **threshold table**:
+  - The check takes the fee and on-time bonus against the minutes left until the last "deliver before" time.
+  - The target hourly rate is the one you set, or your own 4-week average.
+  - "Usually needs x% of the time limit" turns the worst case into an expected rate.
+  - The avoided-areas list is matched against the address you enter.
+- **Areas** (`/areas`): stops within 250 m are grouped. For each group you see visits, the average climb getting there, and how long you were stuck there afterwards. The app suggests avoiding big climbs (30 m or more) or long waits (12 min or more). Share the avoid list to paste into the Keeta shortcut.
+- **Region HK** (Settings, or automatic on a phone set to Hong Kong):
+  - HKD, km and 繁體中文
+  - fiscal year from 1 April
+  - walking as the default travel mode
+  - a 外賣 work type with Keeta, foodpanda, 貼士, 惡劣天氣加成 and 獎勵
+  - the UK tax tab is hidden
+
 ## Running it
 
 Background location, the foreground service and the `incomemeter://` sign-in redirect all need native config. That means you need a **development build**; Expo Go can't do these.

@@ -3,13 +3,15 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { saveSettings } from '../../db/repo';
 import { Period } from '../../domain/dashboard';
-import { MileageUnit } from '../../domain/types';
+import { MileageUnit, Region } from '../../domain/types';
+import { applyRegion } from '../../services/data';
 import { adoptSessionToken, signInWithGoogle, signOut } from '../../sync/api';
 import { syncNow } from '../../sync/sync';
-import { Banner, Button, Card, Chips, H2, Input, KV, Muted, Screen, Toggle } from '../../ui/components';
-import { dateTime } from '../../ui/format';
+import { Banner, Button, Card, Chips, H2, Input, KV, Muted, NumberInput, Screen, Toggle } from '../../ui/components';
+import { dateTime, money, numText, parseNum } from '../../ui/format';
 import { useSettings } from '../../ui/hooks';
 import { useT } from '../../ui/i18n';
+import { useTargetHourly } from '../../ui/useTarget';
 
 export default function SettingsScreen() {
   const t = useT();
@@ -18,6 +20,8 @@ export default function SettingsScreen() {
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState<'signin' | 'sync' | 'token' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [target, setTarget] = useState(numText(s.targetHourly));
+  const auto = useTargetHourly();
 
   const run = async (kind: 'signin' | 'sync' | 'token', fn: () => Promise<string>) => {
     setBusy(kind);
@@ -60,6 +64,8 @@ export default function SettingsScreen() {
       <Card onPress={() => router.push('/worktypes')}><KV k={t('manageWorkTypes')} v="›" /></Card>
 
       <H2>{t('preferences')}</H2>
+      <Chips label={t('region')} options={[{ value: 'HK', label: '香港' }, { value: 'UK', label: 'UK' }] as { value: Region; label: string }[]}
+        value={s.region} onChange={applyRegion} />
       <Chips label={t('language')} options={[{ value: 'en-GB', label: 'English' }, { value: 'zh-HK', label: '繁體中文' }]}
         value={s.language} onChange={(language) => saveSettings({ language })} />
       <Chips label={t('currency')} options={[{ value: 'GBP', label: 'GBP £' }, { value: 'HKD', label: 'HKD $' }]}
@@ -71,6 +77,17 @@ export default function SettingsScreen() {
       <Input label={t('fiscalStart')} value={s.fiscalYearStart} maxLength={5}
         onChangeText={(v) => { if (/^\d{2}-\d{2}$/.test(v)) saveSettings({ fiscalYearStart: v }); }} />
       <Toggle label={t('trackRoutes')} value={s.trackRoutes} onChange={(trackRoutes) => saveSettings({ trackRoutes })} />
+      <Toggle label={t('autoStops')} value={s.autoStops} onChange={(autoStops) => saveSettings({ autoStops })} />
+
+      <H2>{t('offerTools')}</H2>
+      <NumberInput label={t('targetHourly')} value={target}
+        onChange={(v) => { setTarget(v); saveSettings({ targetHourly: parseNum(v) }); }}
+        placeholder={auto.auto && auto.target != null ? String(auto.target) : ''}
+        hint={auto.auto && auto.target != null ? `${t('targetAuto')}: ${money(auto.target)}` : undefined} />
+      <Chips label={`${t('completionFactor')} … ${t('ofTimeLimit')}`}
+        options={[1, 0.9, 0.8, 0.7, 0.6].map((f) => ({ value: String(f), label: `${Math.round(f * 100)}%` }))}
+        value={String(s.completionFactor)} onChange={(v) => saveSettings({ completionFactor: Number(v) })} />
+      <Card onPress={() => router.push('/areas')}><KV k={`${t('areas')} · ${t('avoidAreas')}`} v="›" /></Card>
 
       <H2>{t('sync')}</H2>
       <Muted>{t('syncOptional')}</Muted>

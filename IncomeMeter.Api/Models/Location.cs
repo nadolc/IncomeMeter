@@ -47,4 +47,8 @@ public class Location
     /// </summary>
     [BsonElement("kind")]
     public string? Kind { get; set; }
+
+    /// <summary>GPS altitude in metres (mobile app), used for "uphill" area stats.</summary>
+    [BsonElement("altitude")]
+    public double? Altitude { get; set; }
 }

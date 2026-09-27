@@ -6,7 +6,9 @@ import { ActiveRouteCard } from '../../ui/ActiveRouteCard';
 import { ShareBar, StackedBars } from '../../ui/chart';
 import { Badge, Button, Card, Chips, colors, Empty, H2, KV, Muted, Row, Screen, statusColor } from '../../ui/components';
 import { hours, money, num, time } from '../../ui/format';
+import { thresholdTable } from '../../domain/metrics';
 import { useCollection, useSettings } from '../../ui/hooks';
+import { useTargetHourly } from '../../ui/useTarget';
 import { tOr, useT } from '../../ui/i18n';
 
 export default function Dashboard() {
@@ -16,6 +18,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<Period>(settings.defaultChartPeriod);
   const [offset, setOffset] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { target } = useTargetHourly();
 
   const active = routes.find((r) => r.status === 'in_progress') ?? null;
   const summary = useMemo(() => summaryStats(routes), [routes]);
@@ -35,6 +38,21 @@ export default function Dashboard() {
   return (
     <Screen>
       {active ? <ActiveRouteCard route={active} /> : <Button title={`▶  ${t('startRoute')}`} onPress={() => router.push('/routes/start')} />}
+
+      {active || settings.region === 'HK' ? (
+        <Card onPress={() => router.push('/offer')}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text style={{ fontWeight: '700' }}>{t('offerTools')}</Text>
+            <Text style={{ color: colors.primary }}>{t('offerCheck')} ›</Text>
+          </Row>
+          {target != null ? (
+            <Muted>
+              {thresholdTable(target, settings.completionFactor, [20, 30, 40]).map((r) => `${r.minutes}${t('minutesShort')} ≥ ${money(r.minFee)}`).join('   ')}
+            </Muted>
+          ) : <Muted>{t('setTarget')}</Muted>}
+          <Text style={{ color: colors.primary }} onPress={() => router.push('/areas')}>{t('areas')} ›</Text>
+        </Card>
+      ) : null}
 
       <Row style={{ gap: 12 }}>
         <Card style={{ flex: 1 }}>
@@ -81,6 +99,9 @@ export default function Dashboard() {
             {w.routes} {t('routes').toLowerCase()} · {hours(w.hours)} · {money(w.hourlyRate)}{t('perHour')}
             {w.mileage > 0 ? ` · ${num(w.mileage)} ${settings.mileageUnit} · ${money(w.earningsPerMile)}/${settings.mileageUnit}` : ''}
           </Muted>
+          {w.movingHours > 0 ? (
+            <Muted>{t('movingTime')} {hours(w.movingHours)} · {t('hourlyMoving')} {money(w.movingHourlyRate)}</Muted>
+          ) : null}
           {expanded === w.workType ? (
             <View style={{ marginTop: 8 }}>
               <ShareBar parts={Object.entries(w.incomeBySource).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)} />

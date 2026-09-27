@@ -1,8 +1,8 @@
 import { newId, nowIso } from '../db/database';
-import { getAll, getById, getSettings, save } from '../db/repo';
-import { kmToUnit } from '../domain/geo';
+import { getAll, getById, getLocations, getSettings, save, saveSettings } from '../db/repo';
+import { kmToUnit, movingMinutes } from '../domain/geo';
 import { pickVehicleForDate } from '../domain/vehicleAssignment';
-import { IncomeItem, Route, RouteStatus } from '../domain/types';
+import { IncomeItem, Route, RouteStatus, TravelMode, usesOdometer } from '../domain/types';
 import { startTracking, stopTracking, trackedKm, trackedPointCount, TrackingMode } from '../tracking/tracker';
 
 const HOURS8 = 8 * 3_600_000;
@@ -26,20 +26,28 @@ export interface RouteInput {
   estimatedIncome: number;
   startMile: number | null;
   endMile: number | null;
+  /** Kept from the existing route when omitted (e.g. by the edit form). */
+  travelMode?: TravelMode | null;
 }
 
 export function saveRoute(input: RouteInput, id?: string): Route {
   const existing = id ? getById('routes', id) : null;
   const vehicleId = input.vehicleId ?? pickVehicleForDate(getAll('vehicles'), input.scheduleStart);
+  const travelMode = input.travelMode ?? existing?.travelMode ?? null;
+  const trackedMiles = existing?.trackedMiles ?? null;
+  const odometerDistance = distanceOf(input.startMile, input.endMile);
   const route: Route = {
     id: existing?.id ?? newId(),
-    trackedMiles: existing?.trackedMiles ?? null,
+    trackedMiles,
+    movingMinutes: existing?.movingMinutes ?? null,
     createdAt: existing?.createdAt ?? nowIso(),
     updatedAt: nowIso(),
     ...input,
-    vehicleId,
+    travelMode,
+    // Walking / cycling routes have no odometer: their distance is the GPS distance.
+    vehicleId: usesOdometer(travelMode) ? vehicleId : null,
     totalIncome: totalOf(input.incomes),
-    distance: distanceOf(input.startMile, input.endMile),
+    distance: odometerDistance || (!usesOdometer(travelMode) ? trackedMiles ?? 0 : 0),
   };
   return save('routes', route);
 }
@@ -47,9 +55,12 @@ export function saveRoute(input: RouteInput, id?: string): Route {
 /** Start a route now (POST /api/routes/start) and begin recording GPS if enabled. */
 export async function startRoute(args: {
   workType: string; workTypeId: string | null; vehicleId: string | null; startMile: number | null; estimatedIncome: number; incomes: IncomeItem[];
+  travelMode: TravelMode;
 }): Promise<{ route: Route; tracking: TrackingMode | 'off' }> {
   const now = new Date();
+  saveSettings({ defaultTravelMode: args.travelMode });
   const route = saveRoute({
+    travelMode: args.travelMode,
     workType: args.workType,
     workTypeId: args.workTypeId,
     vehicleId: args.vehicleId,
@@ -60,7 +71,7 @@ export async function startRoute(args: {
     actualEndTime: null,
     incomes: args.incomes,
     estimatedIncome: args.estimatedIncome,
-    startMile: args.startMile,
+    startMile: usesOdometer(args.travelMode) ? args.startMile : null,
     endMile: null,
   });
   const tracking = getSettings().trackRoutes ? await startTracking(route.id) : 'off';
@@ -108,7 +119,13 @@ export async function endRoute(route: Route, args: { endMile: number | null; inc
     incomes: args.incomes,
     endMile: args.endMile,
   }, route.id);
-  return save('routes', { ...saved, trackedMiles: suggestEndMile(saved).tracked });
+  const tracked = suggestEndMile(saved).tracked;
+  return save('routes', {
+    ...saved,
+    trackedMiles: tracked,
+    movingMinutes: Math.round(movingMinutes(getLocations(route.id, 'track')) * 10) / 10,
+    distance: saved.distance || (!usesOdometer(saved.travelMode) ? tracked : 0),
+  });
 }
 
 export async function cancelRoute(route: Route) {

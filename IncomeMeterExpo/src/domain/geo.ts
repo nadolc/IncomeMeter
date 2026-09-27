@@ -17,32 +17,71 @@ export interface Fix {
   accuracy: number | null; // metres
 }
 
-/** Tuning for turning raw GPS fixes into driven distance. */
-export const TRACKING = {
+export type Mode = 'car' | 'motorcycle' | 'bicycle' | 'walk';
+
+export interface ModeProfile {
   /** Fixes worse than this are dropped – urban-canyon / indoor fixes jump around by 50–500 m. */
-  maxAccuracyM: 50,
-  /** Ignore movement smaller than this (or than the combined accuracy) so parked jitter doesn't add miles. */
-  minStepM: 15,
-  /** Anything implying more than ~200 km/h between two fixes is a GPS glitch. */
-  maxSpeedMps: 55,
-  /** Straight-line GPS undercounts real road distance a little (corners between fixes); used for the odometer suggestion only. */
-  roadFactor: 1.0,
+  maxAccuracyM: number;
+  /** Ignore movement smaller than this (or than the combined accuracy) so standing-still jitter adds nothing. */
+  minStepM: number;
+  /** Faster than this between two nearby-in-time fixes is a GPS glitch. */
+  maxSpeedMps: number;
+  /** Save battery while standing still (switch to low-power location between moves). */
+  adaptivePower: boolean;
+  /** Mark a stop automatically after standing still this long (0 = never). */
+  autoStopAfterS: number;
+}
+
+/** Tuning per travel mode. */
+export const PROFILES: Record<Mode, ModeProfile> = {
+  // Walking up to a jog; MTR / bus / minibus between fixes is faster than this and isn't counted as walking.
+  walk: { maxAccuracyM: 40, minStepM: 12, maxSpeedMps: 4, adaptivePower: true, autoStopAfterS: 120 },
+  // Bicycle and e-bike (HK e-bikes are limited to ~25 km/h).
+  bicycle: { maxAccuracyM: 40, minStepM: 15, maxSpeedMps: 13, adaptivePower: true, autoStopAfterS: 120 },
+  motorcycle: { maxAccuracyM: 50, minStepM: 15, maxSpeedMps: 55, adaptivePower: true, autoStopAfterS: 0 },
+  // The car is usually on a charger (CarPlay); keep full accuracy and never pause.
+  car: { maxAccuracyM: 50, minStepM: 15, maxSpeedMps: 55, adaptivePower: false, autoStopAfterS: 0 },
 };
+
+/** Kept for callers that don't know the mode. */
+export const TRACKING = PROFILES.car;
+
+/** Fixes further apart in time than this are a gap (tunnel, MTR, phone pocketed indoors, low-power mode). */
+export const GAP_S = 120;
 
 /**
  * Decide whether `next` should be recorded after `prev`, and the step distance in km.
- * Returns null when the fix is noise (poor accuracy, jitter, teleport).
+ * Returns null when the fix is noise (poor accuracy, jitter, glitch).
+ *
+ * After a gap the fix is always accepted (so tracking re-anchors), but the distance only counts when the
+ * implied speed is plausible for the mode – a walker coming out of the MTR two stations later hasn't walked it.
  */
-export function acceptFix(prev: Fix | null, next: Fix): { stepKm: number } | null {
-  if (next.accuracy != null && next.accuracy > TRACKING.maxAccuracyM) return null;
+export function acceptFix(prev: Fix | null, next: Fix, mode: Mode = 'car'): { stepKm: number } | null {
+  const p = PROFILES[mode];
+  if (next.accuracy != null && next.accuracy > p.maxAccuracyM) return null;
   if (!prev) return { stepKm: 0 };
   const km = haversineKm(prev.latitude, prev.longitude, next.latitude, next.longitude);
   const metres = km * 1000;
-  const noise = Math.max(TRACKING.minStepM, ((prev.accuracy ?? 0) + (next.accuracy ?? 0)) / 2);
+  const noise = Math.max(p.minStepM, ((prev.accuracy ?? 0) + (next.accuracy ?? 0)) / 2);
   if (metres < noise) return null;
   const seconds = (next.timestamp - prev.timestamp) / 1000;
-  if (seconds > 0 && metres / seconds > TRACKING.maxSpeedMps) return null;
+  const speed = seconds > 0 ? metres / seconds : Infinity;
+  if (seconds > GAP_S) return { stepKm: speed <= p.maxSpeedMps ? km : 0 };
+  if (speed > p.maxSpeedMps) return null;
   return { stepKm: km };
+}
+
+/**
+ * Minutes spent moving: consecutive driving points are only recorded after real movement, so time between
+ * points that are less than GAP_S apart is moving time; longer gaps are waiting (or travel not counted).
+ */
+export function movingMinutes(points: { timestamp: string; distanceFromLastKm?: number | null }[]): number {
+  let ms = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dt = new Date(points[i].timestamp).getTime() - new Date(points[i - 1].timestamp).getTime();
+    if (dt > 0 && dt <= GAP_S * 1000 && (points[i].distanceFromLastKm ?? 0) > 0) ms += dt;
+  }
+  return ms / 60_000;
 }
 
 /** Total distance of an ordered path in km (points already filtered when they were recorded). */

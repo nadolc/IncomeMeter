@@ -39,6 +39,7 @@ const MIGRATIONS: string[] = [
    CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);`,
   // 'track' = recorded while driving, 'stop' = marked by the driver (Record stop / iOS shortcut).
   `ALTER TABLE locations ADD COLUMN kind TEXT NOT NULL DEFAULT 'track';`,
+  `ALTER TABLE locations ADD COLUMN altitude REAL;`,
 ];
 
 export function getDb(): SQLite.SQLiteDatabase {

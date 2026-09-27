@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { activeWorkTypes, defaultVehicleId } from '../../services/data';
 import { inProgressRoute, startRoute, suggestStartMile } from '../../services/routes';
-import { Banner, Button, Input, NumberInput, Screen } from '../../ui/components';
+import { TRAVEL_MODES, TravelMode, usesOdometer } from '../../domain/types';
+import { Banner, Button, Chips, Input, NumberInput, Screen } from '../../ui/components';
 import { numText, parseNum } from '../../ui/format';
 import { useCollection, useSettings } from '../../ui/hooks';
 import { useT } from '../../ui/i18n';
@@ -19,6 +20,8 @@ export default function StartRouteScreen() {
   const [vehicleId, setVehicleId] = useState<string | null>(() => defaultVehicleId(new Date().toISOString()));
   const [startMile, setStartMile] = useState(() => numText(suggestStartMile(defaultVehicleId(new Date().toISOString()))));
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<TravelMode>(settings.defaultTravelMode);
+  const odometer = usesOdometer(mode);
 
   const wt = workTypes.find((w) => w.id === workTypeId) ?? null;
   const estimated = (wt?.incomeSourceTemplates ?? []).reduce((s, x) => s + (x.defaultAmount ?? 0), 0);
@@ -45,8 +48,9 @@ export default function StartRouteScreen() {
       const { route, tracking } = await startRoute({
         workType: name,
         workTypeId: workTypeId === '__other' ? null : workTypeId,
-        vehicleId,
-        startMile: parseNum(startMile),
+        vehicleId: odometer ? vehicleId : null,
+        startMile: odometer ? parseNum(startMile) : null,
+        travelMode: mode,
         estimatedIncome: parseNum(estimate) ?? estimated,
         incomes: [],
       });
@@ -61,8 +65,13 @@ export default function StartRouteScreen() {
     <Screen>
       <WorkTypePicker workTypes={workTypes} value={workTypeId} onChange={setWorkTypeId} />
       {workTypeId === '__other' ? <Input label={t('name')} value={otherName} onChangeText={setOtherName} /> : null}
-      <VehiclePicker vehicles={vehicles} value={vehicleId} onChange={onVehicle} />
-      <NumberInput label={`${t('startMile')} (${settings.mileageUnit})`} value={startMile} onChange={setStartMile} />
+      <Chips label={t('travelMode')} options={TRAVEL_MODES.map((m) => ({ value: m, label: t(m) }))} value={mode} onChange={setMode} />
+      {odometer ? (
+        <>
+          <VehiclePicker vehicles={vehicles} value={vehicleId} onChange={onVehicle} />
+          <NumberInput label={`${t('startMile')} (${settings.mileageUnit})`} value={startMile} onChange={setStartMile} />
+        </>
+      ) : null}
       <NumberInput label={t('estimatedIncome')} value={estimate} onChange={setEstimate} placeholder={estimated ? estimated.toFixed(2) : '0.00'} />
       {!settings.trackRoutes ? <Banner kind="info">{t('trackingOff')}</Banner> : null}
       <Button title={`▶  ${t('startRoute')}`} onPress={start} busy={busy} />

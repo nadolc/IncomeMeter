@@ -2,6 +2,12 @@
 
 export type RouteStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
+/** How the route is travelled – decides GPS power settings and whether an odometer is used. */
+export type TravelMode = 'car' | 'motorcycle' | 'bicycle' | 'walk';
+export const TRAVEL_MODES: TravelMode[] = ['walk', 'bicycle', 'motorcycle', 'car'];
+/** Walking and cycling have no odometer: the route distance comes from GPS. */
+export const usesOdometer = (mode: TravelMode | null | undefined) => mode !== 'walk' && mode !== 'bicycle';
+
 export interface IncomeItem {
   source: string;
   amount: number;
@@ -23,8 +29,12 @@ export interface Route {
   distance: number;
   startMile: number | null;
   endMile: number | null;
-  /** GPS distance recorded on the device while the route was in progress, in miles. Local only. */
+  /** GPS distance recorded while the route was in progress, in the odometer unit (Settings). */
   trackedMiles: number | null;
+  /** Missing on routes created before travel modes existed (treated as 'car'). */
+  travelMode?: TravelMode | null;
+  /** Minutes actually moving (from GPS); the rest of the route time is waiting. */
+  movingMinutes?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +54,8 @@ export interface LocationPoint {
   address: string | null;
   distanceFromLastKm: number | null;
   distanceFromLastMi: number | null;
+  /** GPS altitude in metres (for "uphill" area stats); noisy per point, fine on average. */
+  altitude?: number | null;
 }
 
 export type VehicleType = 'car' | 'van' | 'motorcycle';
@@ -166,6 +178,7 @@ export interface WorkType {
 }
 
 export type MileageUnit = 'mi' | 'km';
+export type Region = 'UK' | 'HK';
 
 export interface Settings {
   currencyCode: string;
@@ -178,6 +191,18 @@ export interface Settings {
   fiscalYearStart: string;
   /** Record GPS points while a route is in progress. */
   trackRoutes: boolean;
+  /** HK hides the UK tax report and seeds Keeta / foodpanda. */
+  region: Region;
+  /** Last travel mode used – preselected when starting a route. */
+  defaultTravelMode: TravelMode;
+  /** Walking / cycling: mark a stop automatically after standing still for 2 minutes. */
+  autoStops: boolean;
+  /** Hourly target for judging offers; null = own average over the last 4 weeks. */
+  targetHourly: number | null;
+  /** Share of an offer's time limit usually needed (1 = uses all of it – worst case). */
+  completionFactor: number;
+  /** Place names to avoid, separated by "|" (same list as the Keeta shortcut). */
+  avoidAreas: string;
   /** Sync */
   apiBaseUrl: string;
   syncEnabled: boolean;
@@ -193,6 +218,12 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultChartPeriod: 'weekly',
   fiscalYearStart: '04-06',
   trackRoutes: true,
+  region: 'UK',
+  defaultTravelMode: 'car',
+  autoStops: true,
+  targetHourly: null,
+  completionFactor: 1,
+  avoidAreas: '',
   apiBaseUrl: '',
   syncEnabled: false,
   lastSyncAt: null,
