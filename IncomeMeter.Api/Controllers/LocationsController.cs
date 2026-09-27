@@ -387,7 +387,8 @@ public class LocationsController : ControllerBase
         }
 
         // Validate RouteId format (basic ObjectId format check)
-        if (string.IsNullOrWhiteSpace(dto.RouteId) || dto.RouteId.Length != 24)
+        // RouteId may be omitted (the stop goes to the route in progress); if given it must look like an ObjectId.
+        if (!string.IsNullOrWhiteSpace(dto.RouteId) && dto.RouteId.Length != 24)
         {
             Log.Logger
                 .ForContext("EventType", "LocationRouteIdValidationError")
@@ -396,7 +397,7 @@ public class LocationsController : ControllerBase
                 .ForContext("RouteId", dto.RouteId)
                 .Warning("iOS location RouteId format validation failed");
                 
-            return BadRequest(new { error = "RouteId must be a valid 24-character ObjectId" });
+            return BadRequest(new { error = "RouteId must be a valid 24-character ObjectId (or omit it to use the route in progress)" });
         }
 
         try
@@ -405,7 +406,7 @@ public class LocationsController : ControllerBase
                 .ForContext("EventType", "LocationAdditionRequest")
                 .ForContext("CorrelationId", correlationId)
                 .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
-                .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
+                .ForContext("RouteId", (string.IsNullOrEmpty(dto.RouteId) ? "in_progress" : dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***"))
                 .ForContext("Latitude", Math.Round(dto.Latitude, 6))
                 .ForContext("Longitude", Math.Round(dto.Longitude, 6))
                 .Information("User adding location via API key - validation passed");
@@ -417,10 +418,10 @@ public class LocationsController : ControllerBase
                     .ForContext("EventType", "LocationAdditionRouteNotFound")
                     .ForContext("CorrelationId", correlationId)
                     .ForContext("UserId", userId?[..Math.Min(8, userId.Length)] + "***")
-                    .ForContext("RouteId", dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***")
+                    .ForContext("RouteId", (string.IsNullOrEmpty(dto.RouteId) ? "in_progress" : dto.RouteId[..Math.Min(8, dto.RouteId.Length)] + "***"))
                     .Warning("Route not found or user does not have access to route for location addition via API key");
                     
-                return NotFound(new { error = "Route not found or you do not have access to this route", routeId = dto.RouteId });
+                return NotFound(new { error = string.IsNullOrEmpty(dto.RouteId) ? "No route in progress" : "Route not found or you do not have access to this route", routeId = dto.RouteId });
             }
 
             Log.Logger

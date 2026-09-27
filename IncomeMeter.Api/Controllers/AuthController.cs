@@ -19,6 +19,9 @@ namespace IncomeMeter.Api.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        /// <summary>Deep-link scheme of the IncomeMeter Expo app (see IncomeMeterExpo/app.json "scheme").</summary>
+        private const string MobileAppScheme = "incomemeter://";
+
         private readonly IConfiguration _configuration;
         private readonly IUserService _userService;
         private readonly ILogger<AuthController> _logger;
@@ -158,6 +161,14 @@ namespace IncomeMeter.Api.Controllers
                 .ForContext("TokenExpiry", DateTime.UtcNow.AddHours(1).ToString("O"))
                 .Information("User authentication completed successfully, JWT token generated");
                 
+            // The Expo app signs in through the system browser and asks to come back to its own URL scheme.
+            // Only that fixed scheme is honoured so returnUrl can't be used as an open redirect.
+            if (returnUrl.StartsWith(MobileAppScheme, StringComparison.OrdinalIgnoreCase))
+            {
+                var separator = returnUrl.Contains('?') ? '&' : '?';
+                return Redirect($"{returnUrl}{separator}token={Uri.EscapeDataString(token)}");
+            }
+
             // Redirect to frontend with token
             var frontendUrl = $"{_appSettings.FrontendBaseUrl}/auth-callback?token={token}&redirectUrl={Uri.EscapeDataString(returnUrl)}";
             return Redirect(frontendUrl);

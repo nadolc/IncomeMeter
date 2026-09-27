@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "IncomeMeter",
+    "slug": "incomemeter",
+    "scheme": "incomemeter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.incomemeter.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "package": "com.incomemeter.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-web-browser",
+      "@react-native-community/datetimepicker",
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "IncomeMeter records where you drive during a route so it can work out the distance and fill in the end odometer.",
+          "locationAlwaysAndWhenInUsePermission": "Allow \"Always\" so IncomeMeter keeps recording the route while the phone is locked or you use a navigation app.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose receipt and dashboard photos to attach to expenses.",
+          "cameraPermission": "Photograph receipts and the dashboard odometer."
+        }
+      ]
+    ]
+  }
+}

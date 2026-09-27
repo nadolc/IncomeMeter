@@ -40,4 +40,15 @@ public class Location
     
     [BsonElement("timezoneOffset")]
     public double? TimezoneOffset { get; set; }
+
+    /// <summary>
+    /// "track" = recorded automatically by the mobile app while driving; "stop" = a point the driver marked
+    /// (iOS shortcut / "Record stop"). Null on older records, which were all added by the iOS shortcut.
+    /// </summary>
+    [BsonElement("kind")]
+    public string? Kind { get; set; }
+
+    /// <summary>GPS altitude in metres (mobile app), used for "uphill" area stats.</summary>
+    [BsonElement("altitude")]
+    public double? Altitude { get; set; }
 }
