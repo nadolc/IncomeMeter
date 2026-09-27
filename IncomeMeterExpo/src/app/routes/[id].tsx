@@ -1,6 +1,8 @@
+import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Platform, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getById, getLocations, getSettings, insertLocations, remove } from '../../db/repo';
 import { kmToUnit } from '../../domain/geo';
@@ -14,6 +16,12 @@ import { Badge, Banner, Button, Card, colors, Empty, H2, KV, Muted, Row, Screen,
 import { dateTime, duration, hours, money, num, time } from '../../ui/format';
 import { useLive } from '../../ui/hooks';
 import { tOr, useT } from '../../ui/i18n';
+
+/**
+ * Android maps need a Google Maps key built into the app (GOOGLE_MAPS_API_KEY, see app.config.js); without one
+ * the map view crashes. Expo Go ships its own key; iOS uses Apple Maps.
+ */
+const MAPS_AVAILABLE = Platform.OS !== 'android' || isRunningInExpoGo() || !!Constants.expoConfig?.extra?.androidMaps;
 
 export default function RouteDetail() {
   const t = useT();
@@ -73,7 +81,7 @@ export default function RouteDetail() {
       {tracking === 'foreground' ? <Banner kind="warning">{t('trackingForeground')}</Banner> : null}
       {tracking === 'denied' ? <Banner kind="error">{t('trackingDenied')}</Banner> : null}
 
-      {coords.length > 0 ? (
+      {coords.length > 0 && MAPS_AVAILABLE ? (
         <View style={{ height: 260, borderRadius: 12, overflow: 'hidden' }}>
           <MapView
             style={{ flex: 1 }}
@@ -90,7 +98,7 @@ export default function RouteDetail() {
           </MapView>
         </View>
       ) : (
-        <Card><Muted>{t('noPath')}</Muted></Card>
+        <Card><Muted>{coords.length > 0 ? t('mapUnavailable') : t('noPath')}</Muted></Card>
       )}
 
       {route.status === 'in_progress' ? (
