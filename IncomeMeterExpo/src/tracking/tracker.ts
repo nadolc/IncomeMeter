@@ -19,6 +19,17 @@ import { syncQuietly } from '../sync/sync';
 export const TRACKING_TASK = 'incomemeter-route-tracking';
 const ACTIVE_KEY = 'tracking.activeRouteId';
 const POWER_KEY = 'tracking.power';
+const MODE_KEY = 'tracking.mode';
+
+/** How the active route is being recorded right now – shown to the rider, so a silent fallback is visible. */
+export function getTrackingMode(): TrackingMode | null {
+  return (kvGet(MODE_KEY) as TrackingMode | null) ?? null;
+}
+
+function setTrackingMode(mode: TrackingMode | null) {
+  kvSet(MODE_KEY, mode);
+  notify('kv');
+}
 
 /** 'fixed' = this phone won't change location settings from the background (Android): keep them as they are. */
 type Power = 'moving' | 'still' | 'fixed';
@@ -42,6 +53,7 @@ export function getActiveTrackingRouteId(): string | null {
 function setActiveTrackingRouteId(routeId: string | null) {
   kvSet(ACTIVE_KEY, routeId);
   kvSet(POWER_KEY, routeId ? 'moving' : null);
+  if (!routeId) kvSet(MODE_KEY, null);
   notify('kv');
 }
 
@@ -283,6 +295,7 @@ export async function startTracking(routeId: string): Promise<TrackingMode> {
   if (await Location.isBackgroundLocationAvailableAsync()) {
     try {
       await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
+      setTrackingMode('background');
       return 'background';
     } catch {
       // fall through
@@ -290,6 +303,7 @@ export async function startTracking(routeId: string): Promise<TrackingMode> {
   }
 
   await startForegroundWatch(routeId, mode);
+  setTrackingMode('foreground');
   return 'foreground';
 }
 
@@ -319,7 +333,10 @@ export async function resumeTrackingIfNeeded(): Promise<TrackingMode | null> {
   const routeId = getActiveTrackingRouteId();
   if (!routeId) return null;
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) return 'background';
+    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) {
+      setTrackingMode('background');
+      return 'background';
+    }
   } catch {
     // fall through
   }
