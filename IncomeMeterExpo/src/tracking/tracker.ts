@@ -4,6 +4,7 @@ import { getDb, newId, notify } from '../db/database';
 import { getById, getLastLocation, getLocations, getSettings, insertLocations } from '../db/repo';
 import { acceptFix, Fix, GAP_S, haversineKm, KM_TO_MI, Mode, pathKm, PROFILES } from '../domain/geo';
 import { LocationKind, LocationPoint, TravelMode } from '../domain/types';
+import { logEvent, startDiagnostics } from '../diagnostics/log';
 import { syncQuietly } from '../sync/sync';
 
 /**
@@ -27,6 +28,7 @@ export function getTrackingMode(): TrackingMode | null {
 }
 
 function setTrackingMode(mode: TrackingMode | null) {
+  if (mode) logEvent('tracking', mode);
   kvSet(MODE_KEY, mode);
   notify('kv');
 }
@@ -162,6 +164,7 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
 }
 
 async function switchPower(mode: Mode, power: Power) {
+  logEvent('power', power);
   kvSet(POWER_KEY, power);
   try {
     // Calling start again on a running task updates its options.
@@ -169,6 +172,7 @@ async function switchPower(mode: Mode, power: Power) {
   } catch {
     // Android doesn't allow restarting the location service from the background. Keep the current settings
     // for the rest of the route (costs battery, loses nothing) and stop trying.
+    logEvent('power-switch-refused', power);
     kvSet(POWER_KEY, power === 'moving' ? 'fixed' : 'moving');
   }
 }
@@ -260,14 +264,30 @@ export async function recordStop(routeId: string, coords?: { latitude: number; l
   return point;
 }
 
+startDiagnostics();
+let lastBatchAt = 0;
+
 // Must be defined at module load (imported from the app entry) so the OS can wake it in the background.
 TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, async ({ data, error }) => {
-  if (error || !data?.locations?.length) return;
+  if (error) {
+    logEvent('gps-error', String(error.message ?? error));
+    return;
+  }
+  if (!data?.locations?.length) return;
   const routeId = getActiveTrackingRouteId();
   if (!routeId) return;
-  const mode = modeOf(routeId);
-  recordFixes(routeId, data.locations, mode);
-  await afterFixes(routeId, mode, data.locations, true);
+  try {
+    const mode = modeOf(routeId);
+    const kept = recordFixes(routeId, data.locations, mode);
+    // Log the first batch after a (re)start and any resume after a silence – that's where gaps come from.
+    const now = Date.now();
+    if (lastBatchAt === 0 || now - lastBatchAt > 60_000)
+      logEvent('gps-batch', `${lastBatchAt === 0 ? 'first after process start' : `after ${Math.round((now - lastBatchAt) / 1000)}s silence`}: ${data.locations.length} fixes, kept ${kept}`);
+    lastBatchAt = now;
+    await afterFixes(routeId, mode, data.locations, true);
+  } catch (e) {
+    logEvent('gps-task-error', e instanceof Error ? e.message : String(e));
+  }
 });
 
 // ---------- start / stop ----------
@@ -318,6 +338,7 @@ async function startForegroundWatch(routeId: string, mode: Mode) {
 }
 
 export async function stopTracking() {
+  logEvent('tracking', 'stop');
   setActiveTrackingRouteId(null);
   foregroundSub?.remove();
   foregroundSub = null;

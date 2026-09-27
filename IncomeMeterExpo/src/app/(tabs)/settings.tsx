@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+import { Share, Text } from 'react-native';
+import { clearLog, logText, readLog } from '../../diagnostics/log';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { saveSettings } from '../../db/repo';
@@ -88,6 +90,16 @@ export default function SettingsScreen() {
         options={[1, 0.9, 0.8, 0.7, 0.6].map((f) => ({ value: String(f), label: `${Math.round(f * 100)}%` }))}
         value={String(s.completionFactor)} onChange={(v) => saveSettings({ completionFactor: Number(v) })} />
       <Card onPress={() => router.push('/areas')}><KV k={`${t('areas')} · ${t('avoidAreas')}`} v="›" /></Card>
+
+      <H2>{t('diagnostics')}</H2>
+      <Muted>{t('diagnosticsHint')}</Muted>
+      <Card>
+        <Text style={{ fontFamily: 'Menlo', fontSize: 11 }} selectable>
+          {readLog().slice(-25).map((e) => `${e.t.slice(11, 19)} ${e.kind}${e.detail ? ` ${e.detail}` : ''}`).join('\n') || '—'}
+        </Text>
+      </Card>
+      <Button kind="secondary" title={t('shareLog')} onPress={() => Share.share({ message: logText() })} />
+      <Button kind="ghost" title={t('clearLog')} onPress={() => { clearLog(); setMessage(null); }} />
 
       <H2>{t('sync')}</H2>
       <Muted>{t('syncOptional')}</Muted>

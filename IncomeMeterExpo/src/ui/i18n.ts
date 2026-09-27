@@ -66,6 +66,7 @@ const en = {
   // settings
   preferences: 'Preferences', language: 'Language', currency: 'Currency', mileageUnit: 'Odometer unit', trackRoutes: 'Record GPS during routes',
   sync: 'Sync with IncomeMeter (Azure)', serverUrl: 'Server address', signIn: 'Sign in with Google', signOut: 'Sign out', syncNow: 'Sync now',
+  diagnostics: 'Diagnostics', diagnosticsHint: 'Recording gaps, app restarts and GPS errors. Share this after a drive with missing points.', shareLog: 'Share log', clearLog: 'Clear log',
   account: 'Account', lastSync: 'Last sync', never: 'Never', signedInAs: 'Signed in as {e}', pasteToken: 'Or paste an API token', useToken: 'Use token',
   syncDone: 'Sync complete: {p} sent, {g} received', syncOptional: 'Optional. Everything works offline on this phone; sync copies it to your account.',
   data: 'Data', manageVehicles: 'Vehicles', manageWorkTypes: 'Work types', chartPeriod: 'Default chart period', fiscalStart: 'Fiscal year start (MM-DD)',
@@ -129,6 +130,7 @@ const zh: Record<Key, string> = {
   exportCsv: '匯出 CSV', totalClaim: '申報總額', unassigned: '未分配記錄', receiptsMissing: '缺少收據',
   preferences: '偏好', language: '語言', currency: '貨幣', mileageUnit: '里程表單位', trackRoutes: '路線進行中記錄 GPS',
   sync: '同步到 IncomeMeter（Azure）', serverUrl: '伺服器地址', signIn: '用 Google 登入', signOut: '登出', syncNow: '立即同步',
+  diagnostics: '診斷記錄', diagnosticsHint: '記錄 GPS 中斷、app 重新啟動同錯誤。行車少咗 GPS 點之後，分享呢個記錄俾我睇。', shareLog: '分享記錄', clearLog: '清除記錄',
   account: '帳戶', lastSync: '上次同步', never: '從未', signedInAs: '已登入：{e}', pasteToken: '或者貼上 API token', useToken: '使用 token',
   syncDone: '同步完成：上載 {p}，下載 {g}', syncOptional: '可選。所有功能都可以喺手機離線使用；同步會複製到你嘅帳戶。',
   data: '資料', manageVehicles: '車輛', manageWorkTypes: '工作類型', chartPeriod: '預設圖表時段', fiscalStart: '財政年度開始（MM-DD）',
