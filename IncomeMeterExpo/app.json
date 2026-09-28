@@ -46,7 +46,9 @@
           "locationAlwaysAndWhenInUsePermission": "Allow \"Always\" so IncomeMeter keeps recording the route while the phone is locked or you use a navigation app.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidMotionActivityEnabled": true,
+          "motionUsagePermission": "IncomeMeter uses motion to notice when you stop, so it can save battery while you wait."
         }
       ],
       [

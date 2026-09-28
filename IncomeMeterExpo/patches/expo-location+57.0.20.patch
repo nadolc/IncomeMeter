@@ -1,0 +1,17 @@
+diff --git a/node_modules/expo-location/android/src/main/java/expo/modules/location/LocationModule.kt b/node_modules/expo-location/android/src/main/java/expo/modules/location/LocationModule.kt
+index b286ea2..934bc72 100644
+--- a/node_modules/expo-location/android/src/main/java/expo/modules/location/LocationModule.kt
++++ b/node_modules/expo-location/android/src/main/java/expo/modules/location/LocationModule.kt
+@@ -323,7 +323,11 @@ class LocationModule : Module(), SensorEventListener, ActivityEventListener {
+       if (!shouldUseForegroundService && isMissingBackgroundPermissions()) {
+         throw LocationBackgroundUnauthorizedException()
+       }
+-      if (!AppForegroundedSingleton.isForegrounded && options.foregroundService != null) {
++      // A task that is already running only gets new location-request options here (no new foreground
++      // service is started), which Android allows from the background. Lets an app switch accuracy while
++      // backgrounded, e.g. to low power while the user stands still.
++      val alreadyRunning = mTaskManager.taskHasConsumerOfClass(taskName, LocationTaskConsumer::class.java)
++      if (!alreadyRunning && !AppForegroundedSingleton.isForegrounded && options.foregroundService != null) {
+         throw ForegroundServiceStartNotAllowedException()
+       }
+ 

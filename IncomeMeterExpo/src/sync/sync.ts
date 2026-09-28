@@ -1,4 +1,5 @@
-import { Collection, notify } from '../db/database';
+import * as Network from 'expo-network';
+import { Collection, getDb, notify } from '../db/database';
 import {
   applyRemote, changeId, getAll, getById, getDirty, getDirtyLocations, getSettings, insertLocations, markClean, markLocationsClean,
   removeMissing, save, saveSettings,
@@ -98,7 +99,13 @@ async function runSync(): Promise<SyncResult> {
     deletions[c] = dirty.filter((d) => d.deleted).map((d) => d.id);
   }
   // Routes are upserted before locations in the same request, so points of a new route are safe to send.
-  const locations = getDirtyLocations(2000);
+  // While a route is being recorded on mobile data, its GPS points wait for Wi-Fi or the end of the route
+  // (fewer radio wake-ups); stops and everything else still go straight away.
+  const activeRoute = getDb().getFirstSync<{ value: string }>("SELECT value FROM kv WHERE key = 'tracking.activeRouteId'")?.value;
+  const onWifi = activeRoute
+    ? (await Network.getNetworkStateAsync().catch(() => null))?.type === Network.NetworkStateType.WIFI
+    : true;
+  const locations = getDirtyLocations(2000).filter((p) => onWifi || p.kind === 'stop' || p.routeId !== activeRoute);
 
   const res = await api<SyncResponse>('/api/sync', {
     method: 'POST',

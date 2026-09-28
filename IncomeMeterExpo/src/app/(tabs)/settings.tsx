@@ -14,6 +14,8 @@ import { dateTime, money, numText, parseNum } from '../../ui/format';
 import { useSettings } from '../../ui/hooks';
 import { useT } from '../../ui/i18n';
 import { useTargetHourly } from '../../ui/useTarget';
+import { isBatteryOptimised, openBatterySettings, phoneBrand } from '../../ui/batteryOptimisation';
+import { useEffect } from 'react';
 
 export default function SettingsScreen() {
   const t = useT();
@@ -24,6 +26,8 @@ export default function SettingsScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [target, setTarget] = useState(numText(s.targetHourly));
   const auto = useTargetHourly();
+  const [batteryOpt, setBatteryOpt] = useState<boolean | null>(null);
+  useEffect(() => { isBatteryOptimised().then(setBatteryOpt); }, []);
 
   const run = async (kind: 'signin' | 'sync' | 'token', fn: () => Promise<string>) => {
     setBusy(kind);
@@ -90,6 +94,15 @@ export default function SettingsScreen() {
         options={[1, 0.9, 0.8, 0.7, 0.6].map((f) => ({ value: String(f), label: `${Math.round(f * 100)}%` }))}
         value={String(s.completionFactor)} onChange={(v) => saveSettings({ completionFactor: Number(v) })} />
       <Card onPress={() => router.push('/areas')}><KV k={`${t('areas')} · ${t('avoidAreas')}`} v="›" /></Card>
+
+      {batteryOpt != null ? (
+        <Card>
+          <KV k={t('batteryOptTitle')} v={batteryOpt ? t('batteryOptOn') : t('batteryOptOff')} strong />
+          {batteryOpt ? <Muted>{t('batteryOptBody')}</Muted> : null}
+          {phoneBrand() ? <Muted>{phoneBrand()}</Muted> : null}
+          <Button small kind="secondary" title={t('openSettings')} onPress={openBatterySettings} />
+        </Card>
+      ) : null}
 
       <H2>{t('diagnostics')}</H2>
       <Muted>{t('diagnosticsHint')}</Muted>

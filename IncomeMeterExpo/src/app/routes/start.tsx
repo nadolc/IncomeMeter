@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { activeWorkTypes, defaultVehicleId } from '../../services/data';
 import { inProgressRoute, startRoute, suggestStartMile } from '../../services/routes';
 import { TRAVEL_MODES, TravelMode, usesOdometer } from '../../domain/types';
+import { maybeAskAboutBatteryOptimisation } from '../../ui/batteryOptimisation';
 import { Banner, Button, Chips, Input, NumberInput, Screen } from '../../ui/components';
 import { numText, parseNum } from '../../ui/format';
 import { useCollection, useSettings } from '../../ui/hooks';
@@ -56,6 +57,7 @@ export default function StartRouteScreen() {
       });
       router.dismiss();
       router.push({ pathname: '/routes/[id]', params: { id: route.id, tracking } });
+      if (tracking === 'background') maybeAskAboutBatteryOptimisation().catch(() => undefined);
     } finally {
       setBusy(false);
     }

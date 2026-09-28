@@ -4,6 +4,8 @@ import { getDb, newId, notify } from '../db/database';
 import { getById, getLastLocation, getLocations, getSettings, insertLocations } from '../db/repo';
 import { acceptFix, Fix, GAP_S, haversineKm, KM_TO_MI, Mode, pathKm, PROFILES } from '../domain/geo';
 import { LocationKind, LocationPoint, TravelMode } from '../domain/types';
+import { Platform } from 'react-native';
+import { batteryTick } from '../diagnostics/battery';
 import { logEvent, startDiagnostics } from '../diagnostics/log';
 import { syncQuietly } from '../sync/sync';
 
@@ -37,6 +39,7 @@ function setTrackingMode(mode: TrackingMode | null) {
 type Power = 'moving' | 'still' | 'fixed';
 
 let foregroundSub: Location.LocationSubscription | null = null;
+let motionSub: Location.LocationSubscription | null = null;
 
 /** Told about new points / stops (the Live Activity refreshes from it). Set by src/widgets/liveActivity.ts. */
 type TrackingListener = (routeId: string, kind: LocationKind) => void;
@@ -164,9 +167,12 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
   const lastMs = new Date(last.timestamp).getTime();
   const power = (kvGet(POWER_KEY) as Power | null) ?? 'moving';
 
-  if (power !== 'still' && latest.timestamp - lastMs > GAP_S * 1000) {
-    if (profile.autoStopAfterS > 0 && getSettings().autoStops) await autoStop(routeId, last);
-    if (profile.adaptivePower && background && power === 'moving') await switchPower(mode, 'still');
+  const stillFor = latest.timestamp - lastMs;
+  // Standing still for 2 minutes = a pickup or drop-off (repeats at the same place are skipped).
+  if (stillFor > GAP_S * 1000 && profile.autoStopAfterS > 0 && getSettings().autoStops) await autoStop(routeId, last);
+
+  if (power === 'moving' && stillFor > GAP_S * 1000) {
+    if (profile.adaptivePower && background) await switchPower(mode, 'still');
   } else if (power === 'still') {
     // Moved away from where we stopped (by more than the fix's own uncertainty) → back to GPS.
     const away = locations.some((l) => {
@@ -177,18 +183,60 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
   }
 }
 
-async function switchPower(mode: Mode, power: Power) {
-  logEvent('power', power);
+let switching = false;
+
+async function switchPower(mode: Mode, power: Power, reason = 'gps') {
+  const current = kvGet(POWER_KEY);
+  if (switching || current === power || current === 'fixed') return;
+  switching = true;
+  logEvent('power', `${power} (${reason})`);
   kvSet(POWER_KEY, power);
   try {
     // Calling start again on a running task updates its options.
     await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, power));
   } catch {
-    // Android doesn't allow restarting the location service from the background. Keep the current settings
-    // for the rest of the route (costs battery, loses nothing) and stop trying.
+    // This phone won't change location settings from the background (unpatched Android). Going to low power
+    // failed: keep full GPS for the rest of the route (costs battery, loses nothing) and stop trying. Going
+    // back to GPS failed: stay marked as low power so the next movement tries again.
     logEvent('power-switch-refused', power);
-    kvSet(POWER_KEY, power === 'moving' ? 'fixed' : 'moving');
+    kvSet(POWER_KEY, power === 'still' ? 'fixed' : 'still');
+  } finally {
+    switching = false;
   }
+}
+
+/**
+ * Android: the phone's motion sensors (Activity Recognition, no GPS) say when you stop and start moving –
+ * sooner than waiting for 2 minutes without GPS movement – so GPS can go to low power straight away.
+ * Walking / cycling / motorcycle routes only; the GPS-based switch stays as the fallback.
+ */
+async function startMotionWatch(routeId: string, mode: Mode) {
+  motionSub?.remove();
+  motionSub = null;
+  if (Platform.OS !== 'android' || !PROFILES[mode].adaptivePower) return;
+  const perm = await Location.requestMotionActivityPermissionsAsync();
+  if (perm.status !== 'granted') {
+    logEvent('motion', 'permission not granted');
+    return;
+  }
+  let stillSince: number | null = null;
+  motionSub = await Location.watchMotionActivityAsync((motion) => {
+    if (getActiveTrackingRouteId() !== routeId) return;
+    const a = motion.activities;
+    const sure = (t: Location.MotionActivityType) => a[t]?.detected && a[t].confidence >= Location.MotionActivityConfidence.Medium;
+    const moving = sure(Location.MotionActivityType.Walking) || sure(Location.MotionActivityType.Running)
+      || sure(Location.MotionActivityType.Cycling) || sure(Location.MotionActivityType.Automotive);
+    const power = kvGet(POWER_KEY) as Power | null;
+    if (moving) {
+      stillSince = null;
+      if (power === 'still') switchPower(mode, 'moving', 'motion').catch(() => undefined);
+    } else if (sure(Location.MotionActivityType.Stationary)) {
+      // Brief pauses (traffic lights, crossings) shouldn't flip the GPS off: wait 30 s of stillness.
+      stillSince = stillSince ?? Date.now();
+      if (power === 'moving' && Date.now() - stillSince >= 30_000) switchPower(mode, 'still', 'motion').catch(() => undefined);
+    }
+  }, () => logEvent('motion', 'error'));
+  logEvent('motion', 'watching');
 }
 
 /** Standing still for 2 minutes = a pickup or drop-off. Skipped if a stop was already marked here. */
@@ -301,6 +349,7 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
       logEvent('gps-batch', `${lastBatchAt === 0 ? 'first after process start' : `after ${Math.round((now - lastBatchAt) / 1000)}s silence`}: ${data.locations.length} fixes, kept ${kept}`);
     lastBatchAt = now;
     if (kept > 0) tell(routeId, 'track');
+    batteryTick().catch(() => undefined);
     await afterFixes(routeId, mode, data.locations, true);
   } catch (e) {
     logEvent('gps-task-error', e instanceof Error ? e.message : String(e));
@@ -336,6 +385,7 @@ export async function startTracking(routeId: string): Promise<TrackingMode> {
     try {
       await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
       setTrackingMode('background');
+      startMotionWatch(routeId, mode).catch(() => undefined);
       return 'background';
     } catch {
       // fall through
@@ -359,6 +409,8 @@ async function startForegroundWatch(routeId: string, mode: Mode) {
 
 export async function stopTracking() {
   logEvent('tracking', 'stop');
+  motionSub?.remove();
+  motionSub = null;
   setActiveTrackingRouteId(null);
   foregroundSub?.remove();
   foregroundSub = null;
@@ -376,6 +428,7 @@ export async function resumeTrackingIfNeeded(): Promise<TrackingMode | null> {
   try {
     if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) {
       setTrackingMode('background');
+      startMotionWatch(routeId, modeOf(routeId)).catch(() => undefined);
       return 'background';
     }
   } catch {
