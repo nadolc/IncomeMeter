@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { getDb, subscribe } from '../db/database';
+import { getDb, notify, subscribe } from '../db/database';
 import { seedDefaults } from '../services/data';
 import { isApplyingRemote, syncQuietly } from '../sync/sync';
 import { resumeTrackingIfNeeded } from '../tracking/tracker';
@@ -19,7 +19,12 @@ export default function RootLayout() {
   useEffect(() => {
     resumeTrackingIfNeeded().catch(() => undefined);
     syncQuietly();
-    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') syncQuietly(); });
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') return;
+      // Stops recorded by the Shortcuts action are written natively, without telling the screens.
+      notify('locations');
+      syncQuietly();
+    });
     // Push local edits a few seconds after they happen (GPS points go up with the next sync).
     let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribe((c) => {

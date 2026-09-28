@@ -11,7 +11,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.nadolc.incomemeter",
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
@@ -51,7 +53,8 @@
           "photosPermission": "Choose receipt and dashboard photos to attach to expenses.",
           "cameraPermission": "Photograph receipts and the dashboard odometer."
         }
-      ]
+      ],
+      "./plugins/withRecordStopIntent"
     ]
   }
 }
