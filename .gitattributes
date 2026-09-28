@@ -61,3 +61,6 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# patch-package patches must keep LF line endings to apply to node_modules on every OS
+*.patch text eol=lf
