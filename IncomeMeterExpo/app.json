@@ -13,7 +13,9 @@
       "infoPlist": {
         "UIBackgroundModes": [
           "location"
-        ]
+        ],
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true
       }
     },
     "android": {
@@ -55,12 +57,7 @@
         }
       ],
       "./plugins/withRecordStopIntent",
-      [
-        "expo-widgets",
-        {
-          "frequentUpdates": true
-        }
-      ]
+      "@bacons/apple-targets"
     ]
   }
 }
