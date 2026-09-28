@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Share, Text } from 'react-native';
 import { getStopsWithTrack, saveSettings } from '../db/repo';
+import { mergeStops } from '../domain/legs';
 import { areaStats, avoidList } from '../domain/metrics';
 import { Badge, Button, Card, colors, Empty, H2, Input, Muted, Row, Screen } from '../ui/components';
 import { num } from '../ui/format';
@@ -12,7 +13,7 @@ export default function AreasScreen() {
   const t = useT();
   const settings = useSettings();
   const data = useLive(() => getStopsWithTrack(), ['locations']);
-  const areas = useMemo(() => areaStats(data.stops, data.track), [data]);
+  const areas = useMemo(() => areaStats(mergeStops(data.stops), data.track), [data]);
   const avoided = avoidList(settings.avoidAreas);
 
   const add = (label: string) => {

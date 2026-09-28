@@ -1,11 +1,12 @@
 import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { getById, getLocations, getSettings, insertLocations, remove } from '../../db/repo';
 import { kmToUnit } from '../../domain/geo';
+import { Leg, mergeStops, routeLegs } from '../../domain/legs';
 import { routeIncome } from '../../domain/dashboard';
 import { routeRates } from '../../domain/metrics';
 import { vehicleLabel } from '../../services/data';
@@ -31,14 +32,24 @@ export default function RouteDetail() {
   const recording = useLive(() => getActiveTrackingRouteId() === id, ['kv'], [id]);
   const [showPoints, setShowPoints] = useState(false);
   const [stopBusy, setStopBusy] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'signedOut' | 'failed'>('idle');
+  const mapRef = useRef<MapView>(null);
   const unit = getSettings().mileageUnit;
 
-  // Routes recorded on another device: fetch their path once.
+  // Routes recorded elsewhere (old CarPlay shortcut stops, another phone) keep their locations on the server:
+  // fetch them when this phone has no driving path for the route. Points already here are kept (same ids).
   useEffect(() => {
-    if (points.length > 0 || !route || route.status === 'in_progress') return;
-    isSignedIn().then((ok) => (ok ? fetchRouteLocations(id) : [])).then((remote) => {
-      if (remote.length > 0) insertLocations(remote, false);
-    }).catch(() => undefined);
+    if (!route || route.status === 'in_progress' || points.some((p) => p.kind === 'track')) return;
+    setFetchState('loading');
+    isSignedIn()
+      .then(async (ok) => {
+        if (!ok) return setFetchState('signedOut');
+        const remote = await fetchRouteLocations(id);
+        if (remote.length > 0) insertLocations(remote, false);
+        setFetchState('idle');
+      })
+      .catch(() => setFetchState('failed'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -46,11 +57,24 @@ export default function RouteDetail() {
 
   const vehicle = getById('vehicles', route.vehicleId);
   const track = points.filter((p) => p.kind === 'track');
-  const stops = points.filter((p) => p.kind === 'stop');
+  const stops = mergeStops(points.filter((p) => p.kind === 'stop'));
   // Draw the driving path; routes without one (old shortcut routes) are drawn stop to stop.
   const line = (track.length >= 2 ? track : stops).map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
   const coords = points.map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
   const gpsDistance = kmToUnit(trackedKm(route.id), unit);
+  const legs = routeLegs(points);
+  const selectedLeg: Leg | null = selected != null ? legs[selected] ?? null : null;
+
+  const selectLeg = (i: number) => {
+    const next = selected === i ? null : i;
+    setSelected(next);
+    const path = next != null ? legs[next].path : coords;
+    if (path.length > 0) mapRef.current?.fitToCoordinates(path, { edgePadding: { top: 40, right: 40, bottom: 40, left: 40 }, animated: true });
+  };
+  const noMapText = coords.length > 0 ? t('mapUnavailable')
+    : fetchState === 'loading' ? t('loadingPath')
+    : fetchState === 'signedOut' ? t('signInForPath')
+    : t('noPath');
 
   const addStop = async () => {
     setStopBusy(true);
@@ -84,10 +108,14 @@ export default function RouteDetail() {
       {coords.length > 0 && MAPS_AVAILABLE ? (
         <View style={{ height: 260, borderRadius: 12, overflow: 'hidden' }}>
           <MapView
+            ref={mapRef}
             style={{ flex: 1 }}
             initialRegion={regionFor(coords)}
             showsUserLocation={route.status === 'in_progress'}>
-            {line.length > 1 ? <Polyline coordinates={line} strokeWidth={4} strokeColor={colors.primary} /> : null}
+            {line.length > 1 ? <Polyline coordinates={line} strokeWidth={4} strokeColor={selectedLeg ? colors.border : colors.primary} /> : null}
+            {selectedLeg && selectedLeg.path.length > 1
+              ? <Polyline coordinates={selectedLeg.path} strokeWidth={6} strokeColor={colors.warning} lineDashPattern={selectedLeg.source === 'path' ? undefined : [8, 6]} />
+              : null}
             {track.length > 0 ? <Marker coordinate={line[0]} pinColor="green" title={t('actualStart')} /> : null}
             {track.length > 1 && route.status !== 'in_progress'
               ? <Marker coordinate={line[line.length - 1]} pinColor="red" title={t('actualEnd')} /> : null}
@@ -98,7 +126,7 @@ export default function RouteDetail() {
           </MapView>
         </View>
       ) : (
-        <Card><Muted>{coords.length > 0 ? t('mapUnavailable') : t('noPath')}</Muted></Card>
+        <Card><Muted>{noMapText}</Muted></Card>
       )}
 
       {route.status === 'in_progress' ? (
@@ -159,15 +187,29 @@ export default function RouteDetail() {
         <Button kind="danger" title={t('delete')} onPress={confirmDelete} style={{ flex: 1 }} />
       </Row>
 
-      {stops.length > 0 ? <H2>{t('stops')} ({stops.length})</H2> : null}
-      {stops.map((p, i) => (
-        <Card key={p.id}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Text style={{ fontWeight: '600' }}>📍 {i + 1}. {time(p.timestamp)}</Text>
-          </Row>
-          <Muted>{p.address ?? `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`}</Muted>
-        </Card>
-      ))}
+      {legs.length > 0 ? <H2>{t('legs')} · {stops.length} {t('stops')}</H2> : null}
+      {legs.length > 0 && MAPS_AVAILABLE && coords.length > 0 ? <Muted>{t('tapLeg')}</Muted> : null}
+      {legs.map((leg, i) => {
+        // A leg that starts at a stop starts at the previous leg's stop (the last one for the final stretch).
+        const fromLabel = leg.from?.kind === 'stop' ? `📍${leg.toStop > 0 ? leg.toStop - 1 : stops.length}` : t('start');
+        const toLabel = leg.toStop > 0 ? `📍${leg.toStop}` : t('end');
+        return (
+          <Card key={`${leg.to.id}-${i}`} onPress={() => selectLeg(i)}
+            style={selected === i ? { borderColor: colors.warning, borderWidth: 2 } : undefined}>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <Text style={{ fontWeight: '600' }}>
+                {fromLabel} {leg.from ? time(leg.from.timestamp) : ''} → {toLabel} {time(leg.to.timestamp)}
+              </Text>
+              <Text style={{ fontWeight: '700' }}>{num(kmToUnit(leg.km, unit))} {unit}</Text>
+            </Row>
+            <Muted>
+              {leg.minutes > 0 ? `${Math.round(leg.minutes)} ${t('minutesShort')} · ` : ''}
+              {leg.to.kind === 'stop' ? leg.to.address ?? `${leg.to.latitude.toFixed(5)}, ${leg.to.longitude.toFixed(5)}` : ''}
+              {leg.source === 'straight' && leg.km > 0 ? ` ${t('straightEstimate')}` : leg.source === 'server' ? ` ${t('serverDistance')}` : ''}
+            </Muted>
+          </Card>
+        );
+      })}
 
       {track.length > 0 ? (
         <>

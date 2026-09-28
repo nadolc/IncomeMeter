@@ -4,6 +4,8 @@ import { getDb, newId, notify } from '../db/database';
 import { getById, getLastLocation, getLocations, getSettings, insertLocations } from '../db/repo';
 import { acceptFix, Fix, GAP_S, haversineKm, KM_TO_MI, Mode, pathKm, PROFILES } from '../domain/geo';
 import { LocationKind, LocationPoint, TravelMode } from '../domain/types';
+import { logEvent, startDiagnostics } from '../diagnostics/log';
+import { syncQuietly } from '../sync/sync';
 
 /**
  * Records where you go while a route is in progress, so the end odometer can be suggested and walking /
@@ -18,8 +20,21 @@ import { LocationKind, LocationPoint, TravelMode } from '../domain/types';
 export const TRACKING_TASK = 'incomemeter-route-tracking';
 const ACTIVE_KEY = 'tracking.activeRouteId';
 const POWER_KEY = 'tracking.power';
+const MODE_KEY = 'tracking.mode';
 
-type Power = 'moving' | 'still';
+/** How the active route is being recorded right now – shown to the rider, so a silent fallback is visible. */
+export function getTrackingMode(): TrackingMode | null {
+  return (kvGet(MODE_KEY) as TrackingMode | null) ?? null;
+}
+
+function setTrackingMode(mode: TrackingMode | null) {
+  if (mode) logEvent('tracking', mode);
+  kvSet(MODE_KEY, mode);
+  notify('kv');
+}
+
+/** 'fixed' = this phone won't change location settings from the background (Android): keep them as they are. */
+type Power = 'moving' | 'still' | 'fixed';
 
 let foregroundSub: Location.LocationSubscription | null = null;
 
@@ -40,6 +55,7 @@ export function getActiveTrackingRouteId(): string | null {
 function setActiveTrackingRouteId(routeId: string | null) {
   kvSet(ACTIVE_KEY, routeId);
   kvSet(POWER_KEY, routeId ? 'moving' : null);
+  if (!routeId) kvSet(MODE_KEY, null);
   notify('kv');
 }
 
@@ -134,9 +150,9 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
   const lastMs = new Date(last.timestamp).getTime();
   const power = (kvGet(POWER_KEY) as Power | null) ?? 'moving';
 
-  if (power === 'moving' && latest.timestamp - lastMs > GAP_S * 1000) {
+  if (power !== 'still' && latest.timestamp - lastMs > GAP_S * 1000) {
     if (profile.autoStopAfterS > 0 && getSettings().autoStops) await autoStop(routeId, last);
-    if (profile.adaptivePower && background) await switchPower(mode, 'still');
+    if (profile.adaptivePower && background && power === 'moving') await switchPower(mode, 'still');
   } else if (power === 'still') {
     // Moved away from where we stopped (by more than the fix's own uncertainty) → back to GPS.
     const away = locations.some((l) => {
@@ -148,13 +164,16 @@ async function afterFixes(routeId: string, mode: Mode, locations: Location.Locat
 }
 
 async function switchPower(mode: Mode, power: Power) {
+  logEvent('power', power);
   kvSet(POWER_KEY, power);
   try {
     // Calling start again on a running task updates its options.
     await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, power));
   } catch {
-    // Couldn't change settings from the background – keep the current ones (costs battery, loses nothing).
-    kvSet(POWER_KEY, 'moving');
+    // Android doesn't allow restarting the location service from the background. Keep the current settings
+    // for the rest of the route (costs battery, loses nothing) and stop trying.
+    logEvent('power-switch-refused', power);
+    kvSet(POWER_KEY, power === 'moving' ? 'fixed' : 'moving');
   }
 }
 
@@ -188,10 +207,6 @@ export function trackedPointCount(routeId: string): number {
     getDb().getFirstSync<{ n: number }>('SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = ?', routeId, kind)?.n ?? 0;
   const track = count('track');
   return track >= 2 ? track : count('stop');
-}
-
-export function stopCount(routeId: string): number {
-  return getDb().getFirstSync<{ n: number }>("SELECT COUNT(*) AS n FROM locations WHERE route_id = ? AND kind = 'stop'", routeId)?.n ?? 0;
 }
 
 /**
@@ -244,17 +259,35 @@ export async function recordStop(routeId: string, coords?: { latitude: number; l
     distanceFromLastMi: null,
   };
   insertLocations([point]);
+  // Send it up now, so a CarPlay-shortcut stop at the same place moments later is recognised as the same stop.
+  syncQuietly();
   return point;
 }
 
+startDiagnostics();
+let lastBatchAt = 0;
+
 // Must be defined at module load (imported from the app entry) so the OS can wake it in the background.
 TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, async ({ data, error }) => {
-  if (error || !data?.locations?.length) return;
+  if (error) {
+    logEvent('gps-error', String(error.message ?? error));
+    return;
+  }
+  if (!data?.locations?.length) return;
   const routeId = getActiveTrackingRouteId();
   if (!routeId) return;
-  const mode = modeOf(routeId);
-  recordFixes(routeId, data.locations, mode);
-  await afterFixes(routeId, mode, data.locations, true);
+  try {
+    const mode = modeOf(routeId);
+    const kept = recordFixes(routeId, data.locations, mode);
+    // Log the first batch after a (re)start and any resume after a silence – that's where gaps come from.
+    const now = Date.now();
+    if (lastBatchAt === 0 || now - lastBatchAt > 60_000)
+      logEvent('gps-batch', `${lastBatchAt === 0 ? 'first after process start' : `after ${Math.round((now - lastBatchAt) / 1000)}s silence`}: ${data.locations.length} fixes, kept ${kept}`);
+    lastBatchAt = now;
+    await afterFixes(routeId, mode, data.locations, true);
+  } catch (e) {
+    logEvent('gps-task-error', e instanceof Error ? e.message : String(e));
+  }
 });
 
 // ---------- start / stop ----------
@@ -263,7 +296,10 @@ export type TrackingMode = 'background' | 'foreground' | 'denied';
 
 export async function startTracking(routeId: string): Promise<TrackingMode> {
   const fg = await Location.requestForegroundPermissionsAsync();
-  if (fg.status !== 'granted') return 'denied';
+  if (fg.status !== 'granted') {
+    logEvent('tracking', 'denied (no location permission)');
+    return 'denied';
+  }
   setActiveTrackingRouteId(routeId);
   const mode = modeOf(routeId);
 
@@ -272,15 +308,25 @@ export async function startTracking(routeId: string): Promise<TrackingMode> {
     .then((loc) => recordFixes(routeId, [loc], mode))
     .catch(() => undefined);
 
-  let bg = await Location.getBackgroundPermissionsAsync();
-  if (bg.status !== 'granted' && bg.canAskAgain) bg = await Location.requestBackgroundPermissionsAsync();
+  // "Always" lets iOS relaunch the app to keep recording if it gets closed; ask, but don't depend on it.
+  const bg = await Location.getBackgroundPermissionsAsync();
+  if (bg.status !== 'granted' && bg.canAskAgain) Location.requestBackgroundPermissionsAsync().catch(() => undefined);
 
-  if (bg.status === 'granted' && (await Location.isBackgroundLocationAvailableAsync())) {
-    await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
-    return 'background';
+  // The background task only needs "While using the app" when it is started with the app open: iOS keeps
+  // it running in the background (blue location pill), Android as a foreground service. Only Expo Go, or a
+  // failure to start, falls back to recording while the app is on screen.
+  if (await Location.isBackgroundLocationAvailableAsync()) {
+    try {
+      await Location.startLocationUpdatesAsync(TRACKING_TASK, taskOptions(mode, 'moving'));
+      setTrackingMode('background');
+      return 'background';
+    } catch {
+      // fall through
+    }
   }
 
   await startForegroundWatch(routeId, mode);
+  setTrackingMode('foreground');
   return 'foreground';
 }
 
@@ -295,6 +341,7 @@ async function startForegroundWatch(routeId: string, mode: Mode) {
 }
 
 export async function stopTracking() {
+  logEvent('tracking', 'stop');
   setActiveTrackingRouteId(null);
   foregroundSub?.remove();
   foregroundSub = null;
@@ -310,7 +357,10 @@ export async function resumeTrackingIfNeeded(): Promise<TrackingMode | null> {
   const routeId = getActiveTrackingRouteId();
   if (!routeId) return null;
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) return 'background';
+    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) {
+      setTrackingMode('background');
+      return 'background';
+    }
   } catch {
     // fall through
   }
