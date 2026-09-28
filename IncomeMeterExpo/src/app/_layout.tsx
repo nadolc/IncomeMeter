@@ -7,6 +7,7 @@ import { getDb, notify, subscribe } from '../db/database';
 import { seedDefaults } from '../services/data';
 import { isApplyingRemote, syncQuietly } from '../sync/sync';
 import { resumeTrackingIfNeeded } from '../tracking/tracker';
+import { ensureRouteActivity } from '../widgets/liveActivity';
 import { colors } from '../ui/components';
 import { useT } from '../ui/i18n';
 
@@ -18,6 +19,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     resumeTrackingIfNeeded().catch(() => undefined);
+    ensureRouteActivity();
     syncQuietly();
     const sub = AppState.addEventListener('change', (s) => {
       if (s !== 'active') return;

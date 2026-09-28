@@ -54,7 +54,13 @@
           "cameraPermission": "Photograph receipts and the dashboard odometer."
         }
       ],
-      "./plugins/withRecordStopIntent"
+      "./plugins/withRecordStopIntent",
+      [
+        "expo-widgets",
+        {
+          "frequentUpdates": true
+        }
+      ]
     ]
   }
 }
