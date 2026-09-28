@@ -1,4 +1,5 @@
 import { newId, nowIso } from '../db/database';
+import { batteryRouteEnd, batteryRouteStart } from '../diagnostics/battery';
 import { logEvent } from '../diagnostics/log';
 import { endRouteActivity, startRouteActivity } from '../widgets/liveActivity';
 import { getAll, getById, getLocations, getSettings, save, saveSettings } from '../db/repo';
@@ -78,6 +79,7 @@ export async function startRoute(args: {
   });
   const tracking = getSettings().trackRoutes ? await startTracking(route.id) : 'off';
   logEvent('route-start', `${args.travelMode}, GPS ${tracking}`);
+  batteryRouteStart().catch(() => undefined);
   startRouteActivity(route);
   return { route, tracking };
 }
@@ -132,6 +134,7 @@ export async function endRoute(route: Route, args: { endMile: number | null; inc
     distance: saved.distance || (!usesOdometer(saved.travelMode) ? tracked : 0),
   });
   endRouteActivity(final);
+  batteryRouteEnd().catch(() => undefined);
   return final;
 }
 
