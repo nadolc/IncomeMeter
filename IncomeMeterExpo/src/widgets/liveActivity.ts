@@ -113,7 +113,9 @@ export function initLiveActivity() {
   initialised = true;
   setTrackingListener((routeId, kind) => updateRouteActivity(routeId, kind === 'stop'));
   try {
-    const { addUserInteractionListener } = require('expo-widgets') as typeof import('expo-widgets');
+    const { addUserInteractionListener, widgetsDirectory } = require('expo-widgets') as typeof import('expo-widgets');
+    // The Live Activity reads its layout from the app group; without it the Lock Screen shows an empty box.
+    logEvent('live-activity', `app group ${widgetsDirectory ? 'ok' : 'MISSING'}`);
     addUserInteractionListener((event) => {
       if (event.source !== 'RouteActivity' || event.target !== 'record-stop') return;
       const route = getAll('routes').find((r) => r.status === 'in_progress');
