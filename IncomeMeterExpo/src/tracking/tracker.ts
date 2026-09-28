@@ -38,6 +38,20 @@ type Power = 'moving' | 'still' | 'fixed';
 
 let foregroundSub: Location.LocationSubscription | null = null;
 
+/** Told about new points / stops (the Live Activity refreshes from it). Set by src/widgets/liveActivity.ts. */
+type TrackingListener = (routeId: string, kind: LocationKind) => void;
+let listener: TrackingListener | null = null;
+export function setTrackingListener(fn: TrackingListener | null) {
+  listener = fn;
+}
+const tell = (routeId: string, kind: LocationKind) => {
+  try {
+    listener?.(routeId, kind);
+  } catch {
+    // A display problem must never stop the recording.
+  }
+};
+
 // ---------- kv helpers ----------
 
 const kvGet = (key: string) => getDb().getFirstSync<{ value: string }>('SELECT value FROM kv WHERE key = ?', key)?.value ?? null;
@@ -188,6 +202,7 @@ async function autoStop(routeId: string, at: LocationPoint) {
     accuracy: at.accuracy, speed: null, altitude: at.altitude ?? null,
     address: await addressFor(at.latitude, at.longitude), distanceFromLastKm: null, distanceFromLastMi: null,
   }]);
+  tell(routeId, 'stop');
 }
 
 /**
@@ -259,6 +274,7 @@ export async function recordStop(routeId: string, coords?: { latitude: number; l
     distanceFromLastMi: null,
   };
   insertLocations([point]);
+  tell(routeId, 'stop');
   // Send it up now, so a CarPlay-shortcut stop at the same place moments later is recognised as the same stop.
   syncQuietly();
   return point;
@@ -284,6 +300,7 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
     if (lastBatchAt === 0 || now - lastBatchAt > 60_000)
       logEvent('gps-batch', `${lastBatchAt === 0 ? 'first after process start' : `after ${Math.round((now - lastBatchAt) / 1000)}s silence`}: ${data.locations.length} fixes, kept ${kept}`);
     lastBatchAt = now;
+    if (kept > 0) tell(routeId, 'track');
     await afterFixes(routeId, mode, data.locations, true);
   } catch (e) {
     logEvent('gps-task-error', e instanceof Error ? e.message : String(e));
@@ -335,7 +352,7 @@ async function startForegroundWatch(routeId: string, mode: Mode) {
   const { accuracy, distanceInterval, timeInterval } = movingOptions(mode);
   foregroundSub = await Location.watchPositionAsync({ accuracy, distanceInterval, timeInterval }, (loc) => {
     if (getActiveTrackingRouteId() !== routeId) return;
-    recordFixes(routeId, [loc], mode);
+    if (recordFixes(routeId, [loc], mode) > 0) tell(routeId, 'track');
     afterFixes(routeId, mode, [loc], false).catch(() => undefined);
   });
 }

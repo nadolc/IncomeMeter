@@ -1,5 +1,6 @@
 import { newId, nowIso } from '../db/database';
 import { logEvent } from '../diagnostics/log';
+import { endRouteActivity, startRouteActivity } from '../widgets/liveActivity';
 import { getAll, getById, getLocations, getSettings, save, saveSettings } from '../db/repo';
 import { kmToUnit, movingMinutes } from '../domain/geo';
 import { pickVehicleForDate } from '../domain/vehicleAssignment';
@@ -77,6 +78,7 @@ export async function startRoute(args: {
   });
   const tracking = getSettings().trackRoutes ? await startTracking(route.id) : 'off';
   logEvent('route-start', `${args.travelMode}, GPS ${tracking}`);
+  startRouteActivity(route);
   return { route, tracking };
 }
 
@@ -123,17 +125,21 @@ export async function endRoute(route: Route, args: { endMile: number | null; inc
   }, route.id);
   const tracked = suggestEndMile(saved).tracked;
   logEvent('route-end', `${getLocations(route.id, 'track').length} GPS points, ${tracked} tracked`);
-  return save('routes', {
+  const final = save('routes', {
     ...saved,
     trackedMiles: tracked,
     movingMinutes: Math.round(movingMinutes(getLocations(route.id, 'track')) * 10) / 10,
     distance: saved.distance || (!usesOdometer(saved.travelMode) ? tracked : 0),
   });
+  endRouteActivity(final);
+  return final;
 }
 
 export async function cancelRoute(route: Route) {
   await stopTracking();
-  return saveRoute({ ...route, status: 'cancelled' }, route.id);
+  const cancelled = saveRoute({ ...route, status: 'cancelled' }, route.id);
+  endRouteActivity(cancelled);
+  return cancelled;
 }
 
 export function inProgressRoute(): Route | null {
