@@ -290,6 +290,20 @@ public class LocationService : ILocationService
         }
     }
 
+    /// <summary>
+    /// The route a shortcut stop belongs on: the most recently started route in progress, whatever id
+    /// the shortcut sent. The old CarPlay shortcut sends the id of the last route its start-route step
+    /// created; those routes were often never ended, so they stay "in progress" on the server. Honouring
+    /// that id put every stop on a months-old route, where it synced down to the phone but never showed
+    /// on the route being driven. With no route in progress, a given id is used as sent (so a stop can
+    /// still be added to a route just ended); with neither, there is nowhere to put it.
+    /// </summary>
+    public static string? RouteForStop(string? requestedRouteId, string? currentRouteId)
+    {
+        if (!string.IsNullOrEmpty(currentRouteId)) return currentRouteId;
+        return string.IsNullOrWhiteSpace(requestedRouteId) ? null : requestedRouteId;
+    }
+
     public async Task<Location?> AddLocationFromIOSAsync(CreateLocationIOSDto dto, string userId)
     {
         var correlationId = Guid.NewGuid().ToString("N")[..8];
@@ -300,17 +314,9 @@ public class LocationService : ILocationService
         var current = (await _routeService.GetRoutesByStatusAsync(userId, "in_progress"))
             .OrderByDescending(r => r.ActualStartTime ?? r.ScheduleStart)
             .FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(dto.RouteId))
-        {
-            if (current == null) return null;
-            dto.RouteId = current.Id!;
-        }
-        else if (current != null && current.Id != dto.RouteId)
-        {
-            var requested = await _routeService.GetRouteByIdAsync(dto.RouteId, userId);
-            if (requested == null || requested.Status != "in_progress")
-                dto.RouteId = current.Id!;
-        }
+        var routeId = RouteForStop(dto.RouteId, current?.Id);
+        if (routeId == null) return null;
+        dto.RouteId = routeId;
         
         Log.Logger
             .ForContext("EventType", "LocationAdditionIOSStarted")
